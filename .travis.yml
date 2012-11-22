@@ -1,6 +1,8 @@
 language: python
 python:
   - "2.7"
+env:
+  - SETUPTOOLS_INSTALL_ALL_DEPS=1
 install:
   - python setup.py dev
 script: py.test
