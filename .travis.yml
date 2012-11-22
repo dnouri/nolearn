@@ -2,7 +2,9 @@ language: python
 python:
   - "2.7"
 before_install:
- - sudo apt-get update -qq
+ - deactivate
+ - virtualenv --clear --system-site-packages ~/virtualenv/python2.7
+ - source ~/virtualenv/python2.7/bin/activate
  - sudo apt-get install -qq python-numpy python-scipy
 install:
   - python setup.py dev
