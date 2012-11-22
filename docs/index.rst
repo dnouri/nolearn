@@ -6,8 +6,9 @@ with machine learning tasks.  Most of the modules work together with
 `scikit-learn <http://scikit-learn.org/>`_, others are more generally
 useful.
 
-nolearn's source is `hosted on Github
-<https://github.com/dnouri/nolearn>`_.
+nolearn's `source is hosted on Github
+<https://github.com/dnouri/nolearn>`_.  `Releases can be downloaded on
+PyPI <http://pypi.python.org/pypi/nolearn>`_.
 
 
 Modules

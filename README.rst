@@ -3,4 +3,4 @@ with machine learning tasks.  Most of the modules work together with
 `scikit-learn <http://scikit-learn.org/>`_, others are more generally
 useful.
 
-Please refer to the individual module docstrings for more details.
+View the `documentation here <http://nolearn.readthedocs.org>`_.
