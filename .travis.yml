@@ -3,8 +3,8 @@ python:
   - "2.7"
 before_install:
  - deactivate
- - virtualenv --clear --system-site-packages ~/virtualenv/python2.7
- - source ~/virtualenv/python2.7/bin/activate
+ - virtualenv --system-site-packages ~/virtualenv/this
+ - source ~/virtualenv/this/bin/activate
  - sudo apt-get install -qq python-numpy python-scipy
 install:
   - python setup.py dev
