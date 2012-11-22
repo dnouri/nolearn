@@ -10,6 +10,11 @@ nolearn's `source is hosted on Github
 <https://github.com/dnouri/nolearn>`_.  `Releases can be downloaded on
 PyPI <http://pypi.python.org/pypi/nolearn>`_.
 
+|build status|_
+
+.. |build status| image:: https://secure.travis-ci.org/dnouri/nolearn.png?branch=master
+.. _build status: http://travis-ci.org/dnouri/nolearn
+
 
 Modules
 =======
