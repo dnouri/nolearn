@@ -15,15 +15,6 @@ install_requires = [
     'scikit-learn',
     ]
 
-maybe_requires = [
-    'numpy',
-    'scipy',
-    ]
-
-if os.environ.get('SETUPTOOLS_INSTALL_ALL_DEPS', '1').lower() in ('1', 'y'):
-    install_requires = maybe_requires + install_requires
-
-
 tests_require = [
     'mock',
     'pytest',

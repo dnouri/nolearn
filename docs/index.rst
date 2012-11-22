@@ -26,6 +26,16 @@ Modules
    model
   
 
+Installation
+============
+
+Install via `pip <http://www.pip-installer.org>`_:
+
+.. code-block:: bash
+
+  $ pip install nolearn
+
+
 Indices and tables
 ==================
 
