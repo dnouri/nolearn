@@ -40,6 +40,14 @@ Install via `pip <http://www.pip-installer.org>`_:
 
   $ pip install nolearn
 
+nolearn does not declare ``numpy`` or ``scipy`` as dependencies.  So
+you may have to install these separately *before* installing nolearn:
+
+.. code-block:: bash
+
+  $ pip install numpy
+  $ pip install scipy
+
 
 Indices and tables
 ==================
