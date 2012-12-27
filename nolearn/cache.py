@@ -109,7 +109,7 @@ def cached(cache_key=default_cache_key, cache_path=None):
                 filesize = os.path.getsize(filename)
                 size = "%0.1f MB" % (filesize / (1024 * 1024.0))
                 logger.debug(" * cache hit: {} ({})".format(filename, size))
-                with open(filename, 'r') as f:
+                with open(filename, 'rb') as f:
                     return cPickle.load(f)
             else:
                 logger.debug(" * cache miss: {}".format(filename))
