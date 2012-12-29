@@ -39,6 +39,7 @@ call :meth:`Dataset.train_test_split`:
 
 import numpy as np
 from sklearn.cross_validation import StratifiedShuffleSplit
+from sklearn import preprocessing
 
 
 class Dataset(object):
@@ -52,6 +53,10 @@ class Dataset(object):
         if isinstance(target, basestring):
             target = np.load(target)
         self.data, self.target = data, target
+
+    def scale(self):
+        self.data = preprocessing.scale(self.data)
+        return self
 
     @property
     def split_indices(self):
