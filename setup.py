@@ -12,6 +12,7 @@ except IOError:
 
 install_requires = [
     'docopt',
+    'gdbn',
     'scikit-learn',
     ]
 
