@@ -11,7 +11,7 @@ class DBN(BaseEstimator):
         scales=0.05,
         fan_outs=None,
         output_act_funct=None,
-        real_valued_vis=False,
+        real_valued_vis=True,
         use_re_lu=False,
         uniforms=False,
 
@@ -23,11 +23,16 @@ class DBN(BaseEstimator):
         nest_compare=True,
         rms_lims=None,
 
-        epochs_finetune=10,
+        learn_rates_pretrain=None,
+        momentum_pretrain=None,
+        l2_costs_pretrain=None,
+        nest_compare_pretrain=None,
+
+        epochs=10,
         epochs_pretrain=0,
         loss_funct=None,
         minibatch_size=64,
-        minibatch_per_epoch=None,
+        minibatches_per_epoch=None,
         verbose=0,
         ):
 
@@ -50,12 +55,17 @@ class DBN(BaseEstimator):
         self.nest_compare = nest_compare
         self.rms_lims = rms_lims
 
-        self.epochs_finetune = epochs_finetune
+        self.learn_rates_pretrain = learn_rates_pretrain
+        self.momentum_pretrain = momentum_pretrain
+        self.l2_costs_pretrain = l2_costs_pretrain
+        self.nest_compare_pretrain = nest_compare_pretrain
+
+        self.epochs = epochs
         self.epochs_pretrain = epochs_pretrain
         self.loss_funct = loss_funct
         self.use_dropout = True if dropouts else False
         self.minibatch_size = minibatch_size
-        self.minibatch_per_epoch = minibatch_per_epoch
+        self.minibatches_per_epoch = minibatches_per_epoch
         self.verbose = verbose
 
     def _vp(self, value):
@@ -76,6 +86,37 @@ class DBN(BaseEstimator):
             self.use_re_lu,
             v(self.uniforms),
             )
+
+        return net
+
+    def _setup_net_pretrain(self, net):
+        v = self._vp
+
+        self._setup_net_finetune(net)
+
+        learn_rates = self.learn_rates_pretrain
+        momentum = self.momentum_pretrain
+        l2_costs = self.l2_costs_pretrain
+        nest_compare = self.nest_compare_pretrain
+
+        if learn_rates is None:
+            learn_rates = self.learn_rates
+        if momentum is None:
+            momentum = self.momentum
+        if l2_costs is None:
+            l2_costs = self.l2_costs
+        if nest_compare is None:
+            nest_compare = self.nest_compare
+
+        net.learnRates = v(learn_rates)
+        net.momentum = momentum
+        net.L2Costs = v(l2_costs)
+        net.nestCompare = nest_compare
+
+        return net
+
+    def _setup_net_finetune(self, net):
+        v = self._vp
 
         net.learnRates = v(self.learn_rates)
         net.momentum = self.momentum
@@ -110,36 +151,38 @@ class DBN(BaseEstimator):
 
         self.net_ = self._build_net()
 
-        self.epochs_pretrain = self._vp(self.epochs_pretrain)
-        if self.minibatch_per_epoch is None:
-            self.minibatch_per_epoch = X.shape[0] / self.minibatch_size
+        if self.minibatches_per_epoch is None:
+            self.minibatches_per_epoch = X.shape[0] / self.minibatch_size
 
         if self.epochs_pretrain:
+            self.epochs_pretrain = self._vp(self.epochs_pretrain)
+            self._setup_net_pretrain(self.net_)
             for layer_index in range(len(self.layer_sizes) - 1):
-                if self.verbose:
+                if self.verbose:  # pragma: no cover
                     print "[DBN] Pre-train layer {}...".format(layer_index + 1)
                 for epoch, err in enumerate(
                     self.net_.preTrainIth(
                         layer_index,
                         self._minibatches(X),
                         self.epochs_pretrain[layer_index],
-                        self.minibatch_per_epoch,
+                        self.minibatches_per_epoch,
                         )):
-                    if self.verbose:
+                    if self.verbose:  # pragma: no cover
                         print "Epoch {}: err {}".format(epoch + 1, err)
 
-        if self.verbose:
+        self._setup_net_finetune(self.net_)
+        if self.verbose:  # pragma: no cover
             print "[DBN] Fine-tune..."
         for epoch, (loss, err) in enumerate(
             self.net_.fineTune(
                 self._minibatches(X, y),
-                self.epochs_finetune,
-                self.minibatch_per_epoch,
+                self.epochs,
+                self.minibatches_per_epoch,
                 self.loss_funct,
                 self.verbose,
                 self.use_dropout,
                 )):
-            if self.verbose:
+            if self.verbose:  # pragma: no cover
                 print "Epoch {}:".format(epoch + 1)
                 print "  loss {}".format(loss)
                 print "  err  {}".format(err)
