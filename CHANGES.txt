@@ -1,0 +1,8 @@
+Change History
+==============
+
+0.2b1 - 2012-12-30
+------------------
+
+- Added a scikit-learn estimator based on George Dahl's `gdbn` in
+  `nolearn.dbn`.

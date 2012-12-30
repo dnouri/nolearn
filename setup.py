@@ -2,13 +2,14 @@ import os
 
 from setuptools import setup, find_packages
 
-version = '0.1b1'
+version = '0.2b1'
 
 here = os.path.abspath(os.path.dirname(__file__))
 try:
     README = open(os.path.join(here, 'README.rst')).read()
+    CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 except IOError:
-    README = ''
+    README = CHANGES = ''
 
 install_requires = [
     'docopt',
@@ -29,7 +30,7 @@ docs_require = [
 setup(name='nolearn',
       version=version,
       description="Miscellaneous utilities for machine learning.",
-      long_description=README,
+      long_description='\n\n'.join([README, CHANGES]),
       classifiers=[
           'Development Status :: 4 - Beta',
         ],
