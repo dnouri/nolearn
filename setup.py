@@ -46,4 +46,7 @@ setup(name='nolearn',
           'testing': tests_require,
           'docs': docs_require,
           },
+      dependency_links=[
+        'http://danielnouri.org/python-packages/',
+        ],
       )
