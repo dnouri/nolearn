@@ -54,8 +54,8 @@ class Dataset(object):
             target = np.load(target)
         self.data, self.target = data, target
 
-    def scale(self):
-        self.data = preprocessing.scale(self.data)
+    def scale(self, **kwargs):
+        self.data = preprocessing.scale(self.data, **kwargs)
         return self
 
     @property

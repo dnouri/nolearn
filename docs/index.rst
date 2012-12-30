@@ -25,6 +25,7 @@ Modules
    cache
    console
    dataset
+   dbn
    grid_search
    inischema
    metrics

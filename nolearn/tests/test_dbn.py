@@ -24,8 +24,8 @@ def test_functional_digits_no_pretrain(dataset):
     clf.fit(X_train, y_train)
 
     predicted = clf.predict(X_test)
-    score = f1_score(y_test, predicted)
-    assert score > 0.9
+    assert f1_score(y_test, predicted) > 0.9
+    assert 0.9 < 1 + clf.score(X_test, y_test) < 1.0
 
 
 def test_functional_digits_with_pretrain(dataset):
@@ -40,5 +40,5 @@ def test_functional_digits_with_pretrain(dataset):
     clf.fit(X_train, y_train)
 
     predicted = clf.predict(X_test)
-    score = f1_score(y_test, predicted)
-    assert score > 0.9
+    assert f1_score(y_test, predicted) > 0.9
+    assert 0.9 < 1 + clf.score(X_test, y_test) < 1.0

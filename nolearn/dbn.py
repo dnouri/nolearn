@@ -5,6 +5,9 @@ from sklearn.base import BaseEstimator
 
 
 class DBN(BaseEstimator):
+    """A scikit-learn estimator based on George Dahl's DBN
+    implementation `gdbn`.
+    """
     def __init__(
         self,
         layer_sizes,
@@ -35,6 +38,99 @@ class DBN(BaseEstimator):
         minibatches_per_epoch=None,
         verbose=0,
         ):
+        """
+        Many parameters such as `learn_rates`, `dropouts` etc. will
+        also accept a single value, in which case that value will be
+        used for all layers.  To control the value per layer, pass a
+        list of values instead; see examples below.
+
+        Parameters ending with `_pretrain` may be provided to override
+        the given parameter for pretraining.  Consider an example
+        where you want the pre-training to use a lower learning rate
+        than the fine tuning (the backprop), then you'd maybe pass
+        something like::
+
+          DBN([783, 300, 10], learn_rates=0.1, learn_rates_pretrain=0.005)
+
+        If you don't pass the `learn_rates_pretrain` parameter, the
+        value of `learn_rates` will be used for both pre-training and
+        fine tuning.  (Which seems to not work very well.)
+
+        :param layer_sizes: A list of integers of the form
+                            ``[n_vis_units, n_hid_units1,
+                            n_hid_units2, ..., n_out_units]``.
+
+                            An example: ``[784, 300, 10]``
+
+        :param scales: Not documented at this time.
+
+        :param fan_outs: Not documented at this time.
+
+        :param output_act_funct: Output activation function.  Instance
+                                 of type
+                                 :class:`~gdbn.activationFunctions.Sigmoid`,
+                                 :class:`~.gdbn.activationFunctions.Linear`,
+                                 :class:`~.gdbn.activationFunctions.Softmax`
+                                 from the
+                                 :mod:`gdbn.activationFunctions`
+                                 module.  Defaults to
+                                 :class:`~.gdbn.activationFunctions.Softmax`.
+
+        :param real_valued_vis: Set `True` (the default) if visible
+                                units are real-valued.
+
+        :param use_re_lu: Set `True` to use rectified linear units.
+                          Defaults to `False`.
+
+        :param uniforms: Not documented at this time.
+
+        :param learn_rates: A list of learning rates, one entry per
+                            weight layer.
+
+                            An example: ``[0.1, 0.1]``
+
+        :param momentum: Momentum
+
+        :param l2_costs: L2 costs per weight layer.
+
+        :param dropouts: Dropouts per weight layer.
+
+        :param nesterov: Not documented at this time.
+
+        :param nest_compare: Not documented at this time.
+
+        :param rms_lims: Not documented at this time.
+
+        :param learn_rates_pretrain: A list of learning rates similar
+                                     to `learn_rates_pretrain`, but
+                                     used for pretraining.  Defaults
+                                     to value of `learn_rates` parameter.
+
+        :param momentum_pretrain: Momentum for pre-training.  Defaults
+                                  to value of `momentum` parameter.
+
+        :param l2_costs_pretrain: L2 costs per weight layer, for
+                                  pre-training.  Defaults to the value
+                                  of `l2_costs` parameter.
+
+        :param nest_compare_pretrain: Not documented at this time.
+
+        :param epochs: Number of epochs to train (with backprop).
+
+        :param epochs_pretrain: Number of epochs to pre-train (with CDN).
+
+        :param loss_funct: A function that calculates the loss.  Used
+                           for displaying learning progress and for
+                           :meth:`score`.
+
+        :param minibatch_size: Size of a minibatch.
+
+        :param minibatches_per_epoch: Number of minibatches per epoch.
+                                      The default is to use as many as
+                                      fit into our training set.
+
+        :param verbose: Debugging output.
+        """
 
         if output_act_funct is None:
             output_act_funct = Softmax()
@@ -146,13 +242,25 @@ class DBN(BaseEstimator):
                 y = y_new
         return y
 
+    def _num_mistakes(self, targets, outputs):
+        if hasattr(targets, 'as_numpy_array'):  # pragma: no cover
+            targets = targets.as_numpy_array()
+        if hasattr(outputs, 'as_numpy_array'):
+            outputs = outputs.as_numpy_array()
+        return np.sum(outputs.argmax(1) != targets.argmax(1))
+
     def fit(self, X, y):
         y = self._onehot(y)
 
         self.net_ = self._build_net()
 
-        if self.minibatches_per_epoch is None:
-            self.minibatches_per_epoch = X.shape[0] / self.minibatch_size
+        minibatches_per_epoch = self.minibatches_per_epoch
+        if minibatches_per_epoch is None:
+            minibatches_per_epoch = X.shape[0] / self.minibatch_size
+
+        loss_funct = self.loss_funct
+        if loss_funct is None:
+            loss_funct = self._num_mistakes
 
         if self.epochs_pretrain:
             self.epochs_pretrain = self._vp(self.epochs_pretrain)
@@ -165,7 +273,7 @@ class DBN(BaseEstimator):
                         layer_index,
                         self._minibatches(X),
                         self.epochs_pretrain[layer_index],
-                        self.minibatches_per_epoch,
+                        minibatches_per_epoch,
                         )):
                     if self.verbose:  # pragma: no cover
                         print "Epoch {}: err {}".format(epoch + 1, err)
@@ -177,8 +285,8 @@ class DBN(BaseEstimator):
             self.net_.fineTune(
                 self._minibatches(X, y),
                 self.epochs,
-                self.minibatches_per_epoch,
-                self.loss_funct,
+                minibatches_per_epoch,
+                loss_funct,
                 self.verbose,
                 self.use_dropout,
                 )):
@@ -193,3 +301,13 @@ class DBN(BaseEstimator):
     def predict_proba(self, X):
         res = tuple(self.net_.predictions(X))
         return np.array(res).reshape(X.shape[0], -1)
+
+    def score(self, X, y):
+        loss_funct = self.loss_funct
+        if loss_funct is None:
+            loss_funct = self._num_mistakes
+
+        outputs = self.predict_proba(X)
+        targets = self._onehot(y)
+        mistakes = loss_funct(outputs, targets)
+        return - float(mistakes) / len(y)
