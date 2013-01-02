@@ -1,10 +1,11 @@
+from sklearn.cross_validation import cross_val_score
 from sklearn import datasets
 from sklearn.metrics import f1_score
 
 from ..dataset import Dataset
 
 
-def pytest_funcarg__dataset(request):
+def pytest_funcarg__digits(request):
     digits = datasets.load_digits()
     n_samples = len(digits.images)
     data = digits.images.reshape((n_samples, -1))
@@ -13,10 +14,61 @@ def pytest_funcarg__dataset(request):
     return ds.train_test_split()
 
 
-def test_functional_digits_no_pretrain(dataset):
+def pytest_funcarg__iris(request):
+    iris = datasets.load_iris()
+    ds = Dataset(iris.data, iris.target).scale()
+    return ds
+
+
+def test_callback(digits):
     from ..dbn import DBN
 
-    X_train, X_test, y_train, y_test = dataset
+    fine_tune_call_args = []
+    pretrain_call_args = []
+
+    def fine_tune_callback(net, epoch):
+        fine_tune_call_args.append((net, epoch))
+
+    def pretrain_callback(net, epoch, layer):
+        pretrain_call_args.append((net, epoch, layer))
+
+    X_train, X_test, y_train, y_test = digits
+
+    clf = DBN(
+        [X_train.shape[1], 4, 10],
+        epochs=3,
+        epochs_pretrain=2,
+        fine_tune_callback=fine_tune_callback,
+        pretrain_callback=pretrain_callback,
+        )
+
+    clf.fit(X_train, y_train)
+    assert fine_tune_call_args == [
+        (clf, 0), (clf, 1), (clf, 2)]
+    assert pretrain_call_args == [
+        (clf, 0, 0), (clf, 1, 0), (clf, 0, 1), (clf, 1, 1)]
+
+
+def test_functional_iris(iris):
+    from ..dbn import DBN
+
+    X_train, X_test, y_train, y_test = iris.train_test_split()
+
+    clf = DBN(
+        [X_train.shape[1], 4, 3],
+        learn_rates=0.3,
+        output_act_funct='Linear',
+        epochs=50,
+        )
+
+    scores = cross_val_score(clf, iris.data, iris.target, cv=10)
+    assert scores.mean() > 0.9
+
+
+def test_functional_digits_no_pretrain(digits):
+    from ..dbn import DBN
+
+    X_train, X_test, y_train, y_test = digits
     clf = DBN(
         [64, 32, 10],
         verbose=0,
@@ -25,13 +77,13 @@ def test_functional_digits_no_pretrain(dataset):
 
     predicted = clf.predict(X_test)
     assert f1_score(y_test, predicted) > 0.9
-    assert 0.9 < 1 + clf.score(X_test, y_test) < 1.0
+    assert 0.9 < clf.score(X_test, y_test) < 1.0
 
 
-def test_functional_digits_with_pretrain(dataset):
+def test_functional_digits_with_pretrain(digits):
     from ..dbn import DBN
 
-    X_train, X_test, y_train, y_test = dataset
+    X_train, X_test, y_train, y_test = digits
     clf = DBN(
         [64, 32, 10],
         epochs_pretrain=10,
@@ -41,4 +93,4 @@ def test_functional_digits_with_pretrain(dataset):
 
     predicted = clf.predict(X_test)
     assert f1_score(y_test, predicted) > 0.9
-    assert 0.9 < 1 + clf.score(X_test, y_test) < 1.0
+    assert 0.9 < clf.score(X_test, y_test) < 1.0

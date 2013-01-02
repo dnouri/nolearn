@@ -1,5 +1,5 @@
 from gdbn.dbn import buildDBN
-from gdbn.dbn import Softmax
+from gdbn import activationFunctions
 import numpy as np
 from sklearn.base import BaseEstimator
 
@@ -14,11 +14,13 @@ class DBN(BaseEstimator):
         scales=0.05,
         fan_outs=None,
         output_act_funct=None,
+        hidden_act_functs=None,
         real_valued_vis=True,
         use_re_lu=False,
         uniforms=False,
 
         learn_rates=0.1,
+        learn_rate_decays=1.0,
         momentum=0.9,
         l2_costs=0.0001,
         dropouts=0,
@@ -36,6 +38,9 @@ class DBN(BaseEstimator):
         loss_funct=None,
         minibatch_size=64,
         minibatches_per_epoch=None,
+
+        pretrain_callback=None,
+        fine_tune_callback=None,
         verbose=0,
         ):
         """
@@ -129,11 +134,24 @@ class DBN(BaseEstimator):
                                       The default is to use as many as
                                       fit into our training set.
 
+        :param pretrain_callback: An optional function that takes as
+                                  arguments the :class:`DBN` instance,
+                                  the epoch and the layer index as its
+                                  argument, and is called for each
+                                  epoch of pretraining.
+
+        :param fine_tune_callback: An optional function that takes as
+                                   arguments the :class:`DBN` instance
+                                   and the epoch, and is called for
+                                   each epoch of fine tuning.
+
         :param verbose: Debugging output.
         """
 
         if output_act_funct is None:
-            output_act_funct = Softmax()
+            output_act_funct = activationFunctions.Softmax()
+        elif isinstance(output_act_funct, str):
+            output_act_funct = getattr(activationFunctions, output_act_funct)()
 
         self.layer_sizes = layer_sizes
         self.scales = scales
@@ -144,6 +162,7 @@ class DBN(BaseEstimator):
         self.uniforms = uniforms
 
         self.learn_rates = learn_rates
+        self.learn_rate_decays = learn_rate_decays
         self.momentum = momentum
         self.l2_costs = l2_costs
         self.dropouts = dropouts
@@ -162,6 +181,9 @@ class DBN(BaseEstimator):
         self.use_dropout = True if dropouts else False
         self.minibatch_size = minibatch_size
         self.minibatches_per_epoch = minibatches_per_epoch
+
+        self.pretrain_callback = pretrain_callback
+        self.fine_tune_callback = fine_tune_callback
         self.verbose = verbose
 
     def _vp(self, value):
@@ -185,10 +207,10 @@ class DBN(BaseEstimator):
 
         return net
 
-    def _setup_net_pretrain(self, net):
+    def _configure_net_pretrain(self, net):
         v = self._vp
 
-        self._setup_net_finetune(net)
+        self._configure_net_finetune(net)
 
         learn_rates = self.learn_rates_pretrain
         momentum = self.momentum_pretrain
@@ -211,7 +233,7 @@ class DBN(BaseEstimator):
 
         return net
 
-    def _setup_net_finetune(self, net):
+    def _configure_net_finetune(self, net):
         v = self._vp
 
         net.learnRates = v(self.learn_rates)
@@ -249,6 +271,11 @@ class DBN(BaseEstimator):
             outputs = outputs.as_numpy_array()
         return np.sum(outputs.argmax(1) != targets.argmax(1))
 
+    def _learn_rate_adjust(self):
+        learn_rate_decays = self._vp(self.learn_rate_decays)
+        for index, decay in enumerate(learn_rate_decays):
+            self.net_.learnRates[index] *= decay
+
     def fit(self, X, y):
         y = self._onehot(y)
 
@@ -264,7 +291,7 @@ class DBN(BaseEstimator):
 
         if self.epochs_pretrain:
             self.epochs_pretrain = self._vp(self.epochs_pretrain)
-            self._setup_net_pretrain(self.net_)
+            self._configure_net_pretrain(self.net_)
             for layer_index in range(len(self.layer_sizes) - 1):
                 if self.verbose:  # pragma: no cover
                     print "[DBN] Pre-train layer {}...".format(layer_index + 1)
@@ -277,8 +304,10 @@ class DBN(BaseEstimator):
                         )):
                     if self.verbose:  # pragma: no cover
                         print "Epoch {}: err {}".format(epoch + 1, err)
+                    if self.pretrain_callback is not None:
+                        self.pretrain_callback(self, epoch, layer_index)
 
-        self._setup_net_finetune(self.net_)
+        self._configure_net_finetune(self.net_)
         if self.verbose:  # pragma: no cover
             print "[DBN] Fine-tune..."
         for epoch, (loss, err) in enumerate(
@@ -290,10 +319,13 @@ class DBN(BaseEstimator):
                 self.verbose,
                 self.use_dropout,
                 )):
+            self._learn_rate_adjust()
             if self.verbose:  # pragma: no cover
                 print "Epoch {}:".format(epoch + 1)
                 print "  loss {}".format(loss)
                 print "  err  {}".format(err)
+            if self.fine_tune_callback is not None:
+                self.fine_tune_callback(self, epoch)
 
     def predict(self, X):
         return np.argmax(self.predict_proba(X), axis=1)
@@ -310,4 +342,4 @@ class DBN(BaseEstimator):
         outputs = self.predict_proba(X)
         targets = self._onehot(y)
         mistakes = loss_funct(outputs, targets)
-        return - float(mistakes) / len(y)
+        return - float(mistakes) / len(y) + 1
