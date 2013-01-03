@@ -134,10 +134,9 @@ Let us load the dataset:
   labels_test = np.array(dataset3['labels'])
 
 We can now train our network.  We'll configure the network so that it
-has three times as many units in the hidden layer as there are input
-units, i.e. ``[3072, 9216, 10]``.  We'll train our network for 50
-epochs, which will take fairly long if you're not using `CUDAMat
-<http://code.google.com/p/cudamat/>`_.
+has 1024 units in the hidden layer, i.e. ``[3072, 1024, 10]``.  We'll
+train our network for 50 epochs, which will take a while if you're not
+using `CUDAMat <http://code.google.com/p/cudamat/>`_.
 
 .. code-block:: python
 
@@ -145,7 +144,7 @@ epochs, which will take fairly long if you're not using `CUDAMat
   n_targets = labels_train.max() + 1
 
   net = DBN(
-      [n_feat, n_feat * 3, n_targets],
+      [n_feat, n_feat / 3, n_targets],
       epochs=50,
       learn_rates=0.03,
       verbose=1,
@@ -166,20 +165,20 @@ Finally, we'll look at our network's performance:
       net, classification_report(expected, predicted))
   print "Confusion matrix:\n%s" % confusion_matrix(expected, predicted)
 
-You should see an f1-score of **0.48** and a confusion matrix that
+You should see an f1-score of **0.49** and a confusion matrix that
 looks something like this::
 
     air aut bir cat dee dog fro hor shi tru
-  [[532  42 177  26  20  20   5  39  90  43]  airplane
-   [ 86 615  25  32   7  28   3  26  51 169]  automobile
-   [ 53  10 588  69  52  67  23  71  16  16]  bird
-   [ 44  16 195 336  34 222  25  72  20  33]  cat
-   [ 60  14 330  62 319  53  23  96  21  12]  deer
-   [ 34  17 188 218  49 383  13  86   8  33]  dog
-   [ 34  21 240 162  78  83 279  50   9  22]  frog
-   [ 32  17 148  47  45  96   2 580  12  36]  horse
-   [123  54  63  24  10  23   3  11 602  48]  ship
-   [ 64 131  49  45  13  35   3  42  52 595]] truck      
+  [[459  48  66  39  91  21   5  39 182  44]  airplane  
+   [ 28 584  12  31  23  22   8  29 117 188]  automobile
+   [ 49  13 279 101 244 124  31  71  37  16]  bird      
+   [ 20  16  54 363 106 255  38  70  36  39]  cat       
+   [ 33  10  79  81 596  66  15  75  26   9]  deer      
+   [ 16  23  57 232 103 448  17  82  26  25]  dog       
+   [ 10  18  70 179 212 106 304  32  21  26]  frog      
+   [ 20   8  40  80 125  98  10 575  21  38]  horse     
+   [ 54  49  10  29  43  25   4   9 707  31]  ship      
+   [ 28 129   9  48  33  36  10  57 118 561]] truck     
 
 We should be able to improve on this score by using the full dataset
 and by training longer.
