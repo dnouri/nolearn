@@ -1,3 +1,4 @@
+from scipy.sparse import csr_matrix
 from sklearn.cross_validation import cross_val_score
 from sklearn import datasets
 from sklearn.metrics import f1_score
@@ -94,3 +95,36 @@ def test_functional_digits_with_pretrain(digits):
     predicted = clf.predict(X_test)
     assert f1_score(y_test, predicted) > 0.9
     assert 0.9 < clf.score(X_test, y_test) < 1.0
+
+
+def test_sparse_support(digits):
+    from ..dbn import DBN
+
+    X_train, X_test, y_train, y_test = digits
+    X_train = csr_matrix(X_train)
+    X_test = csr_matrix(X_test)
+
+    clf = DBN(
+        [64, 32, 10],
+        epochs_pretrain=10,
+        verbose=0,
+        )
+    clf.fit(X_train, y_train)
+
+    predicted = clf.predict(X_test)
+    assert f1_score(y_test, predicted) > 0.9
+    assert 0.9 < clf.score(X_test, y_test) < 1.0
+
+
+def test_layer_sizes_auto(iris):
+    from ..dbn import DBN
+
+    X_train, X_test, y_train, y_test = iris.train_test_split()
+
+    clf = DBN(
+        [-1, 4, -1],
+        )
+    clf.fit(X_train, y_train)
+
+    assert clf.net_.weights[0].shape == (4, 4)
+    assert clf.net_.weights[1].shape == (4, 3)

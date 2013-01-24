@@ -1,3 +1,6 @@
+from datetime import timedelta
+from time import time
+
 from gdbn.dbn import buildDBN
 from gdbn import activationFunctions
 import numpy as np
@@ -21,6 +24,7 @@ class DBN(BaseEstimator):
 
         learn_rates=0.1,
         learn_rate_decays=1.0,
+        learn_rate_minimums=0.0,
         momentum=0.9,
         l2_costs=0.0001,
         dropouts=0,
@@ -67,6 +71,13 @@ class DBN(BaseEstimator):
 
                             An example: ``[784, 300, 10]``
 
+                            The number of units in the input layer and
+                            the output layer will be set automatically
+                            if you set them to -1.  Thus, the above
+                            example is equivalent to ``[-1, 300, -1]``
+                            if you pass an ``X`` with 784 features,
+                            and a ``y`` with 10 classes.
+
         :param scales: Not documented at this time.
 
         :param fan_outs: Not documented at this time.
@@ -93,6 +104,16 @@ class DBN(BaseEstimator):
                             weight layer.
 
                             An example: ``[0.1, 0.1]``
+
+        :param learn_rate_decays: The number with which the
+                                  `learn_rate` is multiplied after
+                                  each epoch of fine-tuning.
+
+        :param learn_rate_minimums: The minimum `learn_rates`; after
+                                    the learn rate reaches the minimum
+                                    learn rate, the
+                                    `learn_rate_decays` no longer has
+                                    any effect.
 
         :param momentum: Momentum
 
@@ -163,6 +184,7 @@ class DBN(BaseEstimator):
 
         self.learn_rates = learn_rates
         self.learn_rate_decays = learn_rate_decays
+        self.learn_rate_minimums = learn_rate_minimums
         self.momentum = momentum
         self.l2_costs = l2_costs
         self.dropouts = dropouts
@@ -190,13 +212,22 @@ class DBN(BaseEstimator):
         num_weights = len(self.layer_sizes) - 1
         if not hasattr(value, '__iter__'):
             value = [value] * num_weights
-        return value
+        return list(value)
 
-    def _build_net(self):
+    def _build_net(self, X, y=None):
         v = self._vp
 
+        layer_sizes = list(self.layer_sizes)
+        if layer_sizes[0] == -1:  # n_feat
+            layer_sizes[0] = X.shape[1]
+        if layer_sizes[-1] == -1 and y is not None:  # n_classes
+            layer_sizes[-1] = y.shape[1]
+
+        if self.verbose:  # pragma: no cover
+            print "[DBN] layers {}".format(layer_sizes)
+
         net = buildDBN(
-            self.layer_sizes,
+            layer_sizes,
             v(self.scales),
             v(self.fan_outs),
             self.output_act_funct,
@@ -249,10 +280,15 @@ class DBN(BaseEstimator):
     def _minibatches(self, X, y=None):
         while True:
             idx = np.random.randint(X.shape[0], size=(self.minibatch_size,))
+
+            X_batch = X[idx]
+            if hasattr(X_batch, 'todense'):
+                X_batch = X_batch.todense()
+
             if y is not None:
-                yield (X[idx], y[idx])
+                yield (X_batch, y[idx])
             else:
-                yield X[idx]
+                yield X_batch
 
     def _onehot(self, y):
         if len(y.shape) == 1:
@@ -273,13 +309,17 @@ class DBN(BaseEstimator):
 
     def _learn_rate_adjust(self):
         learn_rate_decays = self._vp(self.learn_rate_decays)
+        learn_rate_minimums = self._vp(self.learn_rate_minimums)
+
         for index, decay in enumerate(learn_rate_decays):
-            self.net_.learnRates[index] *= decay
+            new_learn_rate = self.net_.learnRates[index] * decay
+            if new_learn_rate >= learn_rate_minimums[index]:
+                self.net_.learnRates[index] = new_learn_rate
 
     def fit(self, X, y):
         y = self._onehot(y)
 
-        self.net_ = self._build_net()
+        self.net_ = self._build_net(X, y)
 
         minibatches_per_epoch = self.minibatches_per_epoch
         if minibatches_per_epoch is None:
@@ -295,6 +335,7 @@ class DBN(BaseEstimator):
             for layer_index in range(len(self.layer_sizes) - 1):
                 if self.verbose:  # pragma: no cover
                     print "[DBN] Pre-train layer {}...".format(layer_index + 1)
+                time0 = time()
                 for epoch, err in enumerate(
                     self.net_.preTrainIth(
                         layer_index,
@@ -303,13 +344,17 @@ class DBN(BaseEstimator):
                         minibatches_per_epoch,
                         )):
                     if self.verbose:  # pragma: no cover
-                        print "Epoch {}: err {}".format(epoch + 1, err)
+                        print "  Epoch {}: err {}".format(epoch + 1, err)
+                        elapsed = str(timedelta(seconds=time() - time0))
+                        print "  ({})".format(elapsed.split('.')[0])
+                        time0 = time()
                     if self.pretrain_callback is not None:
                         self.pretrain_callback(self, epoch, layer_index)
 
         self._configure_net_finetune(self.net_)
         if self.verbose:  # pragma: no cover
             print "[DBN] Fine-tune..."
+        time0 = time()
         for epoch, (loss, err) in enumerate(
             self.net_.fineTune(
                 self._minibatches(X, y),
@@ -324,6 +369,9 @@ class DBN(BaseEstimator):
                 print "Epoch {}:".format(epoch + 1)
                 print "  loss {}".format(loss)
                 print "  err  {}".format(err)
+                elapsed = str(timedelta(seconds=time() - time0))
+                print "  ({})".format(elapsed.split('.')[0])
+                time0 = time()
             if self.fine_tune_callback is not None:
                 self.fine_tune_callback(self, epoch)
 
@@ -331,7 +379,17 @@ class DBN(BaseEstimator):
         return np.argmax(self.predict_proba(X), axis=1)
 
     def predict_proba(self, X):
+        if hasattr(X, 'todense'):
+            return self._predict_proba_sparse(X)
         res = tuple(self.net_.predictions(X))
+        return np.array(res).reshape(X.shape[0], -1)
+
+    def _predict_proba_sparse(self, X):
+        batch_size = self.minibatch_size
+        res = []
+        for i in xrange(0, X.shape[0], batch_size):
+            X_batch = X[i:min(i + batch_size, X.shape[0])].todense()
+            res.extend(self.net_.predictions(X_batch))
         return np.array(res).reshape(X.shape[0], -1)
 
     def score(self, X, y):
