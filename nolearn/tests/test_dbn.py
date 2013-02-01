@@ -50,6 +50,26 @@ def test_callback(digits):
         (clf, 0, 0), (clf, 1, 0), (clf, 0, 1), (clf, 1, 1)]
 
 
+def test_errors(digits):
+    from ..dbn import DBN
+
+    X_train, X_test, y_train, y_test = digits
+
+    clf = DBN(
+        [X_train.shape[1], 4, 10],
+        epochs=3,
+        epochs_pretrain=3,
+        )
+    clf.fit(X_train, y_train)
+
+    assert len(clf.errors_pretrain_) == 2
+    assert len(clf.errors_pretrain_[0]) == 3
+    assert len(clf.errors_pretrain_[1]) == 3
+
+    assert len(clf.errors_fine_tune_) == 3
+    assert len(clf.losses_fine_tune_) == 3
+    
+
 def test_functional_iris(iris):
     from ..dbn import DBN
 

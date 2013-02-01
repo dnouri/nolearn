@@ -308,6 +308,9 @@ class DBN(BaseEstimator):
         return np.sum(outputs.argmax(1) != targets.argmax(1))
 
     def _learn_rate_adjust(self):
+        if self.learn_rate_decays == 1.0:
+            return
+
         learn_rate_decays = self._vp(self.learn_rate_decays)
         learn_rate_minimums = self._vp(self.learn_rate_minimums)
 
@@ -315,6 +318,9 @@ class DBN(BaseEstimator):
             new_learn_rate = self.net_.learnRates[index] * decay
             if new_learn_rate >= learn_rate_minimums[index]:
                 self.net_.learnRates[index] = new_learn_rate
+
+        if self.verbose >= 2:
+            print "Learn rates: {}".format(self.net_.learnRates)
 
     def fit(self, X, y):
         y = self._onehot(y)
@@ -329,10 +335,15 @@ class DBN(BaseEstimator):
         if loss_funct is None:
             loss_funct = self._num_mistakes
 
+        errors_pretrain = self.errors_pretrain_ = []
+        losses_fine_tune = self.losses_fine_tune_ = []
+        errors_fine_tune = self.errors_fine_tune_ = []
+
         if self.epochs_pretrain:
             self.epochs_pretrain = self._vp(self.epochs_pretrain)
             self._configure_net_pretrain(self.net_)
             for layer_index in range(len(self.layer_sizes) - 1):
+                errors_pretrain.append([])
                 if self.verbose:  # pragma: no cover
                     print "[DBN] Pre-train layer {}...".format(layer_index + 1)
                 time0 = time()
@@ -343,6 +354,7 @@ class DBN(BaseEstimator):
                         self.epochs_pretrain[layer_index],
                         minibatches_per_epoch,
                         )):
+                    errors_pretrain[-1].append(err)
                     if self.verbose:  # pragma: no cover
                         print "  Epoch {}: err {}".format(epoch + 1, err)
                         elapsed = str(timedelta(seconds=time() - time0))
@@ -364,6 +376,8 @@ class DBN(BaseEstimator):
                 self.verbose,
                 self.use_dropout,
                 )):
+            losses_fine_tune.append(loss)
+            errors_fine_tune.append(err)
             self._learn_rate_adjust()
             if self.verbose:  # pragma: no cover
                 print "Epoch {}:".format(epoch + 1)
