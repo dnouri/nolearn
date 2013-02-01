@@ -17,7 +17,6 @@ class DBN(BaseEstimator):
         scales=0.05,
         fan_outs=None,
         output_act_funct=None,
-        hidden_act_functs=None,
         real_valued_vis=True,
         use_re_lu=False,
         uniforms=False,
