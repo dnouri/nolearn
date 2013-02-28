@@ -3,6 +3,7 @@ from time import time
 
 from gdbn.dbn import buildDBN
 from gdbn import activationFunctions
+import gnumpy
 import numpy as np
 from sklearn.base import BaseEstimator
 
@@ -394,8 +395,10 @@ class DBN(BaseEstimator):
     def predict_proba(self, X):
         if hasattr(X, 'todense'):
             return self._predict_proba_sparse(X)
-        res = tuple(self.net_.predictions(X))
-        return np.array(res).reshape(X.shape[0], -1)
+        res = np.zeros((X.shape[0], self.layer_sizes[-1]))
+        for i, el in enumerate(self.net_.predictions(X, asNumpy=True)):
+            res[i] = el
+        return res
 
     def _predict_proba_sparse(self, X):
         batch_size = self.minibatch_size
