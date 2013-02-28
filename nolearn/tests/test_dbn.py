@@ -83,7 +83,7 @@ def test_functional_iris(iris):
         )
 
     scores = cross_val_score(clf, iris.data, iris.target, cv=10)
-    assert scores.mean() > 0.9
+    assert scores.mean() > 0.85
 
 
 def test_functional_digits_no_pretrain(digits):
