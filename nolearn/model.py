@@ -3,6 +3,8 @@ from scipy import sparse
 from sklearn.base import BaseEstimator
 from sklearn.externals.joblib import delayed
 from sklearn.externals.joblib import Parallel
+from sklearn.pipeline import FeatureUnion
+from zope.deprecation import deprecated
 
 
 class AbstractModel(object):
@@ -81,38 +83,6 @@ class AveragingEstimator(BaseEstimator):
         return result[0] / len(self.estimators)
 
 
-class FeatureStacker(BaseEstimator):
-    """Combine several transformer objects and yield their results in
-    a single, concatenated feature matrix.
-    """
-    def __init__(self, estimators):
-        """
-        :param estimators: A list of tuples of the form `(name, estimator)`
-        """
-        self.estimators = estimators
-
-    def fit(self, X, y=None):
-        for name, trans in self.estimators:
-            trans.fit(X, y)
-        return self
-
-    def transform(self, X):
-        features = []
-        for name, estimator in self.estimators:
-            features.append(estimator.transform(X))
-        issparse = [sparse.issparse(f) for f in features]
-        if np.any(issparse):
-            features = sparse.hstack(features).tocsr()
-        else:
-            features = np.hstack(features)
-        return features
-
-    def get_params(self, deep=True):
-        if not deep:
-            return super(FeatureStacker, self).get_params(deep=False)
-        else:
-            out = dict(self.estimators)
-            for name, estimator in self.estimators:
-                for key, value in estimator.get_params(deep=True).items():
-                    out['%s__%s' % (name, key)] = value
-            return out
+FeatureStacker = FeatureUnion
+deprecated('FeatureStacker',
+           'Please use sklearn.pipeline.FeatureUnion instead')

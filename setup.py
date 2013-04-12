@@ -15,6 +15,7 @@ install_requires = [
     'docopt',
     'gdbn',
     'scikit-learn',
+    'zope.deprecation',
     ]
 
 tests_require = [
