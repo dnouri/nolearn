@@ -63,7 +63,7 @@ class Dataset(object):
         return StratifiedShuffleSplit(
             self.target,
             indices=True,
-            n_iterations=self.n_iterations,
+            n_iter=self.n_iterations,
             test_size=self.test_size,
             random_state=self.random_state,
             )
