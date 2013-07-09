@@ -211,6 +211,13 @@ class DBN(BaseEstimator):
         self.fine_tune_callback = fine_tune_callback
         self.verbose = verbose
 
+    def _fill_missing_layer_sizes(self, X, y):
+        layer_sizes = self.layer_sizes
+        if layer_sizes[0] == -1:  # n_feat
+            layer_sizes[0] = X.shape[1]
+        if layer_sizes[-1] == -1 and y is not None:  # n_classes
+            layer_sizes[-1] = y.shape[1]
+
     def _vp(self, value):
         num_weights = len(self.layer_sizes) - 1
         if not hasattr(value, '__iter__'):
@@ -220,17 +227,12 @@ class DBN(BaseEstimator):
     def _build_net(self, X, y=None):
         v = self._vp
 
-        layer_sizes = list(self.layer_sizes)
-        if layer_sizes[0] == -1:  # n_feat
-            layer_sizes[0] = X.shape[1]
-        if layer_sizes[-1] == -1 and y is not None:  # n_classes
-            layer_sizes[-1] = y.shape[1]
-
+        self._fill_missing_layer_sizes(X, y)
         if self.verbose:  # pragma: no cover
-            print "[DBN] layers {}".format(layer_sizes)
+            print "[DBN] layers {}".format(self.layer_sizes)
 
         net = buildDBN(
-            layer_sizes,
+            self.layer_sizes,
             v(self.scales),
             v(self.fan_outs),
             self.output_act_funct,
