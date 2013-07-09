@@ -1,7 +1,10 @@
 Change History
 ==============
 
-0.2 - Unreleased
+0.3 - Unreleased
+----------------
+
+0.2 - 2013-03-03
 ----------------
 
 - Add parameters `learn_rate_decays` and `learn_rate_minimums`, which
@@ -12,6 +15,8 @@ Change History
   those.
 
 - Add support for processing sparse input data matrices.
+
+- Improve miserable performance of `DBN.predict_proba`.
 
 0.2b1 - 2012-12-30
 ------------------
