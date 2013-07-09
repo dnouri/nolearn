@@ -14,7 +14,7 @@ class DBN(BaseEstimator):
     """
     def __init__(
         self,
-        layer_sizes,
+        layer_sizes=None,
         scales=0.05,
         fan_outs=None,
         output_act_funct=None,
@@ -168,6 +168,9 @@ class DBN(BaseEstimator):
 
         :param verbose: Debugging output.
         """
+
+        if layer_sizes is None:
+            layer_sizes = [-1, -1]
 
         if output_act_funct is None:
             output_act_funct = activationFunctions.Softmax()
