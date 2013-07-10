@@ -19,7 +19,7 @@ class DBN(BaseEstimator):
         fan_outs=None,
         output_act_funct=None,
         real_valued_vis=True,
-        use_re_lu=False,
+        use_re_lu=True,
         uniforms=False,
 
         learn_rates=0.1,
@@ -28,7 +28,7 @@ class DBN(BaseEstimator):
         momentum=0.9,
         l2_costs=0.0001,
         dropouts=0,
-        nesterov=False,
+        nesterov=True,
         nest_compare=True,
         rms_lims=None,
 
@@ -78,9 +78,15 @@ class DBN(BaseEstimator):
                             if you pass an ``X`` with 784 features,
                             and a ``y`` with 10 classes.
 
-        :param scales: Not documented at this time.
+        :param scales: Scale of the randomly initialized weights.  A
+                       list of floating point values.  When you find
+                       good values for the scale of the weights you
+                       can speed up training a lot, and also improve
+                       performance.  Defaults to `0.05`.
 
-        :param fan_outs: Not documented at this time.
+        :param fan_outs: The number of nonzero columns per layer.  The
+                         default is `None`, which leaves all columns
+                         on.
 
         :param output_act_funct: Output activation function.  Instance
                                  of type
@@ -392,7 +398,7 @@ class DBN(BaseEstimator):
                 print "  ({})".format(elapsed.split('.')[0])
                 time0 = time()
             if self.fine_tune_callback is not None:
-                self.fine_tune_callback(self, epoch)
+                self.fine_tune_callback(self, epoch + 1)
 
     def predict(self, X):
         return np.argmax(self.predict_proba(X), axis=1)
