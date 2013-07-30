@@ -78,9 +78,12 @@ class DBN(BaseEstimator):
                             if you pass an ``X`` with 784 features,
                             and a ``y`` with 10 classes.
 
-        :param scales: Not documented at this time.
+        :param scales: A list of scales for the random initialization
+                       of weights.  Defaults to `0.5`.
 
-        :param fan_outs: Not documented at this time.
+        :param fan_outs: Number of nonzero incoming connections to a
+                         hidden unit.  Defaults to `None`, which means
+                         that all connections have non-zero weights.
 
         :param output_act_funct: Output activation function.  Instance
                                  of type
