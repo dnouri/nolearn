@@ -24,6 +24,7 @@ Modules
 
    cache
    console
+   convnet
    dataset
    dbn
    grid_search

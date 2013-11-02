@@ -4,19 +4,25 @@ Change History
 0.3 - Unreleased
 ----------------
 
+- convnet: Add scikit-learn estimator based on Jia and Donahue's
+  `DeCAF`.
+
+- dbn: Change default args of `use_re_lu=True` and `nesterov=True`.
+
 0.2 - 2013-03-03
 ----------------
 
-- Add parameters `learn_rate_decays` and `learn_rate_minimums`, which
-  allow for decreasing the learning after each epoch of fine-tuning.
+- dbn: Add parameters `learn_rate_decays` and `learn_rate_minimums`,
+  which allow for decreasing the learning after each epoch of
+  fine-tuning.
 
-- Allow `-1` as the value of the input and output layers of the neural
-  network.  The shapes of `X` and `y` will then be used to determine
-  those.
+- dbn: Allow `-1` as the value of the input and output layers of the
+  neural network.  The shapes of `X` and `y` will then be used to
+  determine those.
 
-- Add support for processing sparse input data matrices.
+- dbn: Add support for processing sparse input data matrices.
 
-- Improve miserable performance of `DBN.predict_proba`.
+- dbn: Improve miserable speed of `DBN.predict_proba`.
 
 0.2b1 - 2012-12-30
 ------------------
