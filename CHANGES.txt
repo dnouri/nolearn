@@ -1,7 +1,7 @@
 Change History
 ==============
 
-0.3 - Unreleased
+0.3 - 2013-11-02
 ----------------
 
 - convnet: Add scikit-learn estimator based on Jia and Donahue's
