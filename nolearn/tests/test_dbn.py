@@ -39,15 +39,16 @@ def test_callback(digits):
         [X_train.shape[1], 4, 10],
         epochs=3,
         epochs_pretrain=2,
+        use_re_lu=False,
         fine_tune_callback=fine_tune_callback,
         pretrain_callback=pretrain_callback,
         )
 
     clf.fit(X_train, y_train)
     assert fine_tune_call_args == [
-        (clf, 0), (clf, 1), (clf, 2)]
+        (clf, 1), (clf, 2), (clf, 3)]
     assert pretrain_call_args == [
-        (clf, 0, 0), (clf, 1, 0), (clf, 0, 1), (clf, 1, 1)]
+        (clf, 1, 0), (clf, 2, 0), (clf, 1, 1), (clf, 2, 1)]
 
 
 def test_errors(digits):
@@ -56,9 +57,10 @@ def test_errors(digits):
     X_train, X_test, y_train, y_test = digits
 
     clf = DBN(
-        [X_train.shape[1], 4, 10],
+        [-1, 4, 10],
         epochs=3,
         epochs_pretrain=3,
+        use_re_lu=False,
         )
     clf.fit(X_train, y_train)
 
@@ -68,7 +70,7 @@ def test_errors(digits):
 
     assert len(clf.errors_fine_tune_) == 3
     assert len(clf.losses_fine_tune_) == 3
-    
+
 
 def test_functional_iris(iris):
     from ..dbn import DBN
@@ -76,7 +78,7 @@ def test_functional_iris(iris):
     X_train, X_test, y_train, y_test = iris.train_test_split()
 
     clf = DBN(
-        [X_train.shape[1], 4, 3],
+        [-1, 4, 3],
         learn_rates=0.3,
         output_act_funct='Linear',
         epochs=50,
@@ -108,6 +110,7 @@ def test_functional_digits_with_pretrain(digits):
     clf = DBN(
         [64, 32, 10],
         epochs_pretrain=10,
+        use_re_lu=False,
         verbose=0,
         )
     clf.fit(X_train, y_train)
@@ -127,6 +130,7 @@ def test_sparse_support(digits):
     clf = DBN(
         [64, 32, 10],
         epochs_pretrain=10,
+        use_re_lu=False,
         verbose=0,
         )
     clf.fit(X_train, y_train)
@@ -148,3 +152,4 @@ def test_layer_sizes_auto(iris):
 
     assert clf.net_.weights[0].shape == (4, 4)
     assert clf.net_.weights[1].shape == (4, 3)
+

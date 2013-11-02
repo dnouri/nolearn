@@ -3,7 +3,6 @@ from time import time
 
 from gdbn.dbn import buildDBN
 from gdbn import activationFunctions
-import gnumpy
 import numpy as np
 from sklearn.base import BaseEstimator
 
@@ -334,6 +333,8 @@ class DBN(BaseEstimator):
             print "Learn rates: {}".format(self.net_.learnRates)
 
     def fit(self, X, y):
+        if self.verbose:
+            print "[DBN] fitting X.shape=%s" % (X.shape,)
         y = self._onehot(y)
 
         self.net_ = self._build_net(X, y)
@@ -372,7 +373,8 @@ class DBN(BaseEstimator):
                         print "  ({})".format(elapsed.split('.')[0])
                         time0 = time()
                     if self.pretrain_callback is not None:
-                        self.pretrain_callback(self, epoch, layer_index)
+                        self.pretrain_callback(
+                            self, epoch + 1, layer_index)
 
         self._configure_net_finetune(self.net_)
         if self.verbose:  # pragma: no cover
