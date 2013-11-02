@@ -83,9 +83,9 @@ class DBN(BaseEstimator):
                        can speed up training a lot, and also improve
                        performance.  Defaults to `0.05`.
 
-        :param fan_outs: The number of nonzero columns per layer.  The
-                         default is `None`, which leaves all columns
-                         on.
+        :param fan_outs: Number of nonzero incoming connections to a
+                         hidden unit.  Defaults to `None`, which means
+                         that all connections have non-zero weights.
 
         :param output_act_funct: Output activation function.  Instance
                                  of type
@@ -430,3 +430,4 @@ class DBN(BaseEstimator):
         targets = self._onehot(y)
         mistakes = loss_funct(outputs, targets)
         return - float(mistakes) / len(y) + 1
+
