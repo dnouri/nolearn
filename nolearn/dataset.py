@@ -63,7 +63,7 @@ class Dataset(object):
         return StratifiedShuffleSplit(
             self.target,
             indices=True,
-            n_iterations=self.n_iterations,
+            n_iter=self.n_iterations,
             test_size=self.test_size,
             random_state=self.random_state,
             )
@@ -73,3 +73,4 @@ class Dataset(object):
         X_train, X_test, = self.data[train_index], self.data[test_index]
         y_train, y_test, = self.target[train_index], self.target[test_index]
         return X_train, X_test, y_train, y_test
+
