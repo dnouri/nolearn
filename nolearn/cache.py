@@ -88,6 +88,10 @@ def default_cache_key(*args, **kwargs):
     return str(args) + str(sorted(kwargs.items()))
 
 
+class DontCache(Exception):
+    pass
+
+
 def cached(cache_key=default_cache_key, cache_path=None):
     def cached(func):
         @wraps(func)
@@ -95,7 +99,11 @@ def cached(cache_key=default_cache_key, cache_path=None):
             # Calculation of the cache key is delegated to a function
             # that's passed in via the decorator call
             # (`default_cache_key` by default).
-            key = str(cache_key(*args, **kwargs))
+            try:
+                key = str(cache_key(*args, **kwargs))
+            except DontCache:
+                return func(*args, **kwargs)
+
             hashed_key = hashlib.sha1(key).hexdigest()[:8]
 
             # We construct the filename using the cache key.  If the
