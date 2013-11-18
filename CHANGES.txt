@@ -4,6 +4,8 @@ Change History
 0.3.1 - Unreleased
 ------------------
 
+- convnet: Add `center_only` and `classify_direct` options.
+
 0.3 - 2013-11-02
 ----------------
 

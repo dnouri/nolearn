@@ -1,11 +1,13 @@
 import os
 
-from nolearn.cache import cached
+from nolearn import cache
 import numpy as np
 from sklearn.base import BaseEstimator
 
 
 def _transform_cache_key(self, X):
+    if len(X) == 1:
+        raise cache.DontCache
     return ','.join([
         str(X[:20]),
         str(X[-20:]),
@@ -28,6 +30,8 @@ class ConvNetFeatures(BaseEstimator):
         feature_layer='fc7_cudanet_out',
         pretrained_params='imagenet.decafnet.epoch90',
         pretrained_meta='imagenet.decafnet.meta',
+        center_only=True,
+        classify_direct=False,
         ):
         """
         :param feature_layer: The ConvNet layer that's used for
@@ -54,10 +58,24 @@ class ConvNetFeatures(BaseEstimator):
                                 must file to the file with the
                                 pretrained parameters' metadata.
                                 Defaults to `imagenet.decafnet.meta`.
+
+        :param center_only: Use the center patch of the image only
+                            when extracting features.  If `False`, use
+                            four corners, the image center and flipped
+                            variants and average a total of 10 feature
+                            vectors, which will usually yield better
+                            results.  Defaults to `True`.
+
+        :param classify_direct: When `True`, assume that input X is an
+                                array of shape (num x 256 x 256 x 3)
+                                as returned by `prepare_image`.
         """
         self.feature_layer = feature_layer
         self.pretrained_params = pretrained_params
         self.pretrained_meta = pretrained_meta
+        self.center_only = center_only
+        self.classify_direct = classify_direct
+        self.net_ = None
 
         if (not os.path.exists(pretrained_params) or
             not os.path.exists(pretrained_meta)):
@@ -69,20 +87,58 @@ class ConvNetFeatures(BaseEstimator):
                 "`pretrained_meta` to the `{}` estimator.".format(
                     self.__class__.__name__))
 
-    def fit(self, X, y=None):
+    def fit(self, X=None, y=None):
         from decaf.scripts.imagenet import DecafNet  # soft dep
 
-        self.net_ = DecafNet(
-            self.pretrained_params,
-            self.pretrained_meta,
-            )
+        if self.net_ is None:
+            self.net_ = DecafNet(
+                self.pretrained_params,
+                self.pretrained_meta,
+                )
         return self
 
-    @cached(_transform_cache_key)
+    @cache.cached(_transform_cache_key)
     def transform(self, X):
+        if not self.classify_direct:
+            return self._transform(X)
+        else:
+            return self._transform_direct(X)
+
+    def _transform(self, X):
         features = []
         for img in X:
-            self.net_.classify(img, center_only=True)
-            features.append(self.net_.feature(self.feature_layer))
+            self.net_.classify(img, center_only=self.center_only)
+            feat = self.net_.feature(self.feature_layer)
+            if not self.center_only:
+                feat = feat.mean(0)
+            features.append(feat)
         return np.vstack(features)
 
+    def _transform_direct(self, X):
+        features = []
+        for img in X:
+            images = self.net_.oversample(img, center_only=self.center_only)
+            self.net_.classify_direct(images)
+            feat = self.net_.feature(self.feature_layer)
+            if not self.center_only:
+                feat = feat.mean(0)
+            features.append(feat)
+        return np.vstack(features)
+
+    def prepare_image(self, image):
+        """Returns image of shape `(256, 256, 3)`, as expected by
+        `transform` when `classify_direct = True`.
+        """
+        from decaf.util import transform  # soft dep
+        _JEFFNET_FLIP = True
+
+        # first, extract the 256x256 center.
+        image = transform.scale_and_extract(transform.as_rgb(image), 256)
+        # convert to [0,255] float32
+        image = image.astype(np.float32) * 255.
+        if _JEFFNET_FLIP:
+            # Flip the image if necessary, maintaining the c_contiguous order
+            image = image[::-1, :].copy()
+        # subtract the mean
+        image -= self.net_._data_mean
+        return image
