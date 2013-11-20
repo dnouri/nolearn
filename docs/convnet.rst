@@ -1,5 +1,5 @@
-:mod:`nolearn.dbn`
-------------------
+:mod:`nolearn.convnet`
+----------------------
 
 API
 ~~~
