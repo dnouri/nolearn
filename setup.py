@@ -14,6 +14,7 @@ except IOError:
 install_requires = [
     'docopt',
     'gdbn',
+    'joblib',
     'scikit-learn',
     'zope.deprecation',
     ]
