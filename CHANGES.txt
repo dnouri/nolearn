@@ -1,7 +1,7 @@
 Change History
 ==============
 
-0.4 - Unreleased
+0.4 - 2014-01-15
 ----------------
 
 - cache: Use joblib's `numpy_pickle` instead of `cPickle` to persist.
