@@ -17,7 +17,7 @@ You'll need to manually `install DeCAF
 <https://github.com/UCB-ICSI-Vision-Group/decaf-release/>`_ for
 :class:`ConvNetFeatures` to work.
 
-You will also need to download the a tarball that contains `pretrained
+You will also need to download a tarball that contains `pretrained
 parameter files
 <http://www.eecs.berkeley.edu/~jiayq/decaf_pretrained/>`_ from
 Yangqing Jia's homepage.
