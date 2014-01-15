@@ -22,7 +22,8 @@ class ConvNetFeatures(BaseEstimator):
     Based on Yangqing Jia and Jeff Donahue's `DeCAF
     <https://github.com/UCB-ICSI-Vision-Group/decaf-release/wiki>`_.
 
-    Expects its input X to be a list of images as produced by
+    If ``classify_direct=False``, expects its input X to be a list of
+    image filenames or arrays as produced by
     `np.array(Image.open(filename))`.
     """
     def __init__(
@@ -107,6 +108,9 @@ class ConvNetFeatures(BaseEstimator):
                     img, center_only=self.center_only)
                 self.net_.classify_direct(images)
             else:
+                if isinstance(img, str):
+                    import Image  # soft dep
+                    img = np.array(Image.open(img))
                 self.net_.classify(img, center_only=self.center_only)
             feat = None
             for layer in self.feature_layer.split(','):
@@ -116,7 +120,7 @@ class ConvNetFeatures(BaseEstimator):
                 else:
                     feat = np.hstack([feat, val])
             if not self.center_only:
-                feat = feat.mean(0)
+                feat = feat.flatten()
             features.append(feat)
         return np.vstack(features)
 
