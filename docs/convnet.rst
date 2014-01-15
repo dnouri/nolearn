@@ -38,10 +38,13 @@ Example: Dogs vs. Cats
 
 What follows is a simple example that uses :class:`ConvNetFeatures`
 and scikit-learn to classify images from the `Kaggle Dogs vs. Cats
-challenge <https://www.kaggle.com/c/dogs-vs-cats>`_.
+challenge <https://www.kaggle.com/c/dogs-vs-cats>`_.  Before you
+start, you must download the images from the Kaggle competition page.
+The ``train/`` folder will be referred to further down as
+``TRAIN_DATA_DIR``.
 
-We'll first define a few imports and the paths to files that we
-downloaded previously:
+We'll first define a few imports and the paths to the files that we
+just downloaded:
 
 .. code-block:: python
 
@@ -54,7 +57,7 @@ downloaded previously:
     from sklearn.utils import shuffle
 
     DECAF_IMAGENET_DIR = '/path/to/imagenet-files/'
-    TRAIN_DATA = '/path/to/dogs-vs-cats-training-data/'
+    TRAIN_DATA_DIR = '/path/to/dogs-vs-cats-training-images/'
 
 A ``get_dataset`` function will return a list of all image filenames
 and labels, shuffled for our convenience:
@@ -62,9 +65,9 @@ and labels, shuffled for our convenience:
 .. code-block:: python
 
     def get_dataset():
-        cat_dir = TRAIN_DATA + 'cat/'
+        cat_dir = TRAIN_DATA_DIR + 'cat/'
         cat_filenames = [cat_dir + fn for fn in os.listdir(cat_dir)]
-        dog_dir = TRAIN_DATA + 'dog/'
+        dog_dir = TRAIN_DATA_DIR + 'dog/'
         dog_filenames = [dog_dir + fn for fn in os.listdir(dog_dir)]
 
         labels = [0] * len(cat_filenames) + [1] * len(dog_filenames)
@@ -100,15 +103,12 @@ consists of :class:`ConvNetFeatures` and a
 
     main()
 
-
 Note that we use only 100 images to train our classifier (and 200 for
 testing).  Regardless, and thanks to the magic of pre-trained
 convolutional nets, we're able to reach an accuracy of around 94%,
 which is an improvement of 11% over the classifier described in [1]_.
 
 
-.. [1] Golle, P. (2008) Machine Learning Attacks against the Asirra
-       CAPTCHA, to appear in in Proceedings of the 15th ACM conference
-       on Computer and communications security.
-
-
+.. [1] P. Golle. `Machine learning attacks against the asirra
+       captcha. <https://crypto.stanford.edu/~pgolle/papers/dogcat.pdf‎>`_
+       In ACM CCS 2008, 2008.
