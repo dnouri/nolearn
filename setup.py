@@ -2,7 +2,7 @@ import os
 
 from setuptools import setup, find_packages
 
-version = '0.3.2dev'
+version = '0.4dev'
 
 here = os.path.abspath(os.path.dirname(__file__))
 try:
@@ -16,7 +16,6 @@ install_requires = [
     'gdbn',
     'joblib',
     'scikit-learn',
-    'zope.deprecation',
     ]
 
 tests_require = [

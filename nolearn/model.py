@@ -1,10 +1,7 @@
 import numpy as np
-from scipy import sparse
 from sklearn.base import BaseEstimator
 from sklearn.externals.joblib import delayed
 from sklearn.externals.joblib import Parallel
-from sklearn.pipeline import FeatureUnion
-from zope.deprecation import deprecated
 
 
 class AbstractModel(object):
@@ -81,8 +78,3 @@ class AveragingEstimator(BaseEstimator):
         for proba in result[1:]:
             result[0] += proba
         return result[0] / len(self.estimators)
-
-
-FeatureStacker = FeatureUnion
-deprecated('FeatureStacker',
-           'Please use sklearn.pipeline.FeatureUnion instead')

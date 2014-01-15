@@ -1,8 +1,8 @@
 Change History
 ==============
 
-0.3.2 - Unreleased
-------------------
+0.4 - Unreleased
+----------------
 
 - cache: Use joblib's `numpy_pickle` instead of `cPickle` to persist.
 
