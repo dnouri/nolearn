@@ -68,13 +68,15 @@ Your estimator class can then use the decorator like so:
             # ...
 """
 
-import cPickle
 from functools import wraps
 import hashlib
 import logging
 import random
 import os
 import string
+import traceback
+
+from joblib import numpy_pickle
 
 
 CACHE_PATH = 'cache/'
@@ -110,15 +112,14 @@ def cached(cache_key=default_cache_key, cache_path=None):
             # file exists, unpickle and return the value.
             filename = os.path.join(
                 cache_path or CACHE_PATH,
-                '{}.{}-cache-{}.pkl'.format(
+                '{}.{}-cache-{}'.format(
                     func.__module__, func.__name__, hashed_key))
 
             if os.path.exists(filename):
                 filesize = os.path.getsize(filename)
                 size = "%0.1f MB" % (filesize / (1024 * 1024.0))
                 logger.debug(" * cache hit: {} ({})".format(filename, size))
-                with open(filename, 'rb') as f:
-                    return cPickle.load(f)
+                return numpy_pickle.load(filename)
             else:
                 logger.debug(" * cache miss: {}".format(filename))
                 value = func(*args, **kwargs)
@@ -126,14 +127,13 @@ def cached(cache_key=default_cache_key, cache_path=None):
                     filename,
                     ''.join(random.sample(string.ascii_letters, 4)),
                     )
-                with open(tmp_filename, 'wb') as f:
-                    try:
-                        cPickle.dump(value, f, -1)
-                        os.rename(tmp_filename, filename)
-                    except SystemError:
-                        logger.warning(
-                            "Saving pickle {} resulted in SystemError".format(
-                            filename))
+                try:
+                    numpy_pickle.dump(value, tmp_filename)
+                    os.rename(tmp_filename, filename)
+                except Exception:
+                    logger.exception(
+                        "Saving pickle {} resulted in Exception".format(
+                        filename))
                 return value
 
         wrapper.uncached = func

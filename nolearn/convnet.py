@@ -22,7 +22,8 @@ class ConvNetFeatures(BaseEstimator):
     Based on Yangqing Jia and Jeff Donahue's `DeCAF
     <https://github.com/UCB-ICSI-Vision-Group/decaf-release/wiki>`_.
 
-    Expects its input X to be a list of images as produced by
+    If ``classify_direct=False``, expects its input X to be a list of
+    image filenames or arrays as produced by
     `np.array(Image.open(filename))`.
     """
     def __init__(
@@ -46,6 +47,7 @@ class ConvNetFeatures(BaseEstimator):
                                 - `fc6_neuron_cudanet_out`
                                 - `fc7_cudanet_out`
                                 - `fc7_neuron_cudanet_out`
+                                - `probs_cudanet_out`
 
         :param pretrained_params: This must point to the file with the
                                   pretrained parameters.  Defaults to
@@ -99,29 +101,26 @@ class ConvNetFeatures(BaseEstimator):
 
     @cache.cached(_transform_cache_key)
     def transform(self, X):
-        if not self.classify_direct:
-            return self._transform(X)
-        else:
-            return self._transform_direct(X)
-
-    def _transform(self, X):
         features = []
         for img in X:
-            self.net_.classify(img, center_only=self.center_only)
-            feat = self.net_.feature(self.feature_layer)
+            if self.classify_direct:
+                images = self.net_.oversample(
+                    img, center_only=self.center_only)
+                self.net_.classify_direct(images)
+            else:
+                if isinstance(img, str):
+                    import Image  # soft dep
+                    img = np.array(Image.open(img))
+                self.net_.classify(img, center_only=self.center_only)
+            feat = None
+            for layer in self.feature_layer.split(','):
+                val = self.net_.feature(layer)
+                if feat is None:
+                    feat = val
+                else:
+                    feat = np.hstack([feat, val])
             if not self.center_only:
-                feat = feat.mean(0)
-            features.append(feat)
-        return np.vstack(features)
-
-    def _transform_direct(self, X):
-        features = []
-        for img in X:
-            images = self.net_.oversample(img, center_only=self.center_only)
-            self.net_.classify_direct(images)
-            feat = self.net_.feature(self.feature_layer)
-            if not self.center_only:
-                feat = feat.mean(0)
+                feat = feat.flatten()
             features.append(feat)
         return np.vstack(features)
 

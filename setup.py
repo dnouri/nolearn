@@ -2,7 +2,7 @@ import os
 
 from setuptools import setup, find_packages
 
-version = '0.3.1'
+version = '0.3.2dev'
 
 here = os.path.abspath(os.path.dirname(__file__))
 try:
@@ -14,6 +14,7 @@ except IOError:
 install_requires = [
     'docopt',
     'gdbn',
+    'joblib',
     'scikit-learn',
     'zope.deprecation',
     ]

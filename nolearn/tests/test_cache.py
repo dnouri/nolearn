@@ -47,6 +47,6 @@ def test_cache_systemerror(tmpdir):
     def add(one, two):
         return one + two
 
-    with patch('nolearn.cache.cPickle.dump') as dump:
+    with patch('nolearn.cache.numpy_pickle.dump') as dump:
         dump.side_effect = SystemError()
         assert add(2, 3) == 5
