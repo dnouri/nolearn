@@ -21,6 +21,8 @@ class ConvNetFeatures(BaseEstimator):
 
     Based on Yangqing Jia and Jeff Donahue's `DeCAF
     <https://github.com/UCB-ICSI-Vision-Group/decaf-release/wiki>`_.
+    Please make sure you read and accept DeCAF's license before you
+    use this class.
 
     If ``classify_direct=False``, expects its input X to be a list of
     image filenames or arrays as produced by

@@ -32,6 +32,7 @@ you instantiate :class:`ConvNetFeatures` like so:
         pretrained_meta='/path/to/imagenet.decafnet.meta',
         )
 
+For more information on how DeCAF works, please refer to [1]_.
 
 Example: Dogs vs. Cats
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -106,9 +107,15 @@ consists of :class:`ConvNetFeatures` and a
 Note that we use only 100 images to train our classifier (and 200 for
 testing).  Regardless, and thanks to the magic of pre-trained
 convolutional nets, we're able to reach an accuracy of around 94%,
-which is an improvement of 11% over the classifier described in [1]_.
+which is an improvement of 11% over the classifier described in [2]_.
 
 
-.. [1] P. Golle. `Machine learning attacks against the asirra
+.. [1] Jeff Donahue, Yangqing Jia, Oriol Vinyals, Judy Hoffman, Ning
+       Zhang, Eric Tzeng, and Trevor Darrell. `Decaf: A deep
+       convolutional activation feature for generic visual
+       recognition.  <http://arxiv.org/abs/1310.1531>`_ arXiv preprint
+       arXiv:1310.1531, 2013.
+
+.. [2] P. Golle. `Machine learning attacks against the asirra
        captcha. <https://crypto.stanford.edu/~pgolle/papers/dogcat.pdf‎>`_
        In ACM CCS 2008, 2008.
