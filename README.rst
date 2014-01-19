@@ -1,6 +1,6 @@
-This package contains a number of utility modules that are helpful
-with machine learning tasks.  Most of the modules work together with
-`scikit-learn <http://scikit-learn.org/>`_, others are more generally
-useful.
+nolearn contains a number of wrappers around existing neural network
+libraries, along with a few machine learning utility modules.  Most
+functionality is written to be compatible with the the excellent
+`scikit-learn <http://scikit-learn.org/>`_ library.
 
 View the `documentation here <http://packages.python.org/nolearn/>`_.

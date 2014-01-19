@@ -30,7 +30,7 @@ docs_require = [
 
 setup(name='nolearn',
       version=version,
-      description="scikit-learn compatible wrappers for neural net libraries "
+      description="scikit-learn compatible wrappers for neural net libraries, "
       "and other utilities.",
       long_description='\n\n'.join([README, CHANGES]),
       classifiers=[
