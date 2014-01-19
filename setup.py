@@ -30,7 +30,8 @@ docs_require = [
 
 setup(name='nolearn',
       version=version,
-      description="Miscellaneous utilities for machine learning.",
+      description="scikit-learn compatible wrappers for neural net libraries "
+      "and other utilities.",
       long_description='\n\n'.join([README, CHANGES]),
       classifiers=[
           'Development Status :: 4 - Beta',
@@ -48,8 +49,5 @@ setup(name='nolearn',
           'testing': tests_require,
           'docs': docs_require,
           },
-      dependency_links=[
-        'http://danielnouri.org/python-packages/',
-        ],
       )
 
