@@ -1,4 +1,5 @@
 import os
+import sys
 
 from nolearn import cache
 import numpy as np
@@ -27,6 +28,8 @@ class ConvNetFeatures(BaseEstimator):
     image filenames or arrays as produced by
     `np.array(Image.open(filename))`.
     """
+    verbose = 0
+
     def __init__(
         self,
         feature_layer='fc7_cudanet_out',
@@ -34,6 +37,7 @@ class ConvNetFeatures(BaseEstimator):
         pretrained_meta='imagenet.decafnet.meta',
         center_only=True,
         classify_direct=False,
+        verbose=0,
         ):
         """
         :param feature_layer: The ConvNet layer that's used for
@@ -123,6 +127,12 @@ class ConvNetFeatures(BaseEstimator):
             if not self.center_only:
                 feat = feat.flatten()
             features.append(feat)
+            if self.verbose:
+                sys.stdout.write(
+                    "\r[ConvNet] %d%%" % (100. * len(features) / len(X)))
+                sys.stdout.flush()
+        if self.verbose:
+            sys.stdout.write('\n')
         return np.vstack(features)
 
     def prepare_image(self, image):
