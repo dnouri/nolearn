@@ -44,6 +44,9 @@ class DBN(BaseEstimator):
 
         pretrain_callback=None,
         fine_tune_callback=None,
+
+        random_state=None,
+
         verbose=0,
         ):
         """
@@ -171,6 +174,9 @@ class DBN(BaseEstimator):
                                    and the epoch, and is called for
                                    each epoch of fine tuning.
 
+        :param random_state: An optional int used as the seed by the
+                             random number generator.
+
         :param verbose: Debugging output.
         """
 
@@ -181,6 +187,9 @@ class DBN(BaseEstimator):
             output_act_funct = activationFunctions.Softmax()
         elif isinstance(output_act_funct, str):
             output_act_funct = getattr(activationFunctions, output_act_funct)()
+
+        if random_state is not None:
+            raise ValueError("random_sate must be an int")
 
         self.layer_sizes = layer_sizes
         self.scales = scales
@@ -214,6 +223,7 @@ class DBN(BaseEstimator):
 
         self.pretrain_callback = pretrain_callback
         self.fine_tune_callback = fine_tune_callback
+        self.random_state = random_state
         self.verbose = verbose
 
     def _fill_missing_layer_sizes(self, X, y):
@@ -235,6 +245,9 @@ class DBN(BaseEstimator):
         self._fill_missing_layer_sizes(X, y)
         if self.verbose:  # pragma: no cover
             print "[DBN] layers {}".format(self.layer_sizes)
+
+        if self.random_state is not None:
+            np.random.seed(self.random_state)
 
         net = buildDBN(
             self.layer_sizes,
