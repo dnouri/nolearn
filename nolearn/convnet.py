@@ -9,8 +9,7 @@ def _transform_cache_key(self, X):
     if len(X) == 1:
         raise cache.DontCache
     return ','.join([
-        str(X[:20]),
-        str(X[-20:]),
+        str(X),
         str(len(X)),
         str(sorted(self.get_params().items())),
         ])
