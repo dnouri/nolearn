@@ -115,7 +115,7 @@ class CaffeImageNet(ChunkedTransform, BaseEstimator):
             #     assertion error.
             self.net_.Forward([images[i]], [output_blobs[i]])
 
-        return output_blobs
+        return np.vstack([a[np.newaxis, ...] for a in output_blobs])
 
     @cache.cached(_transform_cache_key)
     def transform(self, X):
