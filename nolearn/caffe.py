@@ -1,6 +1,9 @@
 from __future__ import absolute_import
 
-from caffe import CaffeNet
+try:
+    from caffe import CaffeNet
+except ImportError:
+    from caffe import Net as CaffeNet
 from caffe.imagenet import wrapper
 from joblib import Parallel
 from joblib import delayed
