@@ -1,9 +1,5 @@
 from __future__ import absolute_import
 
-try:
-    from caffe import CaffeNet
-except ImportError:
-    from caffe import Net as CaffeNet
 from caffe.imagenet import wrapper
 from joblib import Parallel
 from joblib import delayed
@@ -83,11 +79,20 @@ class CaffeImageNet(ChunkedTransform, BaseEstimator):
         self.verbose = verbose
 
     @classmethod
+    def Net(cls):
+        # soft dependency
+        try:
+            from caffe import CaffeNet
+        except ImportError:
+            from caffe import Net as CaffeNet
+        return CaffeNet
+
+    @classmethod
     def _create_net(cls, model_def, pretrained_model):
         key = (cls.__name__, model_def, pretrained_model)
         net = _cached_nets.get(key)
         if net is None:
-            net = CaffeNet(model_def, pretrained_model)
+            net = cls.Net()(model_def, pretrained_model)
         _cached_nets[key] = net
         return net
 
