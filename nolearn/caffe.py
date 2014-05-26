@@ -147,7 +147,7 @@ class CaffeImageNet(ChunkedTransform, BaseEstimator):
 
     def __getstate__(self):
         d = self.__dict__.copy()
-        d.pop('net_')
+        d.pop('net_', None)
         return d
 
     def __setstate__(self, state):
