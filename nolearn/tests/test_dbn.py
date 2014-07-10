@@ -1,3 +1,4 @@
+import numpy as np
 from scipy.sparse import csr_matrix
 from sklearn.cross_validation import cross_val_score
 from sklearn import datasets
@@ -70,6 +71,27 @@ def test_errors(digits):
 
     assert len(clf.errors_fine_tune_) == 3
     assert len(clf.losses_fine_tune_) == 3
+
+
+def test_labelencoding(iris):
+    from ..dbn import DBN
+
+    X_train, X_test, y_train, y_test = iris.train_test_split()
+    y_train = y_train * 1.3
+    y_test = y_test * 1.3
+
+    clf = DBN(
+        [-1, 4, -1],
+        epochs=10,
+        )
+
+    clf.fit(X_train, y_train)
+
+    predicted_labels = np.unique(clf.predict(X_test))
+    assert len(predicted_labels) > 1
+    for label in predicted_labels:
+        # predicted labels should correspond to what's in y_test
+        assert label in y_test
 
 
 def test_functional_iris(iris):

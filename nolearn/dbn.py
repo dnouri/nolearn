@@ -5,6 +5,7 @@ from gdbn.dbn import buildDBN
 from gdbn import activationFunctions
 import numpy as np
 from sklearn.base import BaseEstimator
+from sklearn.preprocessing import LabelEncoder
 
 
 class DBN(BaseEstimator):
@@ -348,6 +349,8 @@ class DBN(BaseEstimator):
     def fit(self, X, y):
         if self.verbose:
             print "[DBN] fitting X.shape=%s" % (X.shape,)
+        self._enc = LabelEncoder()
+        y = self._enc.fit_transform(y)
         y = self._onehot(y)
 
         self.net_ = self._build_net(X, y)
@@ -416,7 +419,8 @@ class DBN(BaseEstimator):
                 self.fine_tune_callback(self, epoch + 1)
 
     def predict(self, X):
-        return np.argmax(self.predict_proba(X), axis=1)
+        y_ind = np.argmax(self.predict_proba(X), axis=1)
+        return self._enc.inverse_transform(y_ind)
 
     def predict_proba(self, X):
         if hasattr(X, 'todense'):
@@ -444,3 +448,6 @@ class DBN(BaseEstimator):
         mistakes = loss_funct(outputs, targets)
         return - float(mistakes) / len(y) + 1
 
+    @property
+    def classes_(self):
+        return self._enc.classes_
