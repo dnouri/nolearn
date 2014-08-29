@@ -106,7 +106,7 @@ def test_functional_iris(iris):
         epochs=50,
         )
 
-    scores = cross_val_score(clf, iris.data, iris.target, cv=10)
+    scores = cross_val_score(clf, iris.data, iris.target, cv=5)
     assert scores.mean() > 0.85
 
 
