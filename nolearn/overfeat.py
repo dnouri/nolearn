@@ -36,7 +36,7 @@ class OverFeatShell(ChunkedTransform, BaseEstimator):
     def __init__(
         self,
         feature_layer=21,
-        overfeat_bin='overfeat',
+        overfeat_bin='overfeat',  # or 'overfeat_cuda'
         pretrained_params=None,
         network_size=0,
         merge='maxmean',
@@ -87,9 +87,8 @@ class OverFeatShell(ChunkedTransform, BaseEstimator):
 
         if output == '':
             raise RuntimeError("Call failed; try lower 'batch_size'")
-        elif "unable" in output or "Invalid" in output:
-            print fnames
-            raise RuntimeError("\n" + output)
+        elif "unable" in output or "Invalid" in output or "error" in output:
+            raise RuntimeError("\n%s...\n%s" % (output[:500], list(fnames)))
 
         return output.splitlines()
 
