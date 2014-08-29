@@ -128,7 +128,7 @@ def cached(cache_key=default_cache_key, cache_path=None):
                     ''.join(random.sample(string.ascii_letters, 4)),
                     )
                 try:
-                    numpy_pickle.dump(value, tmp_filename)
+                    numpy_pickle.dump(value, tmp_filename, compress=9)
                     os.rename(tmp_filename, filename)
                 except Exception:
                     logger.exception(
