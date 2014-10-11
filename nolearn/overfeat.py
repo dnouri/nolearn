@@ -83,12 +83,22 @@ class OverFeatShell(ChunkedTransform, BaseEstimator):
             cmd += ['-d', self.pretrained_params]
         cmd += ["'{0}'".format(fn) for fn in fnames]
 
-        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        def _call(cmd):
+            out = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+            if out == '':
+                raise RuntimeError("Call failed; try lower 'batch_size'")
+            elif "unable" in out or "Invalid" in out or "error" in out:
+                raise RuntimeError("\n%s ... %s\n\n%s" % (
+                    out[:250], out[-250:], list(fnames)))
+            return out
 
-        if output == '':
-            raise RuntimeError("Call failed; try lower 'batch_size'")
-        elif "unable" in output or "Invalid" in output or "error" in output:
-            raise RuntimeError("\n%s...\n%s" % (output[:500], list(fnames)))
+        try:
+            output = _call(cmd)
+        except RuntimeError:
+            try:
+                output = _call(cmd)
+            except RuntimeError:
+                raise
 
         return output.splitlines()
 
