@@ -6,6 +6,7 @@ from gdbn import activationFunctions
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import OneHotEncoder
 
 
 class DBN(BaseEstimator):
@@ -315,14 +316,8 @@ class DBN(BaseEstimator):
                 yield X_batch
 
     def _onehot(self, y):
-        if len(y.shape) == 1:
-            num_classes = y.max() + 1
-            y_new = np.zeros(
-                (y.shape[0], num_classes), dtype=np.int)
-            for index, label in enumerate(y):
-                y_new[index][label] = 1
-                y = y_new
-        return y
+        return np.array(
+            OneHotEncoder().fit_transform(y.reshape(-1, 1)).todense())
 
     def _num_mistakes(self, targets, outputs):
         if hasattr(targets, 'as_numpy_array'):  # pragma: no cover
@@ -444,7 +439,7 @@ class DBN(BaseEstimator):
             loss_funct = self._num_mistakes
 
         outputs = self.predict_proba(X)
-        targets = self._onehot(y)
+        targets = self._onehot(self._enc.transform(y))
         mistakes = loss_funct(outputs, targets)
         return - float(mistakes) / len(y) + 1
 
