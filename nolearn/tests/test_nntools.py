@@ -11,6 +11,7 @@ from sklearn.datasets import fetch_mldata
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import accuracy_score
 from sklearn.utils import shuffle
+import theano.tensor as T
 
 
 @pytest.fixture(scope='session')
@@ -80,7 +81,7 @@ def test_nntools_functional_grid_search(mnist, monkeypatch):
 
     nn = NeuralNet(
         layers=[],
-        update=nesterov_momentum,
+        X_tensor_type=T.matrix,
         )
 
     param_grid = {
@@ -134,6 +135,7 @@ def test_clone():
 
         loss=negative_log_likelihood,
         batch_iterator=BatchIterator(batch_size=100),
+        X_tensor_type=T.matrix,
         on_epoch_finished=None,
         on_training_finished=None,
         max_epochs=100,

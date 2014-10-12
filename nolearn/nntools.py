@@ -56,9 +56,10 @@ class NeuralNet(BaseEstimator):
         layers,
         update=nesterov_momentum,
         loss=negative_log_likelihood,
-        batch_iterator=BatchIterator(batch_size=100),
+        batch_iterator=BatchIterator(batch_size=128),
+        X_tensor_type=None,
         max_epochs=100,
-        eval_size=0.1,
+        eval_size=0.2,
         on_epoch_finished=None,
         on_training_finished=None,
         verbose=0,
@@ -76,6 +77,15 @@ class NeuralNet(BaseEstimator):
         self.verbose = verbose
         self.more_params = more_params or {}
 
+        if X_tensor_type is None:
+            types = {
+                2: T.matrix,
+                3: T.tensor3,
+                4: T.tensor4,
+                }
+            X_tensor_type = types[len(kwargs['input_shape'])]
+        self.X_tensor_type = X_tensor_type
+
         for key in kwargs.keys():
             assert not hasattr(self, key)
         vars(self).update(kwargs)
@@ -90,7 +100,8 @@ class NeuralNet(BaseEstimator):
         if self.verbose:
             self._print_layer_info(self.get_all_layers())
 
-        iter_funcs = self._create_iter_funcs(out, self.loss, self.update)
+        iter_funcs = self._create_iter_funcs(
+            out, self.loss, self.update, self.X_tensor_type)
         self.train_iter_, self.eval_iter_, self.predict_iter_ = iter_funcs
 
         self.train_loop(X, y)
@@ -186,10 +197,10 @@ class NeuralNet(BaseEstimator):
     def get_all_params(self):
         return get_all_params(self.output_layer_)[::-1]
 
-    def _create_iter_funcs(self, output_layer, loss_func, update):
-        X = T.matrix('x')
+    def _create_iter_funcs(self, output_layer, loss_func, update, input_type):
+        X = input_type('x')
         y = T.ivector('y')
-        X_batch = T.matrix('x_batch')
+        X_batch = input_type('x_batch')
         y_batch = T.ivector('y_batch')
 
         loss_train = loss_func(
@@ -244,12 +255,12 @@ class NeuralNet(BaseEstimator):
 
         return collected
 
-    def _initialize_layers(self, layers):
-        input_layer_name, input_layer_factory = layers[0]
+    def _initialize_layers(self, layer_types):
+        input_layer_name, input_layer_factory = layer_types[0]
         input_layer_params = self._get_params_for(input_layer_name)
         layer = input_layer_factory(**input_layer_params)
 
-        for (layer_name, layer_factory) in layers[1:]:
+        for (layer_name, layer_factory) in layer_types[1:]:
             layer_params = self._get_params_for(layer_name)
             layer = layer_factory(layer, **layer_params)
 
