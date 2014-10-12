@@ -31,8 +31,8 @@ def test_nntools_functional_mnist(mnist):
 
     epochs = []
 
-    def on_epoch_finished(nn, epoch):
-        epochs.append(epoch)
+    def on_epoch_finished(nn, train_history):
+        epochs[:] = train_history
         if len(epochs) > 1:
             raise StopIteration()
 

@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 
 import itertools
+import operator
+from time import time
 
 from nntools.layers import get_all_layers
 from nntools.layers import get_all_params
@@ -85,6 +87,8 @@ class NeuralNet(BaseEstimator):
         self.classes_ = self.enc_.classes_
 
         out = self.output_layer_ = self._initialize_layers(self.layers)
+        if self.verbose:
+            self._print_layer_info(self.get_all_layers())
 
         iter_funcs = self._create_iter_funcs(out, self.loss, self.update)
         self.train_iter_, self.eval_iter_, self.predict_iter_ = iter_funcs
@@ -98,6 +102,9 @@ class NeuralNet(BaseEstimator):
 
         epoch = 0
         info = None
+        best_valid_loss = np.inf
+
+        self.train_history_ = []
 
         while epoch < self.max_epochs:
             epoch += 1
@@ -105,6 +112,8 @@ class NeuralNet(BaseEstimator):
             train_losses = []
             valid_losses = []
             valid_accuracies = []
+
+            t0 = time()
 
             for Xb, yb in self.batch_iterator(X_train, y_train):
                 batch_train_loss = self.train_iter_(Xb, yb)
@@ -119,12 +128,19 @@ class NeuralNet(BaseEstimator):
             avg_valid_loss = np.mean(valid_losses)
             avg_valid_accuracy = np.mean(valid_accuracies)
 
+            if avg_valid_loss < best_valid_loss:
+                best_valid_loss = avg_valid_loss
+
             if self.verbose:
-                print("Epoch %d of %d" % (epoch, self.max_epochs))
-                print("  training loss:\t\t%.6f" % avg_train_loss)
-                print("  validation loss:\t\t%.6f" % avg_valid_loss)
-                print("  validation accuracy:\t\t%.2f %%" %
-                      (avg_valid_accuracy * 100))
+                print("Epoch {:>3} of {}\t({:.2f} sec)".format(
+                    epoch, self.max_epochs, time() - t0))
+                print("  training loss:      {:>10.6f}".format(avg_train_loss))
+                print("  validation loss:    {:>10.6f}".format(avg_valid_loss))
+                print("  validation accuracy:{:>9.2f}%{}".format(
+                    avg_valid_accuracy * 100,
+                    " !!!" if best_valid_loss == avg_valid_loss else "",
+                    ))
+                print("")
 
             info = dict(
                 epoch=epoch,
@@ -132,14 +148,16 @@ class NeuralNet(BaseEstimator):
                 valid_loss=avg_valid_loss,
                 valid_accuracy=avg_valid_accuracy,
                 )
+            self.train_history_.append(info)
+
             if self.on_epoch_finished is not None:
                 try:
-                    self.on_epoch_finished(self, info)
+                    self.on_epoch_finished(self, self.train_history_)
                 except StopIteration:
                     break
 
         if self.on_training_finished is not None:
-            self.on_training_finished(self, info)
+            self.on_training_finished(self, self.train_history_)
 
     def predict_proba(self, X):
         probas = []
@@ -236,6 +254,15 @@ class NeuralNet(BaseEstimator):
             layer = layer_factory(layer, **layer_params)
 
         return layer
+
+    def _print_layer_info(self, layers):
+        for layer in layers:
+            output_shape = layer.get_output_shape()
+            print("  {:<18}\t{:<20}\tproduces {:>7} outputs".format(
+                layer.__class__.__name__,
+                output_shape,
+                reduce(operator.mul, output_shape[1:]),
+                ))
 
     def get_params(self, deep=True):
         params = super(NeuralNet, self).get_params(deep=deep)
