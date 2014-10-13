@@ -181,7 +181,6 @@ class NeuralNet(BaseEstimator):
         return self.enc_.inverse_transform(y_pred)
 
     def score(self, X, y):
-        assert X.dtype == theano.config.floatX
         return accuracy_score(self.predict(X), y)
 
     def train_test_split(self, X, y, eval_size):
