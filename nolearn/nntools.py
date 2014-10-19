@@ -47,7 +47,10 @@ class BatchIterator(object):
                 yb = self.y[i * bs:(i + 1) * bs]
             else:
                 yb = None
-            yield Xb, yb
+            yield self.transform(Xb, yb)
+
+    def transform(self, Xb, yb):
+        return Xb, yb
 
 
 class NeuralNet(BaseEstimator):
