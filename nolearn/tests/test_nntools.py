@@ -2,14 +2,19 @@ from mock import patch
 from nntools.layers import DenseLayer
 from nntools.layers import DropoutLayer
 from nntools.layers import InputLayer
+from nntools.nonlinearities import identity
 from nntools.nonlinearities import softmax
 from nntools.updates import nesterov_momentum
 import numpy as np
 import pytest
 from sklearn.base import clone
+from sklearn.datasets import load_boston
 from sklearn.datasets import fetch_mldata
+from sklearn.datasets import make_regression
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import mean_absolute_error
+from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
 import theano.tensor as T
 
@@ -19,6 +24,16 @@ def mnist():
     dataset = fetch_mldata('mnist-original')
     X, y = dataset.data, dataset.target
     X = X.astype(np.float32) / 255.0
+    return shuffle(X, y, random_state=42)
+
+
+@pytest.fixture(scope='session')
+def boston():
+    dataset = load_boston()
+    X, y = dataset.data, dataset.target
+    # X, y = make_regression(n_samples=100000, n_features=13)
+    X = StandardScaler().fit_transform(X).astype(np.float32)
+    y = y.reshape(-1, 1).astype(np.float32)
     return shuffle(X, y, random_state=42)
 
 
@@ -133,9 +148,11 @@ def test_clone():
         update_learning_rate=0.01,
         update_momentum=0.9,
 
+        regression=False,
         loss=negative_log_likelihood,
         batch_iterator=BatchIterator(batch_size=100),
         X_tensor_type=T.matrix,
+        y_tensor_type=T.ivector,
         on_epoch_finished=None,
         on_training_finished=None,
         max_epochs=100,
@@ -156,3 +173,29 @@ def test_clone():
     params2.pop('output_nonlinearity')
 
     assert params == params1 == params2
+
+
+def test_nntools_functional_regression(boston):
+    from nolearn.nntools import NeuralNet
+
+    X, y = boston
+
+    nn = NeuralNet(
+        layers=[
+            ('input', InputLayer),
+            ('hidden1', DenseLayer),
+            ('output', DenseLayer),
+            ],
+        input_shape=(128, 13),
+        hidden1_num_units=100,
+        output_nonlinearity=identity,
+        output_num_units=1,
+
+        update_learning_rate=0.01,
+        update_momentum=0.1,
+        regression=True,
+        max_epochs=50,
+        )
+
+    nn.fit(X[:300], y[:300])
+    assert mean_absolute_error(nn.predict(X[300:]), y[300:]) < 3.0

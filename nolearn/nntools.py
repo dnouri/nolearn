@@ -6,11 +6,14 @@ from time import time
 
 from nntools.layers import get_all_layers
 from nntools.layers import get_all_params
+from nntools.objectives import mse
 from nntools.updates import nesterov_momentum
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.cross_validation import StratifiedKFold
+from sklearn.cross_validation import train_test_split
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
 import theano
 from theano import tensor as T
@@ -42,9 +45,10 @@ class BatchIterator(object):
         n_samples = self.X.shape[0]
         bs = self.batch_size
         for i in range((n_samples + bs - 1) / bs):
-            Xb = self.X[i * bs:(i + 1) * bs]
+            sl = slice(i * bs, (i + 1) * bs)
+            Xb = self.X[sl]
             if self.y is not None:
-                yb = self.y[i * bs:(i + 1) * bs]
+                yb = self.y[sl]
             else:
                 yb = None
             yield self.transform(Xb, yb)
@@ -54,32 +58,27 @@ class BatchIterator(object):
 
 
 class NeuralNet(BaseEstimator):
+    """A scikit-learn estimator based on `nntools`.
+    """
     def __init__(
         self,
         layers,
         update=nesterov_momentum,
-        loss=negative_log_likelihood,
+        loss=None,
         batch_iterator=BatchIterator(batch_size=128),
-        X_tensor_type=None,
+        regression=False,
         max_epochs=100,
         eval_size=0.2,
+        X_tensor_type=None,
+        y_tensor_type=None,
         on_epoch_finished=None,
         on_training_finished=None,
-        verbose=0,
         more_params=None,
+        verbose=0,
         **kwargs
         ):
-        self.layers = layers
-        self.update = update
-        self.loss = loss
-        self.batch_iterator = batch_iterator
-        self.max_epochs = max_epochs
-        self.eval_size = eval_size
-        self.on_epoch_finished = on_epoch_finished
-        self.on_training_finished = on_training_finished
-        self.verbose = verbose
-        self.more_params = more_params or {}
-
+        if loss is None:
+            loss = mse if regression else negative_log_likelihood
         if X_tensor_type is None:
             types = {
                 2: T.matrix,
@@ -87,7 +86,22 @@ class NeuralNet(BaseEstimator):
                 4: T.tensor4,
                 }
             X_tensor_type = types[len(kwargs['input_shape'])]
+        if y_tensor_type is None:
+            y_tensor_type = T.fmatrix if regression else T.ivector
+
+        self.layers = layers
+        self.update = update
+        self.loss = loss
+        self.batch_iterator = batch_iterator
+        self.regression = regression
+        self.max_epochs = max_epochs
+        self.eval_size = eval_size
         self.X_tensor_type = X_tensor_type
+        self.y_tensor_type = y_tensor_type
+        self.on_epoch_finished = on_epoch_finished
+        self.on_training_finished = on_training_finished
+        self.more_params = more_params or {}
+        self.verbose = verbose
 
         for key in kwargs.keys():
             assert not hasattr(self, key)
@@ -95,16 +109,20 @@ class NeuralNet(BaseEstimator):
         self._kwarg_keys = kwargs.keys()
 
     def fit(self, X, y):
-        self.enc_ = LabelEncoder()
-        y = self.enc_.fit_transform(y).astype(np.int32)
-        self.classes_ = self.enc_.classes_
+        if not self.regression:
+            self.enc_ = LabelEncoder()
+            y = self.enc_.fit_transform(y).astype(np.int32)
+            self.classes_ = self.enc_.classes_
 
         out = self.output_layer_ = self._initialize_layers(self.layers)
         if self.verbose:
             self._print_layer_info(self.get_all_layers())
 
         iter_funcs = self._create_iter_funcs(
-            out, self.loss, self.update, self.X_tensor_type)
+            out, self.loss, self.update,
+            self.X_tensor_type,
+            self.y_tensor_type,
+            )
         self.train_iter_, self.eval_iter_, self.predict_iter_ = iter_funcs
 
         self.train_loop(X, y)
@@ -149,11 +167,13 @@ class NeuralNet(BaseEstimator):
                 print("Epoch {:>3} of {}\t({:.2f} sec)".format(
                     epoch, self.max_epochs, time() - t0))
                 print("  training loss:      {:>10.6f}".format(avg_train_loss))
-                print("  validation loss:    {:>10.6f}".format(avg_valid_loss))
-                print("  validation accuracy:{:>9.2f}%{}".format(
-                    avg_valid_accuracy * 100,
+                print("  validation loss:    {:>10.6f}{}".format(
+                    avg_valid_loss,
                     " !!!" if best_valid_loss == avg_valid_loss else "",
                     ))
+                if not self.regression:
+                    print("  validation accuracy:{:>9.2f}%{}".format(
+                        avg_valid_accuracy * 100))
                 print("")
 
             info = dict(
@@ -180,18 +200,25 @@ class NeuralNet(BaseEstimator):
         return np.vstack(probas)
 
     def predict(self, X):
-        y_pred = np.argmax(self.predict_proba(X), axis=1)
-        return self.enc_.inverse_transform(y_pred)
+        if self.regression:
+            return self.predict_proba(X)
+        else:
+            y_pred = np.argmax(self.predict_proba(X), axis=1)
+            return self.enc_.inverse_transform(y_pred)
 
     def score(self, X, y):
-        return accuracy_score(self.predict(X), y)
+        score = mean_squared_error if self.regression else accuracy_score
+        return score(self.predict(X), y)
 
     def train_test_split(self, X, y, eval_size):
-        skf = StratifiedKFold(y, 1. / eval_size)
-        train_indices, valid_indices = iter(skf).next()
-        X_train, y_train = X[train_indices], y[train_indices]
-        X_valid, y_valid = X[valid_indices], y[valid_indices]
-        return X_train, X_valid, y_train, y_valid
+        if not self.regression:
+            skf = StratifiedKFold(y, 1. / eval_size)
+            train_indices, valid_indices = iter(skf).next()
+            X_train, y_train = X[train_indices], y[train_indices]
+            X_valid, y_valid = X[valid_indices], y[valid_indices]
+            return X_train, X_valid, y_train, y_valid
+        else:
+            return train_test_split(X, y, test_size=eval_size)
 
     def get_all_layers(self):
         return get_all_layers(self.output_layer_)[::-1]
@@ -199,19 +226,23 @@ class NeuralNet(BaseEstimator):
     def get_all_params(self):
         return get_all_params(self.output_layer_)[::-1]
 
-    def _create_iter_funcs(self, output_layer, loss_func, update, input_type):
+    def _create_iter_funcs(self, output_layer, loss_func, update, input_type,
+                           output_type):
         X = input_type('x')
-        y = T.ivector('y')
+        y = output_type('y')
         X_batch = input_type('x_batch')
-        y_batch = T.ivector('y_batch')
+        y_batch = output_type('y_batch')
 
         loss_train = loss_func(
             output_layer.get_output(X_batch), y_batch)
         loss_eval = loss_func(
             output_layer.get_output(X_batch, deterministic=True), y_batch)
         predict_proba = output_layer.get_output(X_batch, deterministic=True)
-        predict = predict_proba.argmax(axis=1)
-        accuracy = T.mean(T.eq(predict, y_batch))
+        if not self.regression:
+            predict = predict_proba.argmax(axis=1)
+            accuracy = T.mean(T.eq(predict, y_batch))
+        else:
+            accuracy = loss_eval
 
         all_params = get_all_params(output_layer)
         update_params = self._get_params_for('update')
