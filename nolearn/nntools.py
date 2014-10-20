@@ -169,10 +169,10 @@ class NeuralNet(BaseEstimator):
                 print("  training loss:      {:>10.6f}".format(avg_train_loss))
                 print("  validation loss:    {:>10.6f}{}".format(
                     avg_valid_loss,
-                    " !!!" if best_valid_loss == avg_valid_loss else "",
+                    "   !!!" if best_valid_loss == avg_valid_loss else "",
                     ))
                 if not self.regression:
-                    print("  validation accuracy:{:>9.2f}%{}".format(
+                    print("  validation accuracy:{:>9.2f}%".format(
                         avg_valid_accuracy * 100))
                 print("")
 
