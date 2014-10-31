@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import itertools
 import operator
 from time import time
+import pdb
 
 from nntools.layers import get_all_layers
 from nntools.layers import get_all_params
@@ -125,7 +126,10 @@ class NeuralNet(BaseEstimator):
             )
         self.train_iter_, self.eval_iter_, self.predict_iter_ = iter_funcs
 
-        self.train_loop(X, y)
+        try:
+            self.train_loop(X, y)
+        except KeyboardInterrupt:
+            pdb.set_trace()
         return self
 
     def train_loop(self, X, y):
