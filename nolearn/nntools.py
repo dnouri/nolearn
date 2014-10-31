@@ -72,6 +72,7 @@ class NeuralNet(BaseEstimator):
         eval_size=0.2,
         X_tensor_type=None,
         y_tensor_type=None,
+        use_label_encoder=False,
         on_epoch_finished=None,
         on_training_finished=None,
         more_params=None,
@@ -99,6 +100,7 @@ class NeuralNet(BaseEstimator):
         self.eval_size = eval_size
         self.X_tensor_type = X_tensor_type
         self.y_tensor_type = y_tensor_type
+        self.use_label_encoder = use_label_encoder
         self.on_epoch_finished = on_epoch_finished
         self.on_training_finished = on_training_finished
         self.more_params = more_params or {}
@@ -110,7 +112,7 @@ class NeuralNet(BaseEstimator):
         self._kwarg_keys = kwargs.keys()
 
     def fit(self, X, y):
-        if not self.regression:
+        if not self.regression and self.use_label_encoder:
             self.enc_ = LabelEncoder()
             y = self.enc_.fit_transform(y).astype(np.int32)
             self.classes_ = self.enc_.classes_
@@ -208,7 +210,9 @@ class NeuralNet(BaseEstimator):
             return self.predict_proba(X)
         else:
             y_pred = np.argmax(self.predict_proba(X), axis=1)
-            return self.enc_.inverse_transform(y_pred)
+            if self.use_label_encoder:
+                y_pred = self.enc_.inverse_transform(y_pred)
+            return y_pred
 
     def score(self, X, y):
         score = mean_squared_error if self.regression else accuracy_score
