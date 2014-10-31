@@ -298,6 +298,23 @@ class NeuralNet(BaseEstimator):
 
         return collected
 
+    def load_weights_from(self, source):
+        self._output_layer = self.initialize_layers()
+
+        if isinstance(source, str):
+            source = np.load(source)
+
+        if isinstance(source, NeuralNet):
+            source = source.get_all_params()
+
+        source_weights = [
+            w.get_value() if hasattr(w, 'get_value') else w for w in source]
+
+        for w1, w2 in zip(source_weights, self.get_all_params()):
+            if w1.shape != w2.get_value().shape:
+                continue
+            w2.set_value(w1)
+
     def initialize_layers(self, layers=None):
         if layers is not None:
             self.layers = layers
