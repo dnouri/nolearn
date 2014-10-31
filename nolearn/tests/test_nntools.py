@@ -24,6 +24,7 @@ def mnist():
     dataset = fetch_mldata('mnist-original')
     X, y = dataset.data, dataset.target
     X = X.astype(np.float32) / 255.0
+    y = y.astype(np.int32)
     return shuffle(X, y, random_state=42)
 
 
@@ -153,6 +154,7 @@ def test_clone():
         batch_iterator=BatchIterator(batch_size=100),
         X_tensor_type=T.matrix,
         y_tensor_type=T.ivector,
+        use_label_encoder=False,
         on_epoch_finished=None,
         on_training_finished=None,
         max_epochs=100,

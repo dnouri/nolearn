@@ -218,7 +218,7 @@ class NeuralNet(BaseEstimator):
 
     def score(self, X, y):
         score = mean_squared_error if self.regression else accuracy_score
-        return score(self.predict(X), y)
+        return float(score(self.predict(X), y))
 
     def train_test_split(self, X, y, eval_size):
         if not self.regression:
@@ -228,7 +228,7 @@ class NeuralNet(BaseEstimator):
             X_valid, y_valid = X[valid_indices], y[valid_indices]
             return X_train, X_valid, y_train, y_valid
         else:
-            return train_test_split(X, y, test_size=eval_size)
+            return train_test_split(X, y, test_size=eval_size, random_state=42)
 
     def get_all_layers(self):
         return get_all_layers(self._output_layer)[::-1]
