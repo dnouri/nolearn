@@ -117,7 +117,9 @@ class NeuralNet(BaseEstimator):
             y = self.enc_.fit_transform(y).astype(np.int32)
             self.classes_ = self.enc_.classes_
 
-        out = self.output_layer_ = self._initialize_layers(self.layers)
+        out = getattr(self, '_output_layer', None)
+        if out is None:
+            out = self._output_layer = self.initialize_layers()
         if self.verbose:
             self._print_layer_info(self.get_all_layers())
 
@@ -229,10 +231,10 @@ class NeuralNet(BaseEstimator):
             return train_test_split(X, y, test_size=eval_size)
 
     def get_all_layers(self):
-        return get_all_layers(self.output_layer_)[::-1]
+        return get_all_layers(self._output_layer)[::-1]
 
     def get_all_params(self):
-        return get_all_params(self.output_layer_)[::-1]
+        return get_all_params(self._output_layer)[::-1]
 
     def _create_iter_funcs(self, output_layer, loss_func, update, input_type,
                            output_type):
@@ -296,15 +298,19 @@ class NeuralNet(BaseEstimator):
 
         return collected
 
-    def _initialize_layers(self, layer_types):
-        input_layer_name, input_layer_factory = layer_types[0]
+    def initialize_layers(self, layers=None):
+        if layers is not None:
+            self.layers = layers
+
+        input_layer_name, input_layer_factory = self.layers[0]
         input_layer_params = self._get_params_for(input_layer_name)
         layer = input_layer_factory(**input_layer_params)
 
-        for (layer_name, layer_factory) in layer_types[1:]:
+        for (layer_name, layer_factory) in self.layers[1:]:
             layer_params = self._get_params_for(layer_name)
             layer = layer_factory(layer, **layer_params)
 
+        self._output_layer = layer
         return layer
 
     def _print_layer_info(self, layers):
