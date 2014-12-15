@@ -1,10 +1,10 @@
 from mock import patch
-from nntools.layers import DenseLayer
-from nntools.layers import DropoutLayer
-from nntools.layers import InputLayer
-from nntools.nonlinearities import identity
-from nntools.nonlinearities import softmax
-from nntools.updates import nesterov_momentum
+from lasagne.layers import DenseLayer
+from lasagne.layers import DropoutLayer
+from lasagne.layers import InputLayer
+from lasagne.nonlinearities import identity
+from lasagne.nonlinearities import softmax
+from lasagne.updates import nesterov_momentum
 import numpy as np
 import pytest
 from sklearn.base import clone
@@ -38,9 +38,9 @@ def boston():
     return shuffle(X, y, random_state=42)
 
 
-def test_nntools_functional_mnist(mnist):
+def test_lasagne_functional_mnist(mnist):
     # Run a full example on the mnist dataset
-    from nolearn.nntools import NeuralNet
+    from nolearn.lasagne import NeuralNet
 
     X, y = mnist
     X_train, y_train = X[:60000], y[:60000]
@@ -91,9 +91,9 @@ def test_nntools_functional_mnist(mnist):
     assert accuracy_score(y_pred, y_test) > 0.85
 
 
-def test_nntools_functional_grid_search(mnist, monkeypatch):
+def test_lasagne_functional_grid_search(mnist, monkeypatch):
     # Make sure that we can satisfy the grid search interface.
-    from nolearn.nntools import NeuralNet
+    from nolearn.lasagne import NeuralNet
 
     nn = NeuralNet(
         layers=[],
@@ -114,7 +114,7 @@ def test_nntools_functional_grid_search(mnist, monkeypatch):
 
     with patch.object(NeuralNet, 'fit', autospec=True) as mock_fit:
         mock_fit.side_effect = fit
-        with patch('nolearn.nntools.NeuralNet.score') as score:
+        with patch('nolearn.lasagne.NeuralNet.score') as score:
             score.return_value = 0.3
             gs = GridSearchCV(nn, param_grid, cv=2, refit=False, verbose=4)
             gs.fit(X, y)
@@ -128,9 +128,9 @@ def test_nntools_functional_grid_search(mnist, monkeypatch):
 
 
 def test_clone():
-    from nolearn.nntools import NeuralNet
-    from nolearn.nntools import negative_log_likelihood
-    from nolearn.nntools import BatchIterator
+    from nolearn.lasagne import NeuralNet
+    from nolearn.lasagne import negative_log_likelihood
+    from nolearn.lasagne import BatchIterator
 
     params = dict(
         layers=[
@@ -177,8 +177,8 @@ def test_clone():
     assert params == params1 == params2
 
 
-def test_nntools_functional_regression(boston):
-    from nolearn.nntools import NeuralNet
+def test_lasagne_functional_regression(boston):
+    from nolearn.lasagne import NeuralNet
 
     X, y = boston
 

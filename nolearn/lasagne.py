@@ -1,18 +1,19 @@
 from __future__ import absolute_import
 
+import cPickle
 import itertools
 import operator
 from time import time
 import pdb
 
-from nntools.layers import get_all_layers
-from nntools.layers import get_all_params
-from nntools.objectives import mse
-from nntools.updates import nesterov_momentum
+from lasagne.layers import get_all_layers
+from lasagne.layers import get_all_params
+from lasagne.objectives import mse
+from lasagne.updates import nesterov_momentum
 import numpy as np
 from sklearn.base import BaseEstimator
+from sklearn.cross_validation import KFold
 from sklearn.cross_validation import StratifiedKFold
-from sklearn.cross_validation import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
@@ -27,6 +28,12 @@ class _list(list):
 class _dict(dict):
     def __contains__(self, key):
         return True
+
+
+class ansi:
+    BLUE = '\033[94m'
+    GREEN = '\033[32m'
+    ENDC = '\033[0m'
 
 
 def negative_log_likelihood(output, prediction):
@@ -59,7 +66,7 @@ class BatchIterator(object):
 
 
 class NeuralNet(BaseEstimator):
-    """A scikit-learn estimator based on `nntools`.
+    """A scikit-learn estimator based on Lasagne.
     """
     def __init__(
         self,
@@ -73,8 +80,8 @@ class NeuralNet(BaseEstimator):
         X_tensor_type=None,
         y_tensor_type=None,
         use_label_encoder=False,
-        on_epoch_finished=None,
-        on_training_finished=None,
+        on_epoch_finished=(),
+        on_training_finished=(),
         more_params=None,
         verbose=0,
         **kwargs
@@ -111,6 +118,8 @@ class NeuralNet(BaseEstimator):
         vars(self).update(kwargs)
         self._kwarg_keys = kwargs.keys()
 
+        self.train_history_ = []
+
     def fit(self, X, y):
         if not self.regression and self.use_label_encoder:
             self.enc_ = LabelEncoder()
@@ -140,11 +149,24 @@ class NeuralNet(BaseEstimator):
         X_train, X_valid, y_train, y_valid = self.train_test_split(
             X, y, self.eval_size)
 
+        on_epoch_finished = self.on_epoch_finished
+        if not isinstance(on_epoch_finished, (list, tuple)):
+            on_epoch_finished = [on_epoch_finished]
+
+        on_training_finished = self.on_training_finished
+        if not isinstance(on_training_finished, (list, tuple)):
+            on_training_finished = [on_training_finished]
+
         epoch = 0
         info = None
         best_valid_loss = np.inf
+        best_train_loss = np.inf
 
-        self.train_history_ = []
+        if self.verbose:
+            print("""
+ Epoch  |  Train loss  |  Valid loss  |  Train / Val  |  Valid acc  |  Dur
+--------|--------------|--------------|---------------|-------------|-------\
+""")
 
         while epoch < self.max_epochs:
             epoch += 1
@@ -168,21 +190,28 @@ class NeuralNet(BaseEstimator):
             avg_valid_loss = np.mean(valid_losses)
             avg_valid_accuracy = np.mean(valid_accuracies)
 
+            if avg_train_loss < best_train_loss:
+                best_train_loss = avg_train_loss
             if avg_valid_loss < best_valid_loss:
                 best_valid_loss = avg_valid_loss
 
             if self.verbose:
-                print("Epoch {:>3} of {}\t({:.2f} sec)".format(
-                    epoch, self.max_epochs, time() - t0))
-                print("  training loss:      {:>10.6f}".format(avg_train_loss))
-                print("  validation loss:    {:>10.6f}{}".format(
-                    avg_valid_loss,
-                    "   !!!" if best_valid_loss == avg_valid_loss else "",
-                    ))
-                if not self.regression:
-                    print("  validation accuracy:{:>9.2f}%".format(
-                        avg_valid_accuracy * 100))
-                print("")
+                best_train = best_train_loss == avg_train_loss
+                best_valid = best_valid_loss == avg_valid_loss
+                print(" {:>5}  |  {}{:>10.6f}{}  |  {}{:>10.6f}{}  "
+                      "|  {:>11.6f}  |  {:>9}  |  {:>3.1f}s".format(
+                          epoch,
+                          ansi.BLUE if best_train else "",
+                          avg_train_loss,
+                          ansi.ENDC if best_train else "",
+                          ansi.GREEN if best_valid else "",
+                          avg_valid_loss,
+                          ansi.ENDC if best_valid else "",
+                          avg_train_loss / avg_valid_loss,
+                          "{.2f}%".format(avg_valid_accuracy * 100)
+                          if not self.regression else "",
+                          time() - t0,
+                          ))
 
             info = dict(
                 epoch=epoch,
@@ -191,15 +220,14 @@ class NeuralNet(BaseEstimator):
                 valid_accuracy=avg_valid_accuracy,
                 )
             self.train_history_.append(info)
+            try:
+                for func in on_epoch_finished:
+                    func(self, self.train_history_)
+            except StopIteration:
+                break
 
-            if self.on_epoch_finished is not None:
-                try:
-                    self.on_epoch_finished(self, self.train_history_)
-                except StopIteration:
-                    break
-
-        if self.on_training_finished is not None:
-            self.on_training_finished(self, self.train_history_)
+        for func in on_training_finished:
+            func(self, self.train_history_)
 
     def predict_proba(self, X):
         probas = []
@@ -221,14 +249,15 @@ class NeuralNet(BaseEstimator):
         return float(score(self.predict(X), y))
 
     def train_test_split(self, X, y, eval_size):
-        if not self.regression:
-            skf = StratifiedKFold(y, 1. / eval_size)
-            train_indices, valid_indices = iter(skf).next()
-            X_train, y_train = X[train_indices], y[train_indices]
-            X_valid, y_valid = X[valid_indices], y[valid_indices]
-            return X_train, X_valid, y_train, y_valid
+        if self.regression:
+            kf = KFold(y.shape[0], 1. / eval_size)
         else:
-            return train_test_split(X, y, test_size=eval_size, random_state=42)
+            kf = StratifiedKFold(y, 1. / eval_size)
+
+        train_indices, valid_indices = iter(kf).next()
+        X_train, y_train = X[train_indices], y[train_indices]
+        X_valid, y_valid = X[valid_indices], y[valid_indices]
+        return X_train, X_valid, y_train, y_valid
 
     def get_all_layers(self):
         return get_all_layers(self._output_layer)[::-1]
@@ -315,6 +344,11 @@ class NeuralNet(BaseEstimator):
                 continue
             w2.set_value(w1)
 
+    def save_weights_to(self, fname):
+        weights = [w.get_value() for w in self.get_all_params()]
+        with open(fname, 'wb') as f:
+            cPickle.dump(weights, f, -1)
+
     def initialize_layers(self, layers=None):
         if layers is not None:
             self.layers = layers
@@ -342,7 +376,7 @@ class NeuralNet(BaseEstimator):
     def get_params(self, deep=True):
         params = super(NeuralNet, self).get_params(deep=deep)
 
-        # Incidentally, nntools layers have a 'get_params' too, which
+        # Incidentally, Lasagne layers have a 'get_params' too, which
         # for sklearn's 'clone' means it would treat it in a special
         # way when cloning.  Wrapping the list of layers in a custom
         # list type does the trick here, but of course it's crazy:
