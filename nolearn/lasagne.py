@@ -208,7 +208,7 @@ class NeuralNet(BaseEstimator):
                           avg_valid_loss,
                           ansi.ENDC if best_valid else "",
                           avg_train_loss / avg_valid_loss,
-                          "{.2f}%".format(avg_valid_accuracy * 100)
+                          "{:.2f}%".format(avg_valid_accuracy * 100)
                           if not self.regression else "",
                           time() - t0,
                           ))
