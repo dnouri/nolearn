@@ -151,7 +151,7 @@ def test_clone():
 
         regression=False,
         loss=negative_log_likelihood,
-        batch_iterator=BatchIterator(batch_size=100),
+        batch_iterator_train=BatchIterator(batch_size=100),
         X_tensor_type=T.matrix,
         y_tensor_type=T.ivector,
         use_label_encoder=False,
@@ -167,12 +167,13 @@ def test_clone():
     params1 = nn.get_params()
     params2 = nn2.get_params()
 
-    params.pop('batch_iterator')
-    params1.pop('batch_iterator')
-    params2.pop('batch_iterator')
-    params.pop('output_nonlinearity')
-    params1.pop('output_nonlinearity')
-    params2.pop('output_nonlinearity')
+    for ignore in (
+        'batch_iterator_train',
+        'batch_iterator_test',
+        'output_nonlinearity',
+        ):
+        for par in (params, params1, params2):
+            par.pop(ignore, None)
 
     assert params == params1 == params2
 

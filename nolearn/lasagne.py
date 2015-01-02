@@ -44,9 +44,8 @@ class BatchIterator(object):
     def __init__(self, batch_size):
         self.batch_size = batch_size
 
-    def __call__(self, X, y=None, test=False):
+    def __call__(self, X, y=None):
         self.X, self.y = X, y
-        self.test = test
         return self
 
     def __iter__(self):
@@ -73,7 +72,8 @@ class NeuralNet(BaseEstimator):
         layers,
         update=nesterov_momentum,
         loss=None,
-        batch_iterator=BatchIterator(batch_size=128),
+        batch_iterator_train=BatchIterator(batch_size=128),
+        batch_iterator_test=BatchIterator(batch_size=128),
         regression=False,
         max_epochs=100,
         eval_size=0.2,
@@ -101,7 +101,8 @@ class NeuralNet(BaseEstimator):
         self.layers = layers
         self.update = update
         self.loss = loss
-        self.batch_iterator = batch_iterator
+        self.batch_iterator_train = batch_iterator_train
+        self.batch_iterator_test = batch_iterator_test
         self.regression = regression
         self.max_epochs = max_epochs
         self.eval_size = eval_size
@@ -119,6 +120,12 @@ class NeuralNet(BaseEstimator):
         self._kwarg_keys = kwargs.keys()
 
         self.train_history_ = []
+
+        if 'batch_iterator' in kwargs:  # BBB
+            raise ValueError(
+                "The 'batch_iterator' argument has been replaced. "
+                "Use 'batch_iterator_train' and 'batch_iterator_test' instead."
+                )
 
     def fit(self, X, y):
         if not self.regression and self.use_label_encoder:
@@ -177,11 +184,11 @@ class NeuralNet(BaseEstimator):
 
             t0 = time()
 
-            for Xb, yb in self.batch_iterator(X_train, y_train):
+            for Xb, yb in self.batch_iterator_train(X_train, y_train):
                 batch_train_loss = self.train_iter_(Xb, yb)
                 train_losses.append(batch_train_loss)
 
-            for Xb, yb in self.batch_iterator(X_valid, y_valid, test=True):
+            for Xb, yb in self.batch_iterator_test(X_valid, y_valid):
                 batch_valid_loss, accuracy = self.eval_iter_(Xb, yb)
                 valid_losses.append(batch_valid_loss)
                 valid_accuracies.append(accuracy)
@@ -231,7 +238,7 @@ class NeuralNet(BaseEstimator):
 
     def predict_proba(self, X):
         probas = []
-        for Xb, yb in self.batch_iterator(X, test=True):
+        for Xb, yb in self.batch_iterator_test(X):
             probas.append(self.predict_iter_(Xb))
         return np.vstack(probas)
 
