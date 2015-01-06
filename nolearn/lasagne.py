@@ -127,11 +127,11 @@ class NeuralNet(BaseEstimator):
                 "Use 'batch_iterator_train' and 'batch_iterator_test' instead."
                 )
 
-    def fit(self, X, y):
-        if not self.regression and self.use_label_encoder:
-            self.enc_ = LabelEncoder()
-            y = self.enc_.fit_transform(y).astype(np.int32)
-            self.classes_ = self.enc_.classes_
+    def _initialize(self):
+        if (getattr(self, 'train_iter_', None) is not None
+            and getattr(self, 'eval_iter_', None) is not None
+            and getattr(self, 'predict_iter_', None) is not None):
+            return
 
         out = getattr(self, '_output_layer', None)
         if out is None:
@@ -145,6 +145,14 @@ class NeuralNet(BaseEstimator):
             self.y_tensor_type,
             )
         self.train_iter_, self.eval_iter_, self.predict_iter_ = iter_funcs
+
+    def fit(self, X, y):
+        if not self.regression and self.use_label_encoder:
+            self.enc_ = LabelEncoder()
+            y = self.enc_.fit_transform(y).astype(np.int32)
+            self.classes_ = self.enc_.classes_
+
+        self._initialize()
 
         try:
             self.train_loop(X, y)
@@ -237,6 +245,7 @@ class NeuralNet(BaseEstimator):
             func(self, self.train_history_)
 
     def predict_proba(self, X):
+        self._initialize()
         probas = []
         for Xb, yb in self.batch_iterator_test(X):
             probas.append(self.predict_iter_(Xb))
