@@ -127,6 +127,14 @@ class NeuralNet(BaseEstimator):
                 "Use 'batch_iterator_train' and 'batch_iterator_test' instead."
                 )
 
+    def __getstate__(self):
+        ret = dict(self.__dict__)
+        del ret['train_iter_']
+        del ret['eval_iter_']
+        del ret['predict_iter_']
+
+        return ret
+
     def _initialize(self):
         if (getattr(self, 'train_iter_', None) is not None
             and getattr(self, 'eval_iter_', None) is not None
