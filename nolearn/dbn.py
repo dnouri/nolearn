@@ -7,6 +7,7 @@ import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
+import numbers
 
 
 class DBN(BaseEstimator):
@@ -190,8 +191,8 @@ class DBN(BaseEstimator):
         elif isinstance(output_act_funct, str):
             output_act_funct = getattr(activationFunctions, output_act_funct)()
 
-        if random_state is not None:
-            raise ValueError("random_sate must be an int")
+        if random_state is not None and not isinstance(random_state, (numbers.Integral, np.integer)):
+            raise ValueError("random_state must be an int")
 
         self.layer_sizes = layer_sizes
         self.scales = scales
