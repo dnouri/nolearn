@@ -149,7 +149,7 @@ class NeuralNet(BaseEstimator):
         try:
             self.train_loop(X, y)
         except KeyboardInterrupt:
-            pdb.set_trace()
+            pass
         return self
 
     def train_loop(self, X, y):
