@@ -10,7 +10,10 @@ Usage example:
 .. doctest::
 
   >>> import numpy as np
-  >>> from nolearn.dataset import Dataset
+  >>> class Dataset:
+  ...     def __init__(self, data, target):
+  ...         self.data, self.target = data, target
+  ...
   >>> from sklearn.linear_model import LogisticRegression
   >>> data = np.array([[1, 2, 3], [3, 3, 3]] * 20)
   >>> target = np.array([0, 1] * 20)
@@ -29,9 +32,16 @@ Usage example:
 """
 
 from pprint import pprint
+import warnings
 
 from sklearn.base import BaseEstimator
 from sklearn.grid_search import GridSearchCV
+
+warnings.warn("""\
+The nolearn.grid_search module will be removed in nolearn 0.6.  If you want to
+continue to use this module, please consider copying the code into
+your own project.
+""")
 
 
 def print_report(grid_search, parameters):

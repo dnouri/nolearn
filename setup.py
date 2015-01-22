@@ -2,7 +2,7 @@ import os
 
 from setuptools import setup, find_packages
 
-version = '0.5'
+version = '0.6adev'
 
 here = os.path.abspath(os.path.dirname(__file__))
 try:
@@ -12,8 +12,6 @@ except IOError:
     README = CHANGES = ''
 
 install_requires = [
-    'docopt',
-    'gdbn',
     'joblib',
     'scikit-learn',
     ]

@@ -1,6 +1,11 @@
 Change History
 ==============
 
+0.6a - Unreleased
+-----------------
+
+- Removed deprecated modules.  Also deprecate grid_search module.
+
 0.5 - 2015-01-22
 ----------------
 

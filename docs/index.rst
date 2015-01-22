@@ -23,14 +23,9 @@ Modules
    :maxdepth: 2
 
    cache
-   console
-   dataset
-   dbn
    decaf
-   grid_search
    inischema
    metrics
-   model
   
 
 Installation

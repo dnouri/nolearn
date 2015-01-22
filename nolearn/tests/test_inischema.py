@@ -30,7 +30,7 @@ value1 =
 
 
 def test_parse_config():
-    from ..console import parse_config
+    from ..inischema import parse_config
     result = parse_config(SAMPLE_SCHEMA, SAMPLE_CONFIGURATION)
     assert result['first']['value1'] == 3
     assert result['first']['value2'] == u'Three'
