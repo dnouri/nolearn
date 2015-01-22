@@ -1,10 +1,10 @@
-:mod:`nolearn.convnet`
-----------------------
+:mod:`nolearn.decaf`
+--------------------
 
 API
 ~~~
 
-.. automodule:: nolearn.convnet
+.. automodule:: nolearn.decaf
 
   .. autoclass:: ConvNetFeatures
      :special-members:
@@ -51,7 +51,7 @@ just downloaded:
 
     import os
 
-    from nolearn.convnet import ConvNetFeatures
+    from nolearn.decaf import ConvNetFeatures
     from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import accuracy_score
     from sklearn.pipeline import Pipeline
