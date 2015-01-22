@@ -1,5 +1,6 @@
 from datetime import timedelta
 from time import time
+import warnings
 
 from gdbn.dbn import buildDBN
 from gdbn import activationFunctions
@@ -7,6 +8,13 @@ import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
+
+warnings.warn("""
+The nolearn.dbn module will be removed in nolearn 0.6.  If you want to
+continue to use this module, please consider copying the code into
+your own project.  And take a look at Lasagne and nolearn.lasagne for
+a better neural net toolkit.
+""")
 
 
 class DBN(BaseEstimator):

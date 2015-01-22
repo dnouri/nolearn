@@ -37,9 +37,18 @@ call :meth:`Dataset.train_test_split`:
   ((6, 3), (2, 3), (6,), (2,))
 """
 
+import warnings
+
 import numpy as np
 from sklearn.cross_validation import StratifiedShuffleSplit
 from sklearn import preprocessing
+
+
+warnings.warn("""
+The nolearn.dataset module will be removed in nolearn 0.6.  If you want to
+continue to use this module, please consider copying the code into
+your own project.
+""")
 
 
 class Dataset(object):

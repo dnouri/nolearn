@@ -24,9 +24,9 @@ Modules
 
    cache
    console
-   convnet
    dataset
    dbn
+   decaf
    grid_search
    inischema
    metrics

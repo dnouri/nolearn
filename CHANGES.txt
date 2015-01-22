@@ -1,8 +1,13 @@
 Change History
 ==============
 
-0.5 - Unreleased
+0.5 - 2015-01-22
 ----------------
+
+- Deprecated modules console, dataset, dbn, and model.
+
+- lasagne: Added scikit-learn compatible wrapper around the `Lasagne`
+  neural network library for building simple feed-forward networks.
 
 0.5b1 - 2014-08-09
 ------------------

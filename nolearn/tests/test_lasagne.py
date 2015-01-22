@@ -62,7 +62,7 @@ def test_lasagne_functional_mnist(mnist):
             ('dropout2', DropoutLayer),
             ('output', DenseLayer),
             ],
-        input_shape=(100, 784),
+        input_shape=(None, 784),
         output_num_units=10,
         output_nonlinearity=softmax,
 

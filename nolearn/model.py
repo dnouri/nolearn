@@ -1,7 +1,16 @@
+import warnings
+
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.externals.joblib import delayed
 from sklearn.externals.joblib import Parallel
+
+
+warnings.warn("""
+The nolearn.model module will be removed in nolearn 0.6.  If you want
+to continue to use this module, please consider copying the code into
+your own project.
+""")
 
 
 class AbstractModel(object):

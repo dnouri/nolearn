@@ -1,6 +1,13 @@
 :mod:`nolearn.dbn`
 ------------------
 
+.. warning::
+
+   The nolearn.dbn module will be removed in nolearn 0.6.  If you want
+   to continue to use this module, please consider copying the code
+   into your own project.  And take a look at Lasagne and
+   nolearn.lasagne for a better neural net toolkit.
+
 API
 ~~~
 

@@ -87,7 +87,10 @@ class OverFeatShell(ChunkedTransform, BaseEstimator):
             out = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
             if out == '':
                 raise RuntimeError("Call failed; try lower 'batch_size'")
-            elif "unable" in out or "Invalid" in out or "error" in out:
+            elif ("unable" in out or
+                  "Invalid" in out or
+                  "error" in out or
+                  "Assertion" in out):
                 raise RuntimeError("\n%s ... %s\n\n%s" % (
                     out[:250], out[-250:], list(fnames)))
             return out

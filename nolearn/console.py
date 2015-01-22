@@ -86,10 +86,19 @@ import pdb
 import os
 import sys
 import traceback
+import warnings
 
 import docopt
 
 from .inischema import parse_config
+
+warnings.warn("""
+The nolearn.console module will be removed in nolearn 0.6.  If you
+want to continue using this module, please consider copying the code
+into your own project.  And take a look at alternatives like the click
+library.
+""")
+
 
 DEFAULT_OPTIONS = """
 Options:
