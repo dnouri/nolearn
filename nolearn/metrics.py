@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import numpy as np
 from sklearn.base import clone
 from sklearn.metrics import f1_score
@@ -66,7 +68,7 @@ class LearningCurve(object):
         sizes = []
 
         if verbose:
-            print "          n      train      test"
+            print("          n      train      test")
 
         for frac in np.linspace(0.1, 1.0, num=steps):
             frac_size = X_train.shape[0] * frac
@@ -87,8 +89,8 @@ class LearningCurve(object):
             scores_test.append(score_test)
 
             if verbose:
-                print "   %8d     %0.4f    %0.4f" % (
-                    frac_size, score_train, score_test)
+                print("   %8d     %0.4f    %0.4f" % (
+                    frac_size, score_train, score_test))
 
         return scores_train, scores_test, sizes
 

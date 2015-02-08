@@ -58,8 +58,8 @@ passing of values from `.ini` files as function arguments for command
 line scripts.
 """
 
-from ConfigParser import ConfigParser
-from StringIO import StringIO
+from ._compat import ConfigParser
+from ._compat import StringIO
 
 
 def string(value):

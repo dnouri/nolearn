@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
-import cPickle
+from ._compat import pickle
+import functools
 import itertools
 import operator
 from time import time
@@ -51,7 +52,7 @@ class BatchIterator(object):
     def __iter__(self):
         n_samples = self.X.shape[0]
         bs = self.batch_size
-        for i in range((n_samples + bs - 1) / bs):
+        for i in range((n_samples + bs - 1) // bs):
             sl = slice(i * bs, (i + 1) * bs)
             Xb = self.X[sl]
             if self.y is not None:
@@ -117,7 +118,7 @@ class NeuralNet(BaseEstimator):
         for key in kwargs.keys():
             assert not hasattr(self, key)
         vars(self).update(kwargs)
-        self._kwarg_keys = kwargs.keys()
+        self._kwarg_keys = list(kwargs.keys())
 
         self.train_history_ = []
 
@@ -261,7 +262,7 @@ class NeuralNet(BaseEstimator):
         else:
             kf = StratifiedKFold(y, 1. / eval_size)
 
-        train_indices, valid_indices = iter(kf).next()
+        train_indices, valid_indices = next(iter(kf))
         X_train, y_train = X[train_indices], y[train_indices]
         X_valid, y_valid = X[valid_indices], y[valid_indices]
         return X_train, X_valid, y_train, y_valid
@@ -354,7 +355,7 @@ class NeuralNet(BaseEstimator):
     def save_weights_to(self, fname):
         weights = [w.get_value() for w in self.get_all_params()]
         with open(fname, 'wb') as f:
-            cPickle.dump(weights, f, -1)
+            pickle.dump(weights, f, -1)
 
     def initialize_layers(self, layers=None):
         if layers is not None:
@@ -376,8 +377,8 @@ class NeuralNet(BaseEstimator):
             output_shape = layer.get_output_shape()
             print("  {:<18}\t{:<20}\tproduces {:>7} outputs".format(
                 layer.__class__.__name__,
-                output_shape,
-                reduce(operator.mul, output_shape[1:]),
+                str(output_shape),
+                str(functools.reduce(operator.mul, output_shape[1:])),
                 ))
 
     def get_params(self, deep=True):

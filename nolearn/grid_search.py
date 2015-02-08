@@ -31,6 +31,8 @@ Usage example:
   ...
 """
 
+from __future__ import print_function
+
 from pprint import pprint
 import warnings
 
@@ -45,21 +47,21 @@ your own project.
 
 
 def print_report(grid_search, parameters):
-    print
-    print "== " * 20
-    print "All parameters:"
+    print()
+    print("== " * 20)
+    print("All parameters:")
     best_parameters = grid_search.best_estimator_.get_params()
     for param_name, value in sorted(best_parameters.items()):
         if not isinstance(value, BaseEstimator):
-            print "    %s=%r," % (param_name, value)
+            print("    %s=%r," % (param_name, value))
 
-    print
-    print "== " * 20
-    print "Best score: %0.4f" % grid_search.best_score_
-    print "Best grid parameters:"
+    print()
+    print("== " * 20)
+    print("Best score: %0.4f" % grid_search.best_score_)
+    print("Best grid parameters:")
     for param_name in sorted(parameters.keys()):
-        print "    %s=%r," % (param_name, best_parameters[param_name])
-    print "== " * 20
+        print("    %s=%r," % (param_name, best_parameters[param_name]))
+    print("== " * 20)
 
     return grid_search
 
@@ -78,7 +80,7 @@ def grid_search(dataset, clf, parameters, cv=None, verbose=4, n_jobs=1,
         )
 
     if verbose:
-        print "parameters:"
+        print("parameters:")
         pprint(parameters)
 
     grid_search.fit(dataset.data, dataset.target)

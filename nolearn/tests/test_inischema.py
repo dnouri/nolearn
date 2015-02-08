@@ -22,9 +22,7 @@ value5 = 3 3
 [second]
 value1 =
     a few line breaks
-
     are no problem
-
     neither is a missing value2
 """
 
