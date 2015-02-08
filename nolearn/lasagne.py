@@ -119,6 +119,7 @@ class NeuralNet(BaseEstimator):
             assert not hasattr(self, key)
         vars(self).update(kwargs)
         self._kwarg_keys = list(kwargs.keys())
+        self._check_for_unused_kwargs()
 
         self.train_history_ = []
 
@@ -127,6 +128,16 @@ class NeuralNet(BaseEstimator):
                 "The 'batch_iterator' argument has been replaced. "
                 "Use 'batch_iterator_train' and 'batch_iterator_test' instead."
                 )
+
+    def _check_for_unused_kwargs(self):
+        names = [n for n, _ in self.layers] + ['update']
+        for k in self._kwarg_keys:
+            for n in names:
+                prefix = '{}_'.format(n)
+                if k.startswith(prefix):
+                    break
+            else:
+                raise ValueError("Unused kwarg: {}".format(k))
 
     def initialize(self):
         if getattr(self, '_initialized', False):

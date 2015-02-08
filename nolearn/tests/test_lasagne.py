@@ -28,7 +28,7 @@ def NeuralNet():
 
 @pytest.fixture
 def nn(NeuralNet):
-    return NeuralNet([], input_shape=(10, 10))
+    return NeuralNet([('input', object())], input_shape=(10, 10))
 
 
 @pytest.fixture(scope='session')
@@ -248,3 +248,26 @@ class TestTrainTestSplit:
         assert len(X_train) + len(X_valid) == 100
         assert len(y_train) + len(y_valid) == 100
         assert len(X_train) > 45
+
+
+class TestCheckForUnusedKwargs:
+    def test_okay(self, NeuralNet):
+        NeuralNet(
+            layers=[('input', object()), ('mylayer', object())],
+            input_shape=(10, 10),
+            mylayer_hey='hey',
+            update_foo=1,
+            update_bar=2,
+            )
+
+    def test_unused(self, NeuralNet):
+        with pytest.raises(ValueError) as err:
+            NeuralNet(
+                layers=[('input', object()), ('mylayer', object())],
+                input_shape=(10, 10),
+                mylayer_hey='hey',
+                yourlayer_ho='ho',
+                update_foo=1,
+                update_bar=2,
+                )
+        assert str(err.value) == 'Unused kwarg: yourlayer_ho'
