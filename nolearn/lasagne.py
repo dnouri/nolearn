@@ -223,7 +223,7 @@ class NeuralNet(BaseEstimator):
         return train_iter, eval_iter, predict_iter
 
     def fit(self, X, y):
-        if not self.regression and self.use_label_encoder:
+        if self.use_label_encoder:
             self.enc_ = LabelEncoder()
             y = self.enc_.fit_transform(y).astype(np.int32)
             self.classes_ = self.enc_.classes_
