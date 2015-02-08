@@ -146,6 +146,82 @@ class NeuralNet(BaseEstimator):
         self.train_iter_, self.eval_iter_, self.predict_iter_ = iter_funcs
         self._initialized = True
 
+    def _get_params_for(self, name):
+        collected = {}
+        prefix = '{}_'.format(name)
+
+        params = vars(self)
+        more_params = self.more_params
+
+        for key, value in itertools.chain(params.items(), more_params.items()):
+            if key.startswith(prefix):
+                collected[key[len(prefix):]] = value
+
+        return collected
+
+    def initialize_layers(self, layers=None):
+        if layers is not None:
+            self.layers = layers
+
+        input_layer_name, input_layer_factory = self.layers[0]
+        input_layer_params = self._get_params_for(input_layer_name)
+        layer = input_layer_factory(**input_layer_params)
+
+        for (layer_name, layer_factory) in self.layers[1:]:
+            layer_params = self._get_params_for(layer_name)
+            layer = layer_factory(layer, **layer_params)
+
+        return layer
+
+    def _create_iter_funcs(self, output_layer, loss_func, update, input_type,
+                           output_type):
+        X = input_type('x')
+        y = output_type('y')
+        X_batch = input_type('x_batch')
+        y_batch = output_type('y_batch')
+
+        loss_train = loss_func(
+            output_layer.get_output(X_batch), y_batch)
+        loss_eval = loss_func(
+            output_layer.get_output(X_batch, deterministic=True), y_batch)
+        predict_proba = output_layer.get_output(X_batch, deterministic=True)
+        if not self.regression:
+            predict = predict_proba.argmax(axis=1)
+            accuracy = T.mean(T.eq(predict, y_batch))
+        else:
+            accuracy = loss_eval
+
+        all_params = get_all_params(output_layer)
+        update_params = self._get_params_for('update')
+        updates = update(loss_train, all_params, **update_params)
+
+        train_iter = theano.function(
+            inputs=[theano.Param(X_batch), theano.Param(y_batch)],
+            outputs=[loss_train],
+            updates=updates,
+            givens={
+                X: X_batch,
+                y: y_batch,
+                },
+            )
+        eval_iter = theano.function(
+            inputs=[theano.Param(X_batch), theano.Param(y_batch)],
+            outputs=[loss_eval, accuracy],
+            givens={
+                X: X_batch,
+                y: y_batch,
+                },
+            )
+        predict_iter = theano.function(
+            inputs=[theano.Param(X_batch)],
+            outputs=predict_proba,
+            givens={
+                X: X_batch,
+                },
+            )
+
+        return train_iter, eval_iter, predict_iter
+
     def fit(self, X, y):
         if not self.regression and self.use_label_encoder:
             self.enc_ = LabelEncoder()
@@ -279,68 +355,6 @@ class NeuralNet(BaseEstimator):
     def get_all_params(self):
         return get_all_params(self._output_layer)[::-1]
 
-    def _create_iter_funcs(self, output_layer, loss_func, update, input_type,
-                           output_type):
-        X = input_type('x')
-        y = output_type('y')
-        X_batch = input_type('x_batch')
-        y_batch = output_type('y_batch')
-
-        loss_train = loss_func(
-            output_layer.get_output(X_batch), y_batch)
-        loss_eval = loss_func(
-            output_layer.get_output(X_batch, deterministic=True), y_batch)
-        predict_proba = output_layer.get_output(X_batch, deterministic=True)
-        if not self.regression:
-            predict = predict_proba.argmax(axis=1)
-            accuracy = T.mean(T.eq(predict, y_batch))
-        else:
-            accuracy = loss_eval
-
-        all_params = get_all_params(output_layer)
-        update_params = self._get_params_for('update')
-        updates = update(loss_train, all_params, **update_params)
-
-        train_iter = theano.function(
-            inputs=[theano.Param(X_batch), theano.Param(y_batch)],
-            outputs=[loss_train],
-            updates=updates,
-            givens={
-                X: X_batch,
-                y: y_batch,
-                },
-            )
-        eval_iter = theano.function(
-            inputs=[theano.Param(X_batch), theano.Param(y_batch)],
-            outputs=[loss_eval, accuracy],
-            givens={
-                X: X_batch,
-                y: y_batch,
-                },
-            )
-        predict_iter = theano.function(
-            inputs=[theano.Param(X_batch)],
-            outputs=predict_proba,
-            givens={
-                X: X_batch,
-                },
-            )
-
-        return train_iter, eval_iter, predict_iter
-
-    def _get_params_for(self, name):
-        collected = {}
-        prefix = '{}_'.format(name)
-
-        params = vars(self)
-        more_params = self.more_params
-
-        for key, value in itertools.chain(params.items(), more_params.items()):
-            if key.startswith(prefix):
-                collected[key[len(prefix):]] = value
-
-        return collected
-
     def load_weights_from(self, source):
         self._output_layer = self.initialize_layers()
 
@@ -362,20 +376,6 @@ class NeuralNet(BaseEstimator):
         weights = [w.get_value() for w in self.get_all_params()]
         with open(fname, 'wb') as f:
             pickle.dump(weights, f, -1)
-
-    def initialize_layers(self, layers=None):
-        if layers is not None:
-            self.layers = layers
-
-        input_layer_name, input_layer_factory = self.layers[0]
-        input_layer_params = self._get_params_for(input_layer_name)
-        layer = input_layer_factory(**input_layer_params)
-
-        for (layer_name, layer_factory) in self.layers[1:]:
-            layer_params = self._get_params_for(layer_name)
-            layer = layer_factory(layer, **layer_params)
-
-        return layer
 
     def __getstate__(self):
         state = dict(self.__dict__)
