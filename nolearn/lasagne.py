@@ -339,14 +339,19 @@ class NeuralNet(BaseEstimator):
         return float(score(self.predict(X), y))
 
     def train_test_split(self, X, y, eval_size):
-        if self.regression:
-            kf = KFold(y.shape[0], 1. / eval_size)
-        else:
-            kf = StratifiedKFold(y, 1. / eval_size)
+        if eval_size:
+            if self.regression:
+                kf = KFold(y.shape[0], round(1. / eval_size))
+            else:
+                kf = StratifiedKFold(y, round(1. / eval_size))
 
-        train_indices, valid_indices = next(iter(kf))
-        X_train, y_train = X[train_indices], y[train_indices]
-        X_valid, y_valid = X[valid_indices], y[valid_indices]
+            train_indices, valid_indices = next(iter(kf))
+            X_train, y_train = X[train_indices], y[train_indices]
+            X_valid, y_valid = X[valid_indices], y[valid_indices]
+        else:
+            X_train, y_train = X, y
+            X_valid, y_valid = X[len(X):], y[len(y):]
+
         return X_train, X_valid, y_train, y_valid
 
     def get_all_layers(self):
