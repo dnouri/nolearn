@@ -102,7 +102,7 @@ def cached(cache_key=default_cache_key, cache_path=None):
             # that's passed in via the decorator call
             # (`default_cache_key` by default).
             try:
-                key = bytes(cache_key(*args, **kwargs), encoding='ascii')
+                key = str(cache_key(*args, **kwargs)).encode('ascii')
             except DontCache:
                 return func(*args, **kwargs)
 
