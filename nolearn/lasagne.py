@@ -128,11 +128,9 @@ class NeuralNet(BaseEstimator):
                 "Use 'batch_iterator_train' and 'batch_iterator_test' instead."
                 )
 
-    def fit(self, X, y):
-        if not self.regression and self.use_label_encoder:
-            self.enc_ = LabelEncoder()
-            y = self.enc_.fit_transform(y).astype(np.int32)
-            self.classes_ = self.enc_.classes_
+    def initialize(self):
+        if getattr(self, '_initialized', False):
+            return
 
         out = getattr(self, '_output_layer', None)
         if out is None:
@@ -146,6 +144,14 @@ class NeuralNet(BaseEstimator):
             self.y_tensor_type,
             )
         self.train_iter_, self.eval_iter_, self.predict_iter_ = iter_funcs
+        self._initialized = True
+
+    def fit(self, X, y):
+        if not self.regression and self.use_label_encoder:
+            self.enc_ = LabelEncoder()
+            y = self.enc_.fit_transform(y).astype(np.int32)
+            self.classes_ = self.enc_.classes_
+        self.initialize()
 
         try:
             self.train_loop(X, y)
@@ -369,8 +375,23 @@ class NeuralNet(BaseEstimator):
             layer_params = self._get_params_for(layer_name)
             layer = layer_factory(layer, **layer_params)
 
-        self._output_layer = layer
         return layer
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        for attr in (
+            'train_iter_',
+            'eval_iter_',
+            'predict_iter_',
+            '_initialized',
+            ):
+            if attr in state:
+                del state[attr]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.initialize()
 
     def _print_layer_info(self, layers):
         for layer in layers:

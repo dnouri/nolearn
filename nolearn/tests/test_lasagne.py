@@ -1,3 +1,5 @@
+import pickle
+
 from mock import patch
 from lasagne.layers import DenseLayer
 from lasagne.layers import DropoutLayer
@@ -43,7 +45,7 @@ def test_lasagne_functional_mnist(mnist):
     from nolearn.lasagne import NeuralNet
 
     X, y = mnist
-    X_train, y_train = X[:60000], y[:60000]
+    X_train, y_train = X[:10000], y[:10000]
     X_test, y_test = X[60000:], y[60000:]
 
     epochs = []
@@ -81,7 +83,7 @@ def test_lasagne_functional_mnist(mnist):
 
     nn.fit(X_train, y_train)
     assert len(epochs) == 2
-    assert epochs[0]['valid_accuracy'] > 0.85
+    assert epochs[0]['valid_accuracy'] > 0.8
     assert epochs[1]['valid_accuracy'] > epochs[0]['valid_accuracy']
     assert sorted(epochs[0].keys()) == [
         'epoch', 'train_loss', 'valid_accuracy', 'valid_loss',
@@ -89,6 +91,12 @@ def test_lasagne_functional_mnist(mnist):
 
     y_pred = nn.predict(X_test)
     assert accuracy_score(y_pred, y_test) > 0.85
+
+    global on_epoch_finished  # pickle
+    on_epoch_finished = on_epoch_finished
+    pickled = pickle.dumps(nn, -1)
+    nn2 = pickle.loads(pickled)
+    assert np.array_equal(nn2.predict(X_test), y_pred)
 
 
 def test_lasagne_functional_grid_search(mnist, monkeypatch):
