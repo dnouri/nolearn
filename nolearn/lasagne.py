@@ -174,13 +174,22 @@ class NeuralNet(BaseEstimator):
         if layers is not None:
             self.layers = layers
 
+        self.layers_ = {}
         input_layer_name, input_layer_factory = self.layers[0]
         input_layer_params = self._get_params_for(input_layer_name)
         layer = input_layer_factory(**input_layer_params)
+        self.layers_[input_layer_name] = layer
 
         for (layer_name, layer_factory) in self.layers[1:]:
             layer_params = self._get_params_for(layer_name)
+            incoming = layer_params.pop('incoming', None)
+            if incoming is not None:
+                if isinstance(incoming, (list, tuple)):
+                    layer = [self.layers_[name] for name in incoming]
+                else:
+                    layer = self.layers_[incoming]
             layer = layer_factory(layer, **layer_params)
+            self.layers_[layer_name] = layer
 
         return layer
 

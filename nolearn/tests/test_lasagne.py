@@ -1,6 +1,7 @@
 import pickle
 
 from mock import patch
+from mock import Mock
 from lasagne.layers import DenseLayer
 from lasagne.layers import DropoutLayer
 from lasagne.layers import InputLayer
@@ -271,3 +272,55 @@ class TestCheckForUnusedKwargs:
                 update_bar=2,
                 )
         assert str(err.value) == 'Unused kwarg: yourlayer_ho'
+
+
+class TestInitializeLayers:
+    def test_initialization(self, NeuralNet):
+        input, hidden1, hidden2, output = Mock(), Mock(), Mock(), Mock()
+        nn = NeuralNet(
+            layers=[
+                ('input', input),
+                ('hidden1', hidden1),
+                ('hidden2', hidden2),
+                ('output', output),
+                ],
+            input_shape=(10, 10),
+            hidden1_some='param',
+            )
+        out = nn.initialize_layers(nn.layers)
+
+        input.assert_called_with(shape=(10, 10))
+        nn.layers_['input'] is input.return_value
+
+        hidden1.assert_called_with(input.return_value, some='param')
+        nn.layers_['hidden1'] is hidden1.return_value
+
+        hidden2.assert_called_with(hidden1.return_value)
+        nn.layers_['hidden2'] is hidden2.return_value
+
+        output.assert_called_with(hidden2.return_value)
+
+        assert out is nn.layers_['output']
+
+    def test_diamond(self, NeuralNet):
+        input, hidden1, hidden2, concat, output = (
+            Mock(), Mock(), Mock(), Mock(), Mock())
+        nn = NeuralNet(
+            layers=[
+                ('input', input),
+                ('hidden1', hidden1),
+                ('hidden2', hidden2),
+                ('concat', concat),
+                ('output', output),
+                ],
+            input_shape=(10, 10),
+            hidden2_incoming='input',
+            concat_incoming=['hidden1', 'hidden2'],
+            )
+        nn.initialize_layers(nn.layers)
+
+        input.assert_called_with(shape=(10, 10))
+        hidden1.assert_called_with(input.return_value)
+        hidden2.assert_called_with(input.return_value)
+        concat.assert_called_with([hidden1.return_value, hidden2.return_value])
+        output.assert_called_with(concat.return_value)
