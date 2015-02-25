@@ -71,7 +71,7 @@ class LearningCurve(object):
             print("          n      train      test")
 
         for frac in np.linspace(0.1, 1.0, num=steps):
-            frac_size = X_train.shape[0] * frac
+            frac_size = int(X_train.shape[0] * frac)
             sizes.append(frac_size)
             X_train1 = X_train[:frac_size]
             y_train1 = y_train[:frac_size]

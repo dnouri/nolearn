@@ -1,16 +1,18 @@
 from __future__ import absolute_import
 
 from ._compat import pickle
+from collections import OrderedDict
 import functools
 import itertools
 import operator
 from time import time
 import pdb
 
-from lasagne.layers import get_all_layers
-from lasagne.layers import get_all_params
+from lasagne.objectives import categorical_crossentropy
 from lasagne.objectives import mse
+from lasagne.objectives import Objective
 from lasagne.updates import nesterov_momentum
+from lasagne.utils import unique
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.cross_validation import KFold
@@ -35,10 +37,6 @@ class ansi:
     BLUE = '\033[94m'
     GREEN = '\033[32m'
     ENDC = '\033[0m'
-
-
-def negative_log_likelihood(output, prediction):
-    return -T.mean(T.log(output)[T.arange(prediction.shape[0]), prediction])
 
 
 class BatchIterator(object):
@@ -73,6 +71,8 @@ class NeuralNet(BaseEstimator):
         layers,
         update=nesterov_momentum,
         loss=None,
+        objective=Objective,
+        objective_loss_function=None,
         batch_iterator_train=BatchIterator(batch_size=128),
         batch_iterator_test=BatchIterator(batch_size=128),
         regression=False,
@@ -87,8 +87,14 @@ class NeuralNet(BaseEstimator):
         verbose=0,
         **kwargs
         ):
-        if loss is None:
-            loss = mse if regression else negative_log_likelihood
+        if loss is not None:
+            raise ValueError(
+                "The 'loss' parameter was removed, please use "
+                "'objective_loss_function' instead.")  # BBB
+        if objective_loss_function is None:
+            objective_loss_function = (
+                mse if regression else categorical_crossentropy)
+
         if X_tensor_type is None:
             types = {
                 2: T.matrix,
@@ -101,7 +107,8 @@ class NeuralNet(BaseEstimator):
 
         self.layers = layers
         self.update = update
-        self.loss = loss
+        self.objective = objective
+        self.objective_loss_function = objective_loss_function
         self.batch_iterator_train = batch_iterator_train
         self.batch_iterator_test = batch_iterator_test
         self.regression = regression
@@ -130,7 +137,7 @@ class NeuralNet(BaseEstimator):
                 )
 
     def _check_for_unused_kwargs(self):
-        names = [n for n, _ in self.layers] + ['update']
+        names = [n for n, _ in self.layers] + ['update', 'objective']
         for k in self._kwarg_keys:
             for n in names:
                 prefix = '{}_'.format(n)
@@ -147,10 +154,10 @@ class NeuralNet(BaseEstimator):
         if out is None:
             out = self._output_layer = self.initialize_layers()
         if self.verbose:
-            self._print_layer_info(self.get_all_layers())
+            self._print_layer_info(self.layers_.values())
 
         iter_funcs = self._create_iter_funcs(
-            out, self.loss, self.update,
+            self.layers_, self.objective, self.update,
             self.X_tensor_type,
             self.y_tensor_type,
             )
@@ -174,10 +181,11 @@ class NeuralNet(BaseEstimator):
         if layers is not None:
             self.layers = layers
 
-        self.layers_ = {}
+        self.layers_ = OrderedDict()
         input_layer_name, input_layer_factory = self.layers[0]
         input_layer_params = self._get_params_for(input_layer_name)
-        layer = input_layer_factory(**input_layer_params)
+        layer = input_layer_factory(
+            name=input_layer_name, **input_layer_params)
         self.layers_[input_layer_name] = layer
 
         for (layer_name, layer_factory) in self.layers[1:]:
@@ -188,22 +196,27 @@ class NeuralNet(BaseEstimator):
                     layer = [self.layers_[name] for name in incoming]
                 else:
                     layer = self.layers_[incoming]
-            layer = layer_factory(layer, **layer_params)
+            layer = layer_factory(layer, name=layer_name, **layer_params)
             self.layers_[layer_name] = layer
 
-        return layer
+        return self.layers_['output']
 
-    def _create_iter_funcs(self, output_layer, loss_func, update, input_type,
+    def _create_iter_funcs(self, layers, objective, update, input_type,
                            output_type):
         X = input_type('x')
         y = output_type('y')
         X_batch = input_type('x_batch')
         y_batch = output_type('y_batch')
 
-        loss_train = loss_func(
-            output_layer.get_output(X_batch), y_batch)
-        loss_eval = loss_func(
-            output_layer.get_output(X_batch, deterministic=True), y_batch)
+        output_layer = layers['output']
+        objective_params = self._get_params_for('objective')
+        obj = objective(output_layer, **objective_params)
+        if not hasattr(obj, 'layers'):
+            # XXX breaking the Lasagne interface a little:
+            obj.layers = layers
+
+        loss_train = obj.get_loss(X_batch, y_batch)
+        loss_eval = obj.get_loss(X_batch, y_batch, deterministic=True)
         predict_proba = output_layer.get_output(X_batch, deterministic=True)
         if not self.regression:
             predict = predict_proba.argmax(axis=1)
@@ -211,7 +224,7 @@ class NeuralNet(BaseEstimator):
         else:
             accuracy = loss_eval
 
-        all_params = get_all_params(output_layer)
+        all_params = self.get_all_params()
         update_params = self._get_params_for('update')
         updates = update(loss_train, all_params, **update_params)
 
@@ -375,10 +388,12 @@ class NeuralNet(BaseEstimator):
         return X_train, X_valid, y_train, y_valid
 
     def get_all_layers(self):
-        return get_all_layers(self._output_layer)[::-1]
+        return self.layers_.values()
 
     def get_all_params(self):
-        return get_all_params(self._output_layer)[::-1]
+        layers = self.get_all_layers()
+        params = sum([l.get_params() for l in layers], [])
+        return unique(params)
 
     def load_weights_from(self, source):
         self.initialize()
@@ -422,7 +437,7 @@ class NeuralNet(BaseEstimator):
         for layer in layers:
             output_shape = layer.get_output_shape()
             print("  {:<18}\t{:<20}\tproduces {:>7} outputs".format(
-                layer.__class__.__name__,
+                layer.name,
                 str(output_shape),
                 str(functools.reduce(operator.mul, output_shape[1:])),
                 ))
