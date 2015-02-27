@@ -103,10 +103,16 @@ def test_lasagne_functional_mnist(mnist):
     y_pred = nn.predict(X_test)
     assert accuracy_score(y_pred, y_test) > 0.85
 
+    # Pickle, load again, and predict; should give us the same predictions:
     global on_epoch_finished  # pickle
     on_epoch_finished = on_epoch_finished
     pickled = pickle.dumps(nn, -1)
     nn2 = pickle.loads(pickled)
+    assert np.array_equal(nn2.predict(X_test), y_pred)
+
+    # Using load_weights_from should give us the same predictions:
+    nn2.initialize_layers()
+    nn2.load_weights_from(nn)
     assert np.array_equal(nn2.predict(X_test), y_pred)
 
 
