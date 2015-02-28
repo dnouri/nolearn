@@ -149,6 +149,7 @@ def test_lasagne_functional_grid_search(mnist, monkeypatch):
 def test_clone():
     from nolearn.lasagne import NeuralNet
     from nolearn.lasagne import negative_log_likelihood
+    from nolearn.lasagne import l2
     from nolearn.lasagne import BatchIterator
 
     params = dict(
@@ -170,6 +171,8 @@ def test_clone():
 
         regression=False,
         loss=negative_log_likelihood,
+        regularization=l2,
+        regularization_rate=0,
         batch_iterator_train=BatchIterator(batch_size=100),
         X_tensor_type=T.matrix,
         y_tensor_type=T.ivector,

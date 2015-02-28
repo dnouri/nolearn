@@ -73,7 +73,7 @@ class NeuralNet(BaseEstimator):
         layers,
         update=nesterov_momentum,
         loss=None,
-        regularization=None,
+        regularization=l2,
         regularization_rate=0,
         batch_iterator_train=BatchIterator(batch_size=128),
         batch_iterator_test=BatchIterator(batch_size=128),
@@ -91,9 +91,6 @@ class NeuralNet(BaseEstimator):
         ):
         if loss is None:
             loss = mse if regression else negative_log_likelihood
-
-        if regularization is None:
-            regularization = l2
 
         if X_tensor_type is None:
             types = {
