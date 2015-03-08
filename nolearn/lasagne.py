@@ -381,7 +381,7 @@ class NeuralNet(BaseEstimator):
         return get_all_params(self._output_layer)[::-1]
 
     def load_weights_from(self, source):
-        self._output_layer = self.initialize_layers()
+        self.initialize()
 
         if isinstance(source, str):
             source = np.load(source)

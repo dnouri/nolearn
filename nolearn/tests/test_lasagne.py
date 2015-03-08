@@ -66,7 +66,7 @@ def test_lasagne_functional_mnist(mnist):
         if len(epochs) > 1:
             raise StopIteration()
 
-    nn = NeuralNet(
+    nn_def = NeuralNet(
         layers=[
             ('input', InputLayer),
             ('hidden1', DenseLayer),
@@ -92,6 +92,7 @@ def test_lasagne_functional_mnist(mnist):
         on_epoch_finished=on_epoch_finished,
         )
 
+    nn = clone(nn_def)
     nn.fit(X_train, y_train)
     assert len(epochs) == 2
     assert epochs[0]['valid_accuracy'] > 0.8
@@ -110,10 +111,10 @@ def test_lasagne_functional_mnist(mnist):
     nn2 = pickle.loads(pickled)
     assert np.array_equal(nn2.predict(X_test), y_pred)
 
-    # Using load_weights_from should give us the same predictions:
-    nn2.initialize_layers()
-    nn2.load_weights_from(nn)
-    assert np.array_equal(nn2.predict(X_test), y_pred)
+    # Use load_weights_from to initialize an untrained model:
+    nn3 = clone(nn_def)
+    nn3.load_weights_from(nn2)
+    assert np.array_equal(nn3.predict(X_test), y_pred)
 
 
 def test_lasagne_functional_grid_search(mnist, monkeypatch):
