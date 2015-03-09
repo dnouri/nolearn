@@ -11,6 +11,7 @@ from lasagne.layers import get_all_layers
 from lasagne.layers import get_all_params
 from lasagne.objectives import mse
 from lasagne.updates import nesterov_momentum
+from lasagne.regularization import l2
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.cross_validation import KFold
@@ -39,7 +40,6 @@ class ansi:
 
 def negative_log_likelihood(output, prediction):
     return -T.mean(T.log(output)[T.arange(prediction.shape[0]), prediction])
-
 
 class BatchIterator(object):
     def __init__(self, batch_size):
@@ -73,6 +73,8 @@ class NeuralNet(BaseEstimator):
         layers,
         update=nesterov_momentum,
         loss=None,
+        regularization=l2,
+        regularization_rate=0,
         batch_iterator_train=BatchIterator(batch_size=128),
         batch_iterator_test=BatchIterator(batch_size=128),
         regression=False,
@@ -89,6 +91,7 @@ class NeuralNet(BaseEstimator):
         ):
         if loss is None:
             loss = mse if regression else negative_log_likelihood
+
         if X_tensor_type is None:
             types = {
                 2: T.matrix,
@@ -102,6 +105,8 @@ class NeuralNet(BaseEstimator):
         self.layers = layers
         self.update = update
         self.loss = loss
+        self.regularization = regularization
+        self.regularization_rate = regularization_rate
         self.batch_iterator_train = batch_iterator_train
         self.batch_iterator_test = batch_iterator_test
         self.regression = regression
@@ -201,7 +206,8 @@ class NeuralNet(BaseEstimator):
         y_batch = output_type('y_batch')
 
         loss_train = loss_func(
-            output_layer.get_output(X_batch), y_batch)
+            output_layer.get_output(X_batch), y_batch) +\
+                    self.regularization_rate * self.regularization(output_layer)
         loss_eval = loss_func(
             output_layer.get_output(X_batch, deterministic=True), y_batch)
         predict_proba = output_layer.get_output(X_batch, deterministic=True)
