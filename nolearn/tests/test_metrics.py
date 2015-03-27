@@ -44,7 +44,7 @@ def test_learning_curve():
     scores_train, scores_test, sizes = _learning_curve(learning_curve)
     assert len(scores_train) == 5
     assert len(scores_test) == 5
-    assert sizes[0] == 22.5
+    assert sizes[0] == 22
     assert sizes[-1] == 225.0
 
 
@@ -54,5 +54,5 @@ def test_learning_curve_logloss():
     scores_train, scores_test, sizes = _learning_curve(learning_curve_logloss)
     assert len(scores_train) == 5
     assert len(scores_test) == 5
-    assert sizes[0] == 22.5
+    assert sizes[0] == 22
     assert sizes[-1] == 225.0

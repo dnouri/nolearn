@@ -1,4 +1,4 @@
 joblib==0.8.4
 scikit-learn==0.15.2
 git+https://github.com/Theano/Theano.git@b84464261ffa1d451097ac5e5243dcd8f7e0ff62#egg=Theano
-git+https://github.com/benanne/Lasagne.git@490f45de4d1e9f77969a729588f6971744f423e9#egg=Lasagne
+git+https://github.com/benanne/Lasagne.git@b3f291383ceeb4b1fa64a230607455a2f1bb687b#egg=Lasagne
