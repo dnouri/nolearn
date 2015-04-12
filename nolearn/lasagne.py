@@ -62,6 +62,38 @@ class BatchIterator(object):
     def transform(self, Xb, yb):
         return Xb, yb
 
+class MiniBatchIterator(BatchIterator):
+    def __init__(self, batch_size = 128, iterations = 32):
+        BatchIterator.__init__(self, batch_size)
+        self.iterations = iterations
+        self.X = None
+        self.y = None
+        self.cidx = 0
+        self.midx = 0
+
+    def __call__(self, X, y = None):
+        # if data set is reset
+        if not (self.X is X and self.y is y):
+            self.cidx = 0
+            n_samples = X.shape[0]
+            bs = self.batch_size
+            self.midx = (n_samples + bs - 1) // bs
+        self.X, self.y = X, y
+        return self
+
+    def __iter__(self):
+        bs = self.batch_size
+        for i in range(0, self.iterations):
+            sl = slice(self.cidx * bs , (self.cidx + 1) * bs)
+            self.cidx += 1
+            # wrap up.
+            if self.cidx >= self.midx: self.cidx = 0
+            Xb = self.X[sl]
+            if self.y is not None:
+                yb = self.y[sl]
+            else:
+                yb = None
+            yield self.transform(Xb, yb)
 
 class NeuralNet(BaseEstimator):
     """A scikit-learn estimator based on Lasagne.
