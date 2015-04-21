@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 from .._compat import pickle
 from collections import OrderedDict
+from difflib import SequenceMatcher
 import functools
 import itertools
 import operator
@@ -395,28 +396,6 @@ class NeuralNet(BaseEstimator):
         params = sum([l.get_params() for l in layers], [])
         return unique(params)
 
-    def load_weights_from(self, source):
-        self.initialize()
-
-        if isinstance(source, str):
-            source = np.load(source)
-
-        if isinstance(source, NeuralNet):
-            source = source.get_all_params()
-
-        source_weights = [
-            w.get_value() if hasattr(w, 'get_value') else w for w in source]
-
-        for w1, w2 in zip(source_weights, self.get_all_params()):
-            if w1.shape != w2.get_value().shape:
-                continue
-            w2.set_value(w1)
-
-    def save_weights_to(self, fname):
-        weights = [w.get_value() for w in self.get_all_params()]
-        with open(fname, 'wb') as f:
-            pickle.dump(weights, f, -1)
-
     def __getstate__(self):
         state = dict(self.__dict__)
         for attr in (
@@ -456,3 +435,54 @@ class NeuralNet(BaseEstimator):
         # This allows us to have **kwargs in __init__ (woot!):
         param_names = super(NeuralNet, self)._get_param_names()
         return param_names + self._kwarg_keys
+
+    def save_weights_to(self, fname):
+        weights = [w.get_value() for w in self.get_all_params()]
+        with open(fname, 'wb') as f:
+            pickle.dump(weights, f, -1)
+
+    @staticmethod
+    def _param_alignment(shapes0, shapes1):
+        shapes0 = list(map(str, shapes0))
+        shapes1 = list(map(str, shapes1))
+        matcher = SequenceMatcher(a=shapes0, b=shapes1)
+        matches = []
+        for block in matcher.get_matching_blocks():
+            if block.size == 0:
+                continue
+            matches.append((list(range(block.a, block.a + block.size)),
+                            list(range(block.b, block.b + block.size))))
+        result = [line for match in matches for line in zip(*match)]
+        return result
+
+    def load_weights_from(self, src):
+        if not hasattr(self, '_initialized'):
+            raise AttributeError(
+                "Please initialize the net before loading weights.")
+
+        if isinstance(src, str):
+            src = np.load(src)
+        if isinstance(src, NeuralNet):
+            src = src.get_all_params()
+
+        target = self.get_all_params()
+        src_params = [p.get_value() if hasattr(p, 'get_value') else p
+                      for p in src]
+        target_params = [p.get_value() for p in target]
+
+        src_shapes = [p.shape for p in src_params]
+        target_shapes = [p.shape for p in target_params]
+        matches = self._param_alignment(src_shapes, target_shapes)
+
+        for i, j in matches:
+            # ii, jj are the indices of the layers, assuming 2
+            # parameters per layer
+            ii, jj = int(0.5 * i) + 1, int(0.5 * j) + 1
+            target[j].set_value(src_params[i])
+
+            if not self.verbose:
+                continue
+            target_layer_name = list(self.layers_)[jj]
+            param_shape = 'x'.join(map(str, src_params[i].shape))
+            print("* Loaded parameter from layer {} to layer {} ({}) "
+                  "(shape: {})".format(ii, jj, target_layer_name, param_shape))
