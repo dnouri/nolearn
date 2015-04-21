@@ -2,7 +2,6 @@ from __future__ import absolute_import
 
 from .._compat import pickle
 from collections import OrderedDict
-from difflib import SequenceMatcher
 import functools
 import itertools
 import operator
@@ -21,6 +20,7 @@ from sklearn.cross_validation import StratifiedKFold
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
+from tabulate import tabulate
 import theano
 from theano import tensor as T
 
@@ -79,6 +79,7 @@ class NeuralNet(BaseEstimator):
         regression=False,
         max_epochs=100,
         eval_size=0.2,
+        custom_score=None,
         X_tensor_type=None,
         y_tensor_type=None,
         use_label_encoder=False,
@@ -115,6 +116,7 @@ class NeuralNet(BaseEstimator):
         self.regression = regression
         self.max_epochs = max_epochs
         self.eval_size = eval_size
+        self.custom_score = custom_score
         self.X_tensor_type = X_tensor_type
         self.y_tensor_type = y_tensor_type
         self.use_label_encoder = use_label_encoder
@@ -153,8 +155,6 @@ class NeuralNet(BaseEstimator):
         out = getattr(self, '_output_layer', None)
         if out is None:
             out = self._output_layer = self.initialize_layers()
-        self._check_for_unused_kwargs()
-
         if self.verbose:
             self._print_layer_info(self.layers_.values())
 
@@ -301,15 +301,16 @@ class NeuralNet(BaseEstimator):
             on_training_finished = [on_training_finished]
 
         epoch = 0
-        info = None
-        best_valid_loss = np.inf
-        best_train_loss = np.inf
-
-        if self.verbose:
-            print("""
- Epoch  |  Train loss  |  Valid loss  |  Train / Val  |  Valid acc  |  Dur
---------|--------------|--------------|---------------|-------------|-------\
-""")
+        best_valid_loss = (
+            min([row['valid loss'] for row in self.train_history_]) if
+            self.train_history_ else np.inf
+            )
+        best_train_loss = (
+            min([row['train loss'] for row in self.train_history_]) if
+            self.train_history_ else np.inf
+            )
+        first_iteration = True
+        num_epochs_past = len(self.train_history_)
 
         while epoch < self.max_epochs:
             epoch += 1
@@ -317,6 +318,7 @@ class NeuralNet(BaseEstimator):
             train_losses = []
             valid_losses = []
             valid_accuracies = []
+            custom_score = []
 
             t0 = time()
 
@@ -328,41 +330,45 @@ class NeuralNet(BaseEstimator):
                 batch_valid_loss, accuracy = self.eval_iter_(Xb, yb)
                 valid_losses.append(batch_valid_loss)
                 valid_accuracies.append(accuracy)
+                if self.custom_score:
+                    y_prob = self.predict_iter_(Xb)
+                    custom_score.append(self.custom_score[1](yb, y_prob))
 
             avg_train_loss = np.mean(train_losses)
             avg_valid_loss = np.mean(valid_losses)
             avg_valid_accuracy = np.mean(valid_accuracies)
+            if custom_score:
+                avg_custom_score = np.mean(custom_score)
 
             if avg_train_loss < best_train_loss:
                 best_train_loss = avg_train_loss
             if avg_valid_loss < best_valid_loss:
                 best_valid_loss = avg_valid_loss
+            best_train_loss == avg_train_loss
+            best_valid = best_valid_loss == avg_valid_loss
 
-            if self.verbose:
-                best_train = best_train_loss == avg_train_loss
-                best_valid = best_valid_loss == avg_valid_loss
-                print(" {:>5}  |  {}{:>10.6f}{}  |  {}{:>10.6f}{}  "
-                      "|  {:>11.6f}  |  {:>9}  |  {:>3.1f}s".format(
-                          epoch,
-                          ansi.BLUE if best_train else "",
-                          avg_train_loss,
-                          ansi.ENDC if best_train else "",
-                          ansi.GREEN if best_valid else "",
-                          avg_valid_loss,
-                          ansi.ENDC if best_valid else "",
-                          avg_train_loss / avg_valid_loss,
-                          "{:.2f}%".format(avg_valid_accuracy * 100)
-                          if not self.regression else "",
-                          time() - t0,
-                          ))
+            info = OrderedDict([
+                ('epoch', num_epochs_past + epoch),
+                ('train loss', avg_train_loss),
+                ('valid loss', avg_valid_loss),
+                ('valid best', avg_valid_loss if best_valid else None),
+                ('train/val', avg_train_loss / avg_valid_loss),
+                ('valid acc', avg_valid_accuracy),
+                ])
+            if self.custom_score:
+                info.update({self.custom_score[0]: avg_custom_score})
+            info.update({'dur': time() - t0})
 
-            info = dict(
-                epoch=epoch,
-                train_loss=avg_train_loss,
-                valid_loss=avg_valid_loss,
-                valid_accuracy=avg_valid_accuracy,
-                )
             self.train_history_.append(info)
+            self.log_ = tabulate(self.train_history_, headers='keys',
+                                 tablefmt='pipe', floatfmt='.4f')
+            if self.verbose:
+                if first_iteration:
+                    print(self.log_.split('\n', 2)[0])
+                    print(self.log_.split('\n', 2)[1])
+                    first_iteration = False
+                print(self.log_.rsplit('\n', 1)[-1])
+
             try:
                 for func in on_epoch_finished:
                     func(self, self.train_history_)
@@ -415,6 +421,28 @@ class NeuralNet(BaseEstimator):
         params = sum([l.get_params() for l in layers], [])
         return unique(params)
 
+    def load_weights_from(self, source):
+        self.initialize()
+
+        if isinstance(source, str):
+            source = np.load(source)
+
+        if isinstance(source, NeuralNet):
+            source = source.get_all_params()
+
+        source_weights = [
+            w.get_value() if hasattr(w, 'get_value') else w for w in source]
+
+        for w1, w2 in zip(source_weights, self.get_all_params()):
+            if w1.shape != w2.get_value().shape:
+                continue
+            w2.set_value(w1)
+
+    def save_weights_to(self, fname):
+        weights = [w.get_value() for w in self.get_all_params()]
+        with open(fname, 'wb') as f:
+            pickle.dump(weights, f, -1)
+
     def __getstate__(self):
         state = dict(self.__dict__)
         for attr in (
@@ -454,54 +482,3 @@ class NeuralNet(BaseEstimator):
         # This allows us to have **kwargs in __init__ (woot!):
         param_names = super(NeuralNet, self)._get_param_names()
         return param_names + self._kwarg_keys
-
-    def save_weights_to(self, fname):
-        weights = [w.get_value() for w in self.get_all_params()]
-        with open(fname, 'wb') as f:
-            pickle.dump(weights, f, -1)
-
-    @staticmethod
-    def _param_alignment(shapes0, shapes1):
-        shapes0 = list(map(str, shapes0))
-        shapes1 = list(map(str, shapes1))
-        matcher = SequenceMatcher(a=shapes0, b=shapes1)
-        matches = []
-        for block in matcher.get_matching_blocks():
-            if block.size == 0:
-                continue
-            matches.append((list(range(block.a, block.a + block.size)),
-                            list(range(block.b, block.b + block.size))))
-        result = [line for match in matches for line in zip(*match)]
-        return result
-
-    def load_weights_from(self, src):
-        if not hasattr(self, '_initialized'):
-            raise AttributeError(
-                "Please initialize the net before loading weights.")
-
-        if isinstance(src, str):
-            src = np.load(src)
-        if isinstance(src, NeuralNet):
-            src = src.get_all_params()
-
-        target = self.get_all_params()
-        src_params = [p.get_value() if hasattr(p, 'get_value') else p
-                      for p in src]
-        target_params = [p.get_value() for p in target]
-
-        src_shapes = [p.shape for p in src_params]
-        target_shapes = [p.shape for p in target_params]
-        matches = self._param_alignment(src_shapes, target_shapes)
-
-        for i, j in matches:
-            # ii, jj are the indices of the layers, assuming 2
-            # parameters per layer
-            ii, jj = int(0.5 * i) + 1, int(0.5 * j) + 1
-            target[j].set_value(src_params[i])
-
-            if not self.verbose:
-                continue
-            target_layer_name = list(self.layers_)[jj]
-            param_shape = 'x'.join(map(str, src_params[i].shape))
-            print("* Loaded parameter from layer {} to layer {} ({}) "
-                  "(shape: {})".format(ii, jj, target_layer_name, param_shape))
