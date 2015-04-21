@@ -164,11 +164,6 @@ def get_conv_infos(net, min_capacity=100. / 6, tablefmt='pipe',
     MAG = ansi.MAGENTA
     RED = ansi.RED
 
-    if not hasattr(net, '_initialized'):
-        raise AttributeError("Please initialize the net before callings this "
-                             "function, for instance by calling "
-                             "net.initialize()")
-
     layers = net.layers_.values()
     img_size = net.layers_['input'].get_output_shape()[2:]
 
