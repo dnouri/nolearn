@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 from .._compat import pickle
 from collections import OrderedDict
-import functools
+from functools import reduce
 import itertools
 import operator
 from time import time
@@ -20,23 +20,15 @@ from sklearn.cross_validation import StratifiedKFold
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
+from tabulate import tabulate
 import theano
 from theano import tensor as T
 
-
-class _list(list):
-    pass
-
-
-class _dict(dict):
-    def __contains__(self, key):
-        return True
-
-
-class ansi:
-    BLUE = '\033[94m'
-    GREEN = '\033[32m'
-    ENDC = '\033[0m'
+from .utils import _dict
+from .utils import _list
+from .utils import ansi
+from .utils import get_conv_infos
+from .utils import layers_have_conv2d
 
 
 class BatchIterator(object):
@@ -153,8 +145,6 @@ class NeuralNet(BaseEstimator):
         out = getattr(self, '_output_layer', None)
         if out is None:
             out = self._output_layer = self.initialize_layers()
-        if self.verbose:
-            self._print_layer_info(self.layers_.values())
 
         iter_funcs = self._create_iter_funcs(
             self.layers_, self.objective, self.update,
@@ -162,7 +152,11 @@ class NeuralNet(BaseEstimator):
             self.y_tensor_type,
             )
         self.train_iter_, self.eval_iter_, self.predict_iter_ = iter_funcs
+
         self._initialized = True
+
+        if self.verbose:
+            self._print_layer_info()
 
     def _get_params_for(self, name):
         collected = {}
@@ -433,14 +427,57 @@ class NeuralNet(BaseEstimator):
         self.__dict__.update(state)
         self.initialize()
 
-    def _print_layer_info(self, layers):
-        for layer in layers:
-            output_shape = layer.get_output_shape()
-            print("  {:<18}\t{:<20}\tproduces {:>7} outputs".format(
-                layer.name,
-                str(output_shape),
-                str(functools.reduce(operator.mul, output_shape[1:])),
-                ))
+    def _print_layer_info(self):
+        shapes = [param.get_value().shape for param in
+                  self.get_all_params() if param]
+        nparams = reduce(operator.add, [reduce(operator.mul, shape) for
+                                        shape in shapes])
+        print("# Neural Network with {} learnable parameters"
+              "\n".format(nparams))
+        print("## Layer information")
+
+        layers = self.layers_.values()
+        contains_conv2d = layers_have_conv2d(layers)
+        if contains_conv2d and (self.verbose > 1):
+            self._print_layer_info_conv()
+        else:
+            self._print_layer_info_plain()
+
+    def _print_layer_info_plain(self):
+        nums = list(range(len(self.layers)))
+        names = list(zip(*self.layers))[0]
+        output_shapes = ['x'.join(map(str, layer.get_output_shape()[1:]))
+                         for layer in self.layers_.values()]
+        table = OrderedDict([
+            ('#', nums),
+            ('name', names),
+            ('size', output_shapes),
+        ])
+        self.layer_infos_ = tabulate(table, 'keys', tablefmt='pipe')
+        print(self.layer_infos_)
+        print("")
+
+    def _print_layer_info_conv(self):
+        if self.verbose > 2:
+            detailed = True
+            tablefmt = 'simple'
+        else:
+            detailed = False
+            tablefmt = 'pipe'
+
+        self.layer_infos_ = get_conv_infos(self, detailed=detailed,
+                                           tablefmt=tablefmt)
+        print(self.layer_infos_)
+        print("\nExplanation")
+        print("    X, Y:    image dimensions")
+        print("    cap.:    learning capacity")
+        print("    cov.:    coverage of image")
+        print("    {}: capacity too low (<1/6)"
+              "".format("{}{}{}".format(ansi.MAGENTA, "magenta", ansi.ENDC)))
+        print("    {}:    image coverage too high (>100%)"
+              "".format("{}{}{}".format(ansi.CYAN, "cyan", ansi.ENDC)))
+        print("    {}:     capacity too low and coverage too high\n"
+              "".format("{}{}{}".format(ansi.RED, "red", ansi.ENDC)))
 
     def get_params(self, deep=True):
         params = super(NeuralNet, self).get_params(deep=deep)
