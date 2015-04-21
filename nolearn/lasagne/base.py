@@ -230,6 +230,7 @@ class NeuralNet(BaseEstimator):
         regression=False,
         max_epochs=100,
         eval_size=0.2,
+        custom_score=None,
         X_tensor_type=None,
         y_tensor_type=None,
         use_label_encoder=False,
@@ -266,6 +267,7 @@ class NeuralNet(BaseEstimator):
         self.regression = regression
         self.max_epochs = max_epochs
         self.eval_size = eval_size
+        self.custom_score = custom_score
         self.X_tensor_type = X_tensor_type
         self.y_tensor_type = y_tensor_type
         self.use_label_encoder = use_label_encoder
@@ -468,6 +470,7 @@ class NeuralNet(BaseEstimator):
             train_losses = []
             valid_losses = []
             valid_accuracies = []
+            custom_score = []
 
             t0 = time()
 
@@ -479,10 +482,15 @@ class NeuralNet(BaseEstimator):
                 batch_valid_loss, accuracy = self.eval_iter_(Xb, yb)
                 valid_losses.append(batch_valid_loss)
                 valid_accuracies.append(accuracy)
+                if self.custom_score:
+                    y_prob = self.predict_iter_(Xb)
+                    custom_score.append(self.custom_score[1](yb, y_prob))
 
             avg_train_loss = np.mean(train_losses)
             avg_valid_loss = np.mean(valid_losses)
             avg_valid_accuracy = np.mean(valid_accuracies)
+            if custom_score:
+                avg_custom_score = np.mean(custom_score)
 
             if avg_train_loss < best_train_loss:
                 best_train_loss = avg_train_loss
@@ -498,8 +506,11 @@ class NeuralNet(BaseEstimator):
                 ('valid best', avg_valid_loss if best_valid else None),
                 ('train/val', avg_train_loss / avg_valid_loss),
                 ('valid acc', avg_valid_accuracy),
-                ('dur', time() - t0),
                 ])
+            if self.custom_score:
+                info.update({self.custom_score[0]: avg_custom_score})
+            info.update({'dur': time() - t0})
+
             self.train_history_.append(info)
             self.log_ = tabulate(self.train_history_, headers='keys',
                                  tablefmt='pipe', floatfmt='.4f')
