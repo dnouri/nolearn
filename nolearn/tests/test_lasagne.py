@@ -377,6 +377,7 @@ class TestInitializeLayers:
         nn.initialize_layers(nn.layers)
 
         input.assert_called_with(name='input', shape=(10, 10))
+<<<<<<< HEAD
         hidden1.assert_called_with(incoming=input.return_value, name='hidden1')
         hidden2.assert_called_with(incoming=input.return_value, name='hidden2')
         concat.assert_called_with(
@@ -395,6 +396,64 @@ def test_visualize_functions_with_cnn(mnist):
     from nolearn.lasagne.visualize import plot_conv_weights
     from nolearn.lasagne.visualize import plot_loss
     from nolearn.lasagne.visualize import plot_occlusion
+=======
+        hidden1.assert_called_with(input.return_value, name='hidden1')
+        hidden2.assert_called_with(input.return_value, name='hidden2')
+        concat.assert_called_with([hidden1.return_value, hidden2.return_value],
+                                  name='concat')
+        output.assert_called_with(concat.return_value, name='output')
+
+
+def test_verbose_nn(mnist):
+    # Just check that no exception is thrown and that strings look
+    # right
+    from nolearn.lasagne import NeuralNet
+
+    X, y = mnist
+    X_train, y_train = X[:1000], y[:1000]
+    num_epochs = 7
+
+    nn = NeuralNet(
+        layers=[
+            ('input', InputLayer),
+            ('hidden1', DenseLayer),
+            ('dropout1', DropoutLayer),
+            ('hidden2', DenseLayer),
+            ('dropout2', DropoutLayer),
+            ('output', DenseLayer),
+            ],
+        input_shape=(None, 784),
+        output_num_units=10,
+        output_nonlinearity=softmax,
+
+        more_params=dict(
+            hidden1_num_units=512,
+            hidden2_num_units=512,
+            ),
+
+        update=nesterov_momentum,
+        update_learning_rate=0.01,
+        update_momentum=0.9,
+
+        max_epochs=num_epochs,
+        verbose=True,
+        )
+
+    nn.fit(X_train, y_train)
+    nn.predict_proba(X_train)
+    nn.predict(X_train)
+    nn.score(X_train, y_train)
+
+    assert nn.layer_infos_.replace(' ', '').startswith(u'|#|name|size|')
+
+
+def test_verbose_cnn(mnist):
+    # Just check that no exception is thrown and that strings look
+    # right
+    from nolearn.lasagne import NeuralNet
+    from lasagne.layers import Conv2DLayer
+    from lasagne.layers import MaxPool2DLayer
+>>>>>>> More detailed architecture information is now printed for convolutional nets (see Xudong Cao); layer infos are saved in layer_infos_ attribute for potential later use.  New dependency: tabulate.
 
     X, y = mnist
     X_train, y_train = X[:100].reshape(-1, 1, 28, 28), y[:100]
@@ -424,7 +483,11 @@ def test_visualize_functions_with_cnn(mnist):
             conv3_filter_size=(3, 3), conv3_num_filters=16,
             conv4_filter_size=(3, 3), conv4_num_filters=16,
             pool4_ds=(2, 2),
+<<<<<<< HEAD
             hidden1_num_units=16,
+=======
+            hidden1_num_units=512,
+>>>>>>> More detailed architecture information is now printed for convolutional nets (see Xudong Cao); layer infos are saved in layer_infos_ attribute for potential later use.  New dependency: tabulate.
             ),
 
         update=nesterov_momentum,
@@ -432,6 +495,7 @@ def test_visualize_functions_with_cnn(mnist):
         update_momentum=0.9,
 
         max_epochs=num_epochs,
+<<<<<<< HEAD
         )
 
     nn.fit(X_train, y_train)
@@ -448,3 +512,16 @@ def test_visualize_functions_with_cnn(mnist):
     # clear figures from memory
     plt.clf()
     plt.cla()
+=======
+        verbose=3,
+        )
+
+    nn.fit(X_train, y_train)
+    nn.predict_proba(X_train)
+    nn.predict(X_train)
+    nn.score(X_train, y_train)
+
+    assert nn.layer_infos_.replace(' ', '').startswith(
+        u'namesizetotalcap.Y[%]cap.X[%]cov.Y[%]cov.X[%]filterYfilterXfieldY'
+        'fieldX')
+>>>>>>> More detailed architecture information is now printed for convolutional nets (see Xudong Cao); layer infos are saved in layer_infos_ attribute for potential later use.  New dependency: tabulate.
