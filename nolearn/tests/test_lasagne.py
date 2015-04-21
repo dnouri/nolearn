@@ -1,9 +1,12 @@
 import pickle
 
+import matplotlib.pyplot as plt
 from mock import patch
 from mock import Mock
+from lasagne.layers import Conv2DLayer
 from lasagne.layers import DenseLayer
 from lasagne.layers import DropoutLayer
+from lasagne.layers import MaxPool2DLayer
 from lasagne.layers import InputLayer
 from lasagne.nonlinearities import identity
 from lasagne.nonlinearities import softmax
@@ -97,12 +100,12 @@ def test_lasagne_functional_mnist(mnist):
     nn = clone(nn_def)
     nn.fit(X_train, y_train)
     assert len(epochs) == 2
-    assert epochs[0]['valid_accuracy'] > 0.8
-    assert epochs[1]['valid_accuracy'] > epochs[0]['valid_accuracy']
-    assert sorted(epochs[0].keys()) == [
-        'epoch', 'train_loss', 'valid_accuracy', 'valid_loss',
-        ]
-
+    assert epochs[0]['valid acc'] > 0.8
+    assert epochs[1]['valid acc'] > epochs[0]['valid acc']
+    assert set(epochs[0].keys()) == set([
+        'dur', 'epoch', 'train loss', 'train/val', 'valid acc',
+        'valid best', 'valid loss'
+        ])
     y_pred = nn.predict(X_test)
     assert accuracy_score(y_pred, y_test) > 0.85
 
@@ -187,6 +190,7 @@ def test_clone():
         on_training_finished=None,
         max_epochs=100,
         eval_size=0.1,
+        custom_score=None,
         verbose=0,
         )
     nn = NeuralNet(**params)
@@ -200,7 +204,8 @@ def test_clone():
         'batch_iterator_test',
         'output_nonlinearity',
         'loss',
-        'objective'
+        'objective',
+        'custom_score',
         ):
         for par in (params, params1, params2):
             par.pop(ignore, None)
@@ -379,3 +384,170 @@ class TestInitializeLayers:
             name='concat'
             )
         output.assert_called_with(incoming=concat.return_value, name='output')
+
+
+def test_visualize_functions_with_cnn(mnist):
+    # this test simply tests that no exception is raised when using
+    # the plotting functions
+
+    from nolearn.lasagne import NeuralNet
+    from nolearn.lasagne.visualize import plot_conv_activity
+    from nolearn.lasagne.visualize import plot_conv_weights
+    from nolearn.lasagne.visualize import plot_loss
+    from nolearn.lasagne.visualize import plot_occlusion
+
+    X, y = mnist
+    X_train, y_train = X[:100].reshape(-1, 1, 28, 28), y[:100]
+    X_train = X_train.reshape(-1, 1, 28, 28)
+    num_epochs = 3
+
+    nn = NeuralNet(
+        layers=[
+            ('input', InputLayer),
+            ('conv1', Conv2DLayer),
+            ('conv2', Conv2DLayer),
+            ('pool2', MaxPool2DLayer),
+            ('conv3', Conv2DLayer),
+            ('conv4', Conv2DLayer),
+            ('pool4', MaxPool2DLayer),
+            ('hidden1', DenseLayer),
+            ('output', DenseLayer),
+            ],
+        input_shape=(None, 1, 28, 28),
+        output_num_units=10,
+        output_nonlinearity=softmax,
+
+        more_params=dict(
+            conv1_filter_size=(5, 5), conv1_num_filters=16,
+            conv2_filter_size=(3, 3), conv2_num_filters=16,
+            pool2_ds=(3, 3),
+            conv3_filter_size=(3, 3), conv3_num_filters=16,
+            conv4_filter_size=(3, 3), conv4_num_filters=16,
+            pool4_ds=(2, 2),
+            hidden1_num_units=16,
+            ),
+
+        update=nesterov_momentum,
+        update_learning_rate=0.01,
+        update_momentum=0.9,
+
+        max_epochs=num_epochs,
+        )
+
+    nn.fit(X_train, y_train)
+
+    plot_loss(nn)
+    plot_conv_weights(nn.layers_['conv1'])
+    plot_conv_weights(nn.layers_['conv2'], figsize=(1, 2))
+    plot_conv_activity(nn.layers_['conv3'], X_train[:1])
+    plot_conv_activity(nn.layers_['conv4'], X_train[10:11], figsize=(3, 4))
+    plot_occlusion(nn, X_train[:1], y_train[:1])
+    plot_occlusion(nn, X_train[2:4], y_train[2:4], square_length=3,
+                   figsize=(5, 5))
+
+    # clear figures from memory
+    plt.clf()
+    plt.cla()
+
+
+def test_verbose_nn(mnist):
+    # Just check that no exception is thrown and that strings look
+    # right
+    from nolearn.lasagne import NeuralNet
+
+    X, y = mnist
+    X_train, y_train = X[:1000], y[:1000]
+    num_epochs = 7
+
+    nn = NeuralNet(
+        layers=[
+            ('input', InputLayer),
+            ('hidden1', DenseLayer),
+            ('dropout1', DropoutLayer),
+            ('hidden2', DenseLayer),
+            ('dropout2', DropoutLayer),
+            ('output', DenseLayer),
+            ],
+        input_shape=(None, 784),
+        output_num_units=10,
+        output_nonlinearity=softmax,
+
+        more_params=dict(
+            hidden1_num_units=512,
+            hidden2_num_units=512,
+            ),
+
+        update=nesterov_momentum,
+        update_learning_rate=0.01,
+        update_momentum=0.9,
+
+        max_epochs=num_epochs,
+        verbose=True,
+        )
+
+    nn.fit(X_train, y_train)
+    nn.predict_proba(X_train)
+    nn.predict(X_train)
+    nn.score(X_train, y_train)
+
+    assert nn.log_.replace(' ', '').startswith(
+        u'|epoch|trainloss|validloss|validbest|train/val|validacc|dur|')
+    assert nn.log_.count('\n') == num_epochs + 1
+
+    # after additional training, log should be continued
+    nn.fit(X_train, y_train)
+    assert nn.log_.replace(' ', '').startswith(
+        u'|epoch|trainloss|validloss|validbest|train/val|validacc|dur|')
+    assert nn.log_.count('\n') == 2 * num_epochs + 1
+
+
+def test_verbose_nn_with_custom_score(mnist):
+    # Just check that no exception is thrown and that strings look
+    # right
+    from nolearn.lasagne import NeuralNet
+
+    def my_score(y_true, y_prob):
+        return 1.2345
+
+    X, y = mnist
+    X_train, y_train = X[:1000], y[:1000]
+    num_epochs = 4
+
+    nn = NeuralNet(
+        layers=[
+            ('input', InputLayer),
+            ('hidden1', DenseLayer),
+            ('dropout1', DropoutLayer),
+            ('hidden2', DenseLayer),
+            ('dropout2', DropoutLayer),
+            ('output', DenseLayer),
+            ],
+        input_shape=(None, 784),
+        output_num_units=10,
+        output_nonlinearity=softmax,
+
+        more_params=dict(
+            hidden1_num_units=512,
+            hidden2_num_units=512,
+            ),
+
+        update=nesterov_momentum,
+        update_learning_rate=0.01,
+        update_momentum=0.9,
+
+        custom_score=('score_name', my_score),
+        max_epochs=num_epochs,
+        verbose=True,
+        )
+
+    nn.fit(X_train, y_train)
+    nn.predict_proba(X_train)
+    nn.predict(X_train)
+    nn.score(X_train, y_train)
+
+    assert nn.log_.replace(' ', '').startswith(
+        u'|epoch|trainloss|validloss|validbest|train/val|validacc|'
+        'score_name|dur|')
+    assert nn.log_.count('\n') == num_epochs + 1
+    log_my_score = nn.log_.replace(' ', '').rsplit('\n')[-1].split('|')[-3]
+    assert log_my_score == '1.2345'
