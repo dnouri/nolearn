@@ -190,6 +190,7 @@ def test_clone():
         on_training_finished=None,
         max_epochs=100,
         eval_size=0.1,
+        custom_score=None,
         verbose=0,
         )
     nn = NeuralNet(**params)
@@ -204,6 +205,7 @@ def test_clone():
         'output_nonlinearity',
         'loss',
         'objective'
+        'custom_score',
         ):
         for par in (params, params1, params2):
             par.pop(ignore, None)
