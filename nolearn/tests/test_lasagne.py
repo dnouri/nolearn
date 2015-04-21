@@ -100,11 +100,13 @@ def test_lasagne_functional_mnist(mnist):
     nn = clone(nn_def)
     nn.fit(X_train, y_train)
     assert len(epochs) == 2
-    assert epochs[0]['valid_accuracy'] > 0.8
-    assert epochs[1]['valid_accuracy'] > epochs[0]['valid_accuracy']
-    assert sorted(epochs[0].keys()) == [
-        'epoch', 'train_loss', 'valid_accuracy', 'valid_loss',
+    assert epochs[0]['valid acc'] > 0.8
+    assert epochs[1]['valid acc'] > epochs[0]['valid acc']
+    expected_keys = [
+        'epoch', 'train loss', 'valid loss', 'valid best',
+        'train/val', 'valid acc', 'dur',
         ]
+    assert set(epochs[0].keys()) == set(expected_keys)
 
     y_pred = nn.predict(X_test)
     assert accuracy_score(y_pred, y_test) > 0.85

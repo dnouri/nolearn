@@ -451,15 +451,16 @@ class NeuralNet(BaseEstimator):
             on_training_finished = [on_training_finished]
 
         epoch = 0
-        info = None
-        best_valid_loss = np.inf
-        best_train_loss = np.inf
-
-        if self.verbose:
-            print("""
- Epoch  |  Train loss  |  Valid loss  |  Train / Val  |  Valid acc  |  Dur
---------|--------------|--------------|---------------|-------------|-------\
-""")
+        best_valid_loss = (
+            min([row['valid loss'] for row in self.train_history_]) if
+            self.train_history_ else np.inf
+            )
+        best_train_loss = (
+            min([row['train loss'] for row in self.train_history_]) if
+            self.train_history_ else np.inf
+            )
+        first_iteration = True
+        num_epochs_past = len(self.train_history_)
 
         while epoch < self.max_epochs:
             epoch += 1
@@ -487,32 +488,28 @@ class NeuralNet(BaseEstimator):
                 best_train_loss = avg_train_loss
             if avg_valid_loss < best_valid_loss:
                 best_valid_loss = avg_valid_loss
+            best_train_loss == avg_train_loss
+            best_valid = best_valid_loss == avg_valid_loss
 
-            if self.verbose:
-                best_train = best_train_loss == avg_train_loss
-                best_valid = best_valid_loss == avg_valid_loss
-                print(" {:>5}  |  {}{:>10.6f}{}  |  {}{:>10.6f}{}  "
-                      "|  {:>11.6f}  |  {:>9}  |  {:>3.1f}s".format(
-                          epoch,
-                          ansi.BLUE if best_train else "",
-                          avg_train_loss,
-                          ansi.ENDC if best_train else "",
-                          ansi.GREEN if best_valid else "",
-                          avg_valid_loss,
-                          ansi.ENDC if best_valid else "",
-                          avg_train_loss / avg_valid_loss,
-                          "{:.2f}%".format(avg_valid_accuracy * 100)
-                          if not self.regression else "",
-                          time() - t0,
-                          ))
-
-            info = dict(
-                epoch=epoch,
-                train_loss=avg_train_loss,
-                valid_loss=avg_valid_loss,
-                valid_accuracy=avg_valid_accuracy,
-                )
+            info = OrderedDict([
+                ('epoch', num_epochs_past + epoch),
+                ('train loss', avg_train_loss),
+                ('valid loss', avg_valid_loss),
+                ('valid best', avg_valid_loss if best_valid else None),
+                ('train/val', avg_train_loss / avg_valid_loss),
+                ('valid acc', avg_valid_accuracy),
+                ('dur', time() - t0),
+                ])
             self.train_history_.append(info)
+            self.log_ = tabulate(self.train_history_, headers='keys',
+                                 tablefmt='pipe', floatfmt='.4f')
+            if self.verbose:
+                if first_iteration:
+                    print(self.log_.split('\n', 2)[0])
+                    print(self.log_.split('\n', 2)[1])
+                    first_iteration = False
+                print(self.log_.rsplit('\n', 1)[-1])
+
             try:
                 for func in on_epoch_finished:
                     func(self, self.train_history_)
