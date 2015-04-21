@@ -118,6 +118,7 @@ def test_lasagne_functional_mnist(mnist):
 
     # Use load_weights_from to initialize an untrained model:
     nn3 = clone(nn_def)
+    nn3.initialize()
     nn3.load_weights_from(nn2)
     assert np.array_equal(nn3.predict(X_test), y_pred)
 
