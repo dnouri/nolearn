@@ -2,12 +2,13 @@ from __future__ import absolute_import
 
 from .._compat import pickle
 from collections import OrderedDict
-import functools
 import itertools
-import operator
+import operator as op
 from time import time
 import pdb
 
+from lasagne.layers import Conv2DLayer
+from lasagne.layers import MaxPool2DLayer
 from lasagne.objectives import categorical_crossentropy
 from lasagne.objectives import mse
 from lasagne.objectives import Objective
@@ -20,8 +21,15 @@ from sklearn.cross_validation import StratifiedKFold
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
+from tabulate import tabulate
 import theano
 from theano import tensor as T
+try:
+    from lasagne.layers.cuda_convnet import Conv2DCCLayer
+    from lasagne.layers.cuda_convnet import MaxPool2DCCLayer
+except ImportError:
+    Conv2DCCLayer = Conv2DLayer
+    MaxPool2DCCLayer = MaxPool2DLayer
 
 
 class _list(list):
@@ -35,7 +43,10 @@ class _dict(dict):
 
 class ansi:
     BLUE = '\033[94m'
+    CYAN = '\033[36m'
     GREEN = '\033[32m'
+    MAGENTA = '\033[35m'
+    RED = '\033[31m'
     ENDC = '\033[0m'
 
 
@@ -63,6 +74,141 @@ class BatchIterator(object):
         return Xb, yb
 
 
+def get_real_filter(layers, img_size):
+    """Get the real filter sizes of each layer involved in
+    convoluation. See Xudong Cao:
+    https://www.kaggle.com/c/datasciencebowl/forums/t/13166/happy-lantern-festival-report-and-code
+
+    This does not yet take into consideration feature pooling,
+    padding, striding and similar gimmicks.
+
+    """
+    # imports here to prevent circular dependencies
+    real_filter = np.zeros((len(layers), 2))
+    conv_mode = True
+    first_conv_layer = True
+    expon = np.ones((1, 2))
+
+    for i, layer in enumerate(layers[1:]):
+        j = i + 1
+        if not conv_mode:
+            real_filter[j] = img_size
+            continue
+
+        if isinstance(layer, Conv2DLayer):
+            if not first_conv_layer:
+                new_filter = np.array(layer.filter_size) * expon
+                real_filter[j] = new_filter
+            else:
+                new_filter = np.array(layer.filter_size) * expon
+                real_filter[j] = new_filter
+                first_conv_layer = False
+        elif (isinstance(layer, MaxPool2DLayer) or
+              isinstance(layer, MaxPool2DCCLayer)):
+            real_filter[j] = real_filter[i]
+            expon *= np.array(layer.ds)
+        else:
+            conv_mode = False
+            real_filter[j] = img_size
+
+    real_filter[0] = img_size
+    return real_filter
+
+
+def get_receptive_field(layers, img_size):
+    """Get the real filter sizes of each layer involved in
+    convoluation. See Xudong Cao:
+    https://www.kaggle.com/c/datasciencebowl/forums/t/13166/happy-lantern-festival-report-and-code
+
+    This does not yet take into consideration feature pooling,
+    padding, striding and similar gimmicks.
+
+    """
+    receptive_field = np.zeros((len(layers), 2))
+    conv_mode = True
+    first_conv_layer = True
+    expon = np.ones((1, 2))
+
+    for i, layer in enumerate(layers[1:]):
+        j = i + 1
+        if not conv_mode:
+            receptive_field[j] = img_size
+            continue
+
+        if isinstance(layer, Conv2DLayer):
+            if not first_conv_layer:
+                last_field = receptive_field[i]
+                new_field = (last_field + expon *
+                             (np.array(layer.filter_size) - 1))
+                receptive_field[j] = new_field
+            else:
+                receptive_field[j] = layer.filter_size
+                first_conv_layer = False
+        elif (isinstance(layer, MaxPool2DLayer) or
+              isinstance(layer, MaxPool2DCCLayer)):
+            receptive_field[j] = receptive_field[i]
+            expon *= np.array(layer.ds)
+        else:
+            conv_mode = False
+            receptive_field[j] = img_size
+
+    receptive_field[0] = img_size
+    return receptive_field
+
+
+def get_conv_infos(net, min_capacity=100. / 6, tablefmt='pipe',
+                   detailed=False):
+    CYA = ansi.CYAN
+    END = ansi.ENDC
+    MAG = ansi.MAGENTA
+    RED = ansi.RED
+
+    layers = net.layers_.values()
+    img_size = net.layers_['input'].get_output_shape()[2:]
+
+    header = ['name', 'size', 'total', 'cap. Y [%]', 'cap. X [%]',
+              'cov. Y [%]', 'cov. X [%]']
+    if detailed:
+        header += ['filter Y', 'filter X', 'field Y', 'field X']
+
+    shapes = [layer.get_output_shape()[1:] for layer in layers]
+    totals = [str(reduce(op.mul, shape)) for shape in shapes]
+    shapes = ['x'.join(map(str, shape)) for shape in shapes]
+    shapes = np.array(shapes).reshape(-1, 1)
+    totals = np.array(totals).reshape(-1, 1)
+
+    real_filters = get_real_filter(layers, img_size)
+    receptive_fields = get_receptive_field(layers, img_size)
+    capacity = 100. * real_filters / receptive_fields
+    capacity[np.negative(np.isfinite(capacity))] = 1
+    img_coverage = 100. * receptive_fields / img_size
+    layer_names = [layer.name if layer.name
+                   else str(layer).rsplit('.')[-1].split(' ')[0]
+                   for layer in layers]
+
+    colored_names = []
+    for name, (covy, covx), (capy, capx) in zip(
+            layer_names, img_coverage, capacity):
+        if (
+                ((covy > 100) or (covx > 100)) and
+                ((capy < min_capacity) or (capx < min_capacity))
+        ):
+            name = "{}{}{}".format(RED, name, END)
+        elif (covy > 100) or (covx > 100):
+            name = "{}{}{}".format(CYA, name, END)
+        elif (capy < min_capacity) or (capx < min_capacity):
+            name = "{}{}{}".format(MAG, name, END)
+        colored_names.append(name)
+    colored_names = np.array(colored_names).reshape(-1, 1)
+
+    table = np.hstack((colored_names, shapes, totals, capacity, img_coverage))
+    if detailed:
+        table = np.hstack((table, real_filters.astype(int),
+                           receptive_fields.astype(int)))
+
+    return tabulate(table, header, tablefmt=tablefmt, floatfmt='.2f')
+
+
 class NeuralNet(BaseEstimator):
     """A scikit-learn estimator based on Lasagne.
     """
@@ -78,6 +224,7 @@ class NeuralNet(BaseEstimator):
         regression=False,
         max_epochs=100,
         eval_size=0.2,
+        custom_score=None,
         X_tensor_type=None,
         y_tensor_type=None,
         use_label_encoder=False,
@@ -107,6 +254,7 @@ class NeuralNet(BaseEstimator):
         self.regression = regression
         self.max_epochs = max_epochs
         self.eval_size = eval_size
+        self.custom_score = custom_score
         self.X_tensor_type = X_tensor_type
         self.y_tensor_type = y_tensor_type
         self.use_label_encoder = use_label_encoder
@@ -146,7 +294,6 @@ class NeuralNet(BaseEstimator):
         if out is None:
             out = self._output_layer = self.initialize_layers()
         self._check_for_unused_kwargs()
-
         if self.verbose:
             self._print_layer_info(self.layers_.values())
 
@@ -166,6 +313,9 @@ class NeuralNet(BaseEstimator):
             )
         self.train_iter_, self.eval_iter_, self.predict_iter_ = iter_funcs
         self._initialized = True
+
+        if self.verbose:
+            self._print_layer_info()
 
     def _get_params_for(self, name):
         collected = {}
@@ -302,15 +452,16 @@ class NeuralNet(BaseEstimator):
             on_training_finished = [on_training_finished]
 
         epoch = 0
-        info = None
-        best_valid_loss = np.inf
-        best_train_loss = np.inf
-
-        if self.verbose:
-            print("""
- Epoch  |  Train loss  |  Valid loss  |  Train / Val  |  Valid acc  |  Dur
---------|--------------|--------------|---------------|-------------|-------\
-""")
+        best_valid_loss = (
+            min([row['valid loss'] for row in self.train_history_]) if
+            self.train_history_ else np.inf
+            )
+        best_train_loss = (
+            min([row['train loss'] for row in self.train_history_]) if
+            self.train_history_ else np.inf
+            )
+        first_iteration = True
+        num_epochs_past = len(self.train_history_)
 
         while epoch < self.max_epochs:
             epoch += 1
@@ -318,6 +469,7 @@ class NeuralNet(BaseEstimator):
             train_losses = []
             valid_losses = []
             valid_accuracies = []
+            custom_score = []
 
             t0 = time()
 
@@ -329,41 +481,45 @@ class NeuralNet(BaseEstimator):
                 batch_valid_loss, accuracy = self.eval_iter_(Xb, yb)
                 valid_losses.append(batch_valid_loss)
                 valid_accuracies.append(accuracy)
+                if self.custom_score:
+                    y_prob = self.predict_iter_(Xb)
+                    custom_score.append(self.custom_score[1](yb, y_prob))
 
             avg_train_loss = np.mean(train_losses)
             avg_valid_loss = np.mean(valid_losses)
             avg_valid_accuracy = np.mean(valid_accuracies)
+            if custom_score:
+                avg_custom_score = np.mean(custom_score)
 
             if avg_train_loss < best_train_loss:
                 best_train_loss = avg_train_loss
             if avg_valid_loss < best_valid_loss:
                 best_valid_loss = avg_valid_loss
+            best_train_loss == avg_train_loss
+            best_valid = best_valid_loss == avg_valid_loss
 
-            if self.verbose:
-                best_train = best_train_loss == avg_train_loss
-                best_valid = best_valid_loss == avg_valid_loss
-                print(" {:>5}  |  {}{:>10.6f}{}  |  {}{:>10.6f}{}  "
-                      "|  {:>11.6f}  |  {:>9}  |  {:>3.1f}s".format(
-                          epoch,
-                          ansi.BLUE if best_train else "",
-                          avg_train_loss,
-                          ansi.ENDC if best_train else "",
-                          ansi.GREEN if best_valid else "",
-                          avg_valid_loss,
-                          ansi.ENDC if best_valid else "",
-                          avg_train_loss / avg_valid_loss,
-                          "{:.2f}%".format(avg_valid_accuracy * 100)
-                          if not self.regression else "",
-                          time() - t0,
-                          ))
+            info = OrderedDict([
+                ('epoch', num_epochs_past + epoch),
+                ('train loss', avg_train_loss),
+                ('valid loss', avg_valid_loss),
+                ('valid best', avg_valid_loss if best_valid else None),
+                ('train/val', avg_train_loss / avg_valid_loss),
+                ('valid acc', avg_valid_accuracy),
+                ])
+            if self.custom_score:
+                info.update({self.custom_score[0]: avg_custom_score})
+            info.update({'dur': time() - t0})
 
-            info = dict(
-                epoch=epoch,
-                train_loss=avg_train_loss,
-                valid_loss=avg_valid_loss,
-                valid_accuracy=avg_valid_accuracy,
-                )
             self.train_history_.append(info)
+            self.log_ = tabulate(self.train_history_, headers='keys',
+                                 tablefmt='pipe', floatfmt='.4f')
+            if self.verbose:
+                if first_iteration:
+                    print(self.log_.split('\n', 2)[0])
+                    print(self.log_.split('\n', 2)[1])
+                    first_iteration = False
+                print(self.log_.rsplit('\n', 1)[-1])
+
             try:
                 for func in on_epoch_finished:
                     func(self, self.train_history_)
@@ -454,14 +610,59 @@ class NeuralNet(BaseEstimator):
         self.__dict__.update(state)
         self.initialize()
 
-    def _print_layer_info(self, layers):
-        for layer in layers:
-            output_shape = layer.get_output_shape()
-            print("  {:<18}\t{:<20}\tproduces {:>7} outputs".format(
-                layer.name,
-                str(output_shape),
-                str(functools.reduce(operator.mul, output_shape[1:])),
-                ))
+    def _print_layer_info(self):
+        shapes = [param.get_value().shape for param in
+                  self.get_all_params() if param]
+        nparams = reduce(op.add, [reduce(op.mul, shape) for
+                                  shape in shapes])
+        print("# Neural Network with {} learnable parameters"
+              "\n".format(nparams))
+        print("## Layer information")
+
+        layers = self.layers_.values()
+        has_conv2d = any([isinstance(layer, Conv2DLayer) or
+                          isinstance(layer, Conv2DCCLayer)
+                          for layer in layers])
+        if has_conv2d:
+            self._print_layer_info_conv()
+        else:
+            self._print_layer_info_plain()
+
+    def _print_layer_info_plain(self):
+        nums = range(len(self.layers))
+        names = list(zip(*self.layers))[0]
+        output_shapes = ['x'.join(map(str, layer.get_output_shape()[1:]))
+                         for layer in self.layers_.values()]
+        table = OrderedDict([
+            ('#', nums),
+            ('name', names),
+            ('size', output_shapes),
+        ])
+        self.layer_infos_ = tabulate(table, 'keys', tablefmt='pipe')
+        print(self.layer_infos_)
+        print("")
+
+    def _print_layer_info_conv(self):
+        if self.verbose > 1:
+            detailed = True
+            tablefmt = 'simple'
+        else:
+            detailed = False
+            tablefmt = 'pipe'
+
+        self.layer_infos_ = get_conv_infos(self, detailed=detailed,
+                                           tablefmt=tablefmt)
+        print(self.layer_infos_)
+        print("\nExplanation")
+        print("    X, Y:    image dimensions")
+        print("    cap.:    learning capacity")
+        print("    cov.:    coverage of image")
+        print("    {}: capacity too low (<1/6)"
+              "".format("{}{}{}".format(ansi.MAGENTA, "magenta", ansi.ENDC)))
+        print("    {}:    image coverage too high (>100%)"
+              "".format("{}{}{}".format(ansi.CYAN, "cyan", ansi.ENDC)))
+        print("    {}:     capacity too low and coverage too high\n"
+              "".format("{}{}{}".format(ansi.RED, "red", ansi.ENDC)))
 
     def get_params(self, deep=True):
         params = super(NeuralNet, self).get_params(deep=deep)
