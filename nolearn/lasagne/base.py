@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from ._compat import pickle
+from .._compat import pickle
 from collections import OrderedDict
 import functools
 import itertools

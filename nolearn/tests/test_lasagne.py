@@ -7,6 +7,8 @@ from lasagne.layers import DropoutLayer
 from lasagne.layers import InputLayer
 from lasagne.nonlinearities import identity
 from lasagne.nonlinearities import softmax
+from lasagne.objectives import categorical_crossentropy
+from lasagne.objectives import Objective
 from lasagne.updates import nesterov_momentum
 import numpy as np
 import pytest
@@ -155,9 +157,7 @@ def test_lasagne_functional_grid_search(mnist, monkeypatch):
 
 def test_clone():
     from nolearn.lasagne import NeuralNet
-    from nolearn.lasagne import categorical_crossentropy
     from nolearn.lasagne import BatchIterator
-    from nolearn.lasagne import Objective
 
     params = dict(
         layers=[
