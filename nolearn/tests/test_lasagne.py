@@ -264,29 +264,66 @@ class TestTrainTestSplit:
 
 class TestCheckForUnusedKwargs:
     def test_okay(self, NeuralNet):
-        NeuralNet(
-            layers=[('input', object()), ('mylayer', object())],
+        net = NeuralNet(
+            layers=[('input', Mock()), ('mylayer', Mock())],
             input_shape=(10, 10),
             mylayer_hey='hey',
             update_foo=1,
             update_bar=2,
             )
+        net._create_iter_funcs = lambda *args: (1, 2, 3)
+        net.initialize()
 
     def test_unused(self, NeuralNet):
+        net = NeuralNet(
+            layers=[('input', Mock()), ('mylayer', Mock())],
+            input_shape=(10, 10),
+            mylayer_hey='hey',
+            yourlayer_ho='ho',
+            update_foo=1,
+            update_bar=2,
+            )
+        net._create_iter_funcs = lambda *args: (1, 2, 3)
+
         with pytest.raises(ValueError) as err:
-            NeuralNet(
-                layers=[('input', object()), ('mylayer', object())],
-                input_shape=(10, 10),
-                mylayer_hey='hey',
-                yourlayer_ho='ho',
-                update_foo=1,
-                update_bar=2,
-                )
+            net.initialize()
         assert str(err.value) == 'Unused kwarg: yourlayer_ho'
 
 
 class TestInitializeLayers:
     def test_initialization(self, NeuralNet):
+        input, hidden1, hidden2, output = Mock(), Mock(), Mock(), Mock()
+        nn = NeuralNet(
+            layers=[
+                (input, {'shape': (10, 10), 'name': 'input'}),
+                (hidden1, {'some': 'param', 'another': 'param'}),
+                (hidden2, {}),
+                (output, {'name': 'output'}),
+                ],
+            input_shape=(10, 10),
+            mock1_some='iwin',
+            )
+        out = nn.initialize_layers(nn.layers)
+
+        input.assert_called_with(
+            name='input', shape=(10, 10))
+        nn.layers_['input'] is input.return_value
+
+        hidden1.assert_called_with(
+            incoming=input.return_value, name='mock1',
+            some='iwin', another='param')
+        nn.layers_['mock1'] is hidden1.return_value
+
+        hidden2.assert_called_with(
+            incoming=hidden1.return_value, name='mock2')
+        nn.layers_['mock2'] is hidden2.return_value
+
+        output.assert_called_with(
+            incoming=hidden2.return_value, name='output')
+
+        assert out is nn.layers_['output']
+
+    def test_initialization_legacy(self, NeuralNet):
         input, hidden1, hidden2, output = Mock(), Mock(), Mock(), Mock()
         nn = NeuralNet(
             layers=[
@@ -305,14 +342,15 @@ class TestInitializeLayers:
         nn.layers_['input'] is input.return_value
 
         hidden1.assert_called_with(
-            input.return_value, name='hidden1', some='param')
+            incoming=input.return_value, name='hidden1', some='param')
         nn.layers_['hidden1'] is hidden1.return_value
 
         hidden2.assert_called_with(
-            hidden1.return_value, name='hidden2')
+            incoming=hidden1.return_value, name='hidden2')
         nn.layers_['hidden2'] is hidden2.return_value
 
-        output.assert_called_with(hidden2.return_value, name='output')
+        output.assert_called_with(
+            incoming=hidden2.return_value, name='output')
 
         assert out is nn.layers_['output']
 
@@ -334,8 +372,10 @@ class TestInitializeLayers:
         nn.initialize_layers(nn.layers)
 
         input.assert_called_with(name='input', shape=(10, 10))
-        hidden1.assert_called_with(input.return_value, name='hidden1')
-        hidden2.assert_called_with(input.return_value, name='hidden2')
-        concat.assert_called_with([hidden1.return_value, hidden2.return_value],
-                                  name='concat')
-        output.assert_called_with(concat.return_value, name='output')
+        hidden1.assert_called_with(incoming=input.return_value, name='hidden1')
+        hidden2.assert_called_with(incoming=input.return_value, name='hidden2')
+        concat.assert_called_with(
+            incoming=[hidden1.return_value, hidden2.return_value],
+            name='concat'
+            )
+        output.assert_called_with(incoming=concat.return_value, name='output')
