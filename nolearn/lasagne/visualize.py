@@ -19,11 +19,12 @@ def plot_loss(net):
 def plot_conv_weights(layer, figsize=(6, 6)):
     """Plot the weights of a specific layer. Only really makes sense
     with convolutional layers. Colors channels not yet supported.
+
     Parameters
     ----------
     layer : lasagne.layer
       Use a Conv2DLayer or a Conv2DCCLayer.
-      
+
     figsize : tuple of ints (default=(6, 6))
       Size of the figure.
 
@@ -49,11 +50,18 @@ def plot_conv_activity(layer, x, figsize=(6, 8)):
     """Plot the acitivities of a specific layer. Only really makes
     sense with layers that work 2D data (2D convolutional layers, 2D
     pooling layers ...)
+
     Parameters
     ----------
-    layer : netz.layers.layer
+    layer : lasagne.layer
+      Use a Conv2DLayer or a Conv2DCCLayer.
+
     x : numpy.ndarray
       Only takes one sample at a time, i.e. x.shape[0] == 1.
+
+    figsize : tuple ((int, int), default=(6, 6))
+      Size of the figure.
+
     """
     if x.shape[0] != 1:
         raise ValueError("Only one sample can be plotted at a time.")
@@ -86,20 +94,27 @@ def plot_conv_activity(layer, x, figsize=(6, 8)):
 def plot_occlusion(net, X, y, square_length=7, figsize=(9, None)):
     """Plot which parts of an image are particularly import for the
     net to classify the image correctly.
+
     See paper: Zeiler, Fergus 2013
+
     Parameters
     ----------
     net : NeuralNet instance
       The neural net to test.
-    X : np.array
+
+    X : np.ndarray
       The input data, should be of shape (b, c, x, y). Only makes
       sense with image data.
-    y : np.array
+
+    y : np.ndarray
       The true values of the images.
+
     square_length : int (default=7)
       The length of the side of the square that occludes the image.
+
     figsize : tuple (int, int)
       Size of the figure.
+
     """
     if (X.ndim != 4):
         raise ValueError("This function requires the input data to be of "
