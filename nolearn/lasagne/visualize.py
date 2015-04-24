@@ -1,4 +1,4 @@
-import itertools as it
+from itertools import product
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -21,7 +21,7 @@ def plot_conv_weights(layer, figsize=(6, 6)):
     with convolutional layers.
     Parameters
     ----------
-    layer : netz.layers.layer
+    layer : lasagne.layers.Layer
     """
     W = layer.W.get_value()
     shape = W.shape
@@ -33,7 +33,7 @@ def plot_conv_weights(layer, figsize=(6, 6)):
             ax.set_xticks([])
             ax.set_yticks([])
             ax.axis('off')
-        for i, (r, c) in enumerate(it.product(range(nrows), range(ncols))):
+        for i, (r, c) in enumerate(product(range(nrows), range(ncols))):
             if i >= shape[0]:
                 break
             axes[r, c].imshow(W[i, feature_map], cmap='gray',
@@ -46,7 +46,7 @@ def plot_conv_activity(layer, x, figsize=(6, 8)):
     pooling layers ...)
     Parameters
     ----------
-    layer : netz.layers.layer
+    layer : lasagne.layers.Layer
     x : numpy.ndarray
       Only takes one sample at a time, i.e. x.shape[0] == 1.
     """
@@ -67,7 +67,7 @@ def plot_conv_activity(layer, x, figsize=(6, 8)):
         ax.set_xticks([])
         ax.set_yticks([])
         ax.axis('off')
-    for i, (r, c) in enumerate(it.product(range(nrows), range(ncols))):
+    for i, (r, c) in enumerate(product(range(nrows), range(ncols))):
         if i >= shape[1]:
             break
         ndim = activity[0][i].ndim

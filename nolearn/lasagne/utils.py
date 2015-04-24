@@ -1,4 +1,4 @@
-import itertools as it
+from itertools import product
 
 import numpy as np
 
@@ -43,12 +43,12 @@ def occlusion_heatmap(net, x, y, square_length=7):
     pad = square_length // 2
     x_occluded = np.zeros((shape[2] * shape[3], 1, shape[2], shape[3]),
                           dtype=img.dtype)
-    for i, j in it.product(*map(range, shape[2:])):
+    for i, j in product(*map(range, shape[2:])):
         x_padded = np.pad(img, ((0, 0), (pad, pad), (pad, pad)), 'constant')
         x_padded[:, i:i + square_length, j:j + square_length] = 0.
         x_occluded[i * shape[0] + j, 0] = x_padded[:, pad:-pad, pad:-pad]
 
     probs = net.predict_proba(x_occluded)
-    for i, j in it.product(*map(range, shape[2:])):
+    for i, j in product(*map(range, shape[2:])):
         heat_array[i, j] = probs[i * shape[0] + j, y.astype(int)]
     return heat_array
