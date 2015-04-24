@@ -1,9 +1,12 @@
 import pickle
 
+import matplotlib.pyplot as plt
 from mock import patch
 from mock import Mock
+from lasagne.layers import Conv2DLayer
 from lasagne.layers import DenseLayer
 from lasagne.layers import DropoutLayer
+from lasagne.layers import MaxPool2DLayer
 from lasagne.layers import InputLayer
 from lasagne.nonlinearities import identity
 from lasagne.nonlinearities import softmax
@@ -339,3 +342,67 @@ class TestInitializeLayers:
         concat.assert_called_with([hidden1.return_value, hidden2.return_value],
                                   name='concat')
         output.assert_called_with(concat.return_value, name='output')
+
+
+def test_visualize_functions_with_cnn(mnist):
+    # this test simply tests that no exception is raised when using
+    # the plotting functions
+
+    from nolearn.lasagne import NeuralNet
+    from nolearn.lasagne.visualize import plot_conv_activity
+    from nolearn.lasagne.visualize import plot_conv_weights
+    from nolearn.lasagne.visualize import plot_loss
+    from nolearn.lasagne.visualize import plot_occlusion
+
+    X, y = mnist
+    X_train, y_train = X[:100].reshape(-1, 1, 28, 28), y[:100]
+    X_train = X_train.reshape(-1, 1, 28, 28)
+    num_epochs = 3
+
+    nn = NeuralNet(
+        layers=[
+            ('input', InputLayer),
+            ('conv1', Conv2DLayer),
+            ('conv2', Conv2DLayer),
+            ('pool2', MaxPool2DLayer),
+            ('conv3', Conv2DLayer),
+            ('conv4', Conv2DLayer),
+            ('pool4', MaxPool2DLayer),
+            ('hidden1', DenseLayer),
+            ('output', DenseLayer),
+            ],
+        input_shape=(None, 1, 28, 28),
+        output_num_units=10,
+        output_nonlinearity=softmax,
+
+        more_params=dict(
+            conv1_filter_size=(5, 5), conv1_num_filters=16,
+            conv2_filter_size=(3, 3), conv2_num_filters=16,
+            pool2_ds=(3, 3),
+            conv3_filter_size=(3, 3), conv3_num_filters=16,
+            conv4_filter_size=(3, 3), conv4_num_filters=16,
+            pool4_ds=(2, 2),
+            hidden1_num_units=16,
+            ),
+
+        update=nesterov_momentum,
+        update_learning_rate=0.01,
+        update_momentum=0.9,
+
+        max_epochs=num_epochs,
+        )
+
+    nn.fit(X_train, y_train)
+
+    plot_loss(nn)
+    plot_conv_weights(nn.layers_['conv1'])
+    plot_conv_weights(nn.layers_['conv2'], figsize=(1, 2))
+    plot_conv_activity(nn.layers_['conv3'], X_train[:1])
+    plot_conv_activity(nn.layers_['conv4'], X_train[10:11], figsize=(3, 4))
+    plot_occlusion(nn, X_train[:1], y_train[:1])
+    plot_occlusion(nn, X_train[2:4], y_train[2:4], square_length=3,
+                   figsize=(5, 5))
+
+    # clear figures from memory
+    plt.clf()
+    plt.cla()
