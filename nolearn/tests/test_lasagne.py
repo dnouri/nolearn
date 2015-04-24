@@ -2,11 +2,9 @@ import pickle
 
 from mock import patch
 from mock import Mock
-from lasagne.layers import Conv2DLayer
 from lasagne.layers import DenseLayer
 from lasagne.layers import DropoutLayer
 from lasagne.layers import InputLayer
-from lasagne.layers import MaxPool2DLayer
 from lasagne.nonlinearities import identity
 from lasagne.nonlinearities import softmax
 from lasagne.objectives import categorical_crossentropy
@@ -93,20 +91,17 @@ def test_lasagne_functional_mnist(mnist):
         update_momentum=0.9,
 
         max_epochs=5,
-        verbose=1,
         on_epoch_finished=on_epoch_finished,
         )
 
     nn = clone(nn_def)
     nn.fit(X_train, y_train)
     assert len(epochs) == 2
-    assert epochs[0]['valid acc'] > 0.8
-    assert epochs[1]['valid acc'] > epochs[0]['valid acc']
-    expected_keys = [
-        'epoch', 'train loss', 'valid loss', 'valid best',
-        'train/val', 'valid acc', 'dur',
+    assert epochs[0]['valid_accuracy'] > 0.8
+    assert epochs[1]['valid_accuracy'] > epochs[0]['valid_accuracy']
+    assert sorted(epochs[0].keys()) == [
+        'epoch', 'train_loss', 'valid_accuracy', 'valid_loss',
         ]
-    assert set(epochs[0].keys()) == set(expected_keys)
 
     y_pred = nn.predict(X_test)
     assert accuracy_score(y_pred, y_test) > 0.85
@@ -120,7 +115,6 @@ def test_lasagne_functional_mnist(mnist):
 
     # Use load_weights_from to initialize an untrained model:
     nn3 = clone(nn_def)
-    nn3.initialize()
     nn3.load_weights_from(nn2)
     assert np.array_equal(nn3.predict(X_test), y_pred)
 
@@ -193,7 +187,6 @@ def test_clone():
         on_training_finished=None,
         max_epochs=100,
         eval_size=0.1,
-        custom_score=None,
         verbose=0,
         )
     nn = NeuralNet(**params)
@@ -208,7 +201,6 @@ def test_clone():
         'output_nonlinearity',
         'loss',
         'objective'
-        'custom_score',
         ):
         for par in (params, params1, params2):
             par.pop(ignore, None)
@@ -347,156 +339,3 @@ class TestInitializeLayers:
         concat.assert_called_with([hidden1.return_value, hidden2.return_value],
                                   name='concat')
         output.assert_called_with(concat.return_value, name='output')
-
-
-def test_verbose_nn(mnist):
-    # Just check that no exception is thrown
-    from nolearn.lasagne import NeuralNet
-
-    X, y = mnist
-    X_train, y_train = X[:1000], y[:1000]
-    num_epochs = 7
-
-    nn = NeuralNet(
-        layers=[
-            ('input', InputLayer),
-            ('hidden1', DenseLayer),
-            ('dropout1', DropoutLayer),
-            ('hidden2', DenseLayer),
-            ('dropout2', DropoutLayer),
-            ('output', DenseLayer),
-            ],
-        input_shape=(None, 784),
-        output_num_units=10,
-        output_nonlinearity=softmax,
-
-        more_params=dict(
-            hidden1_num_units=512,
-            hidden2_num_units=512,
-            ),
-
-        update=nesterov_momentum,
-        update_learning_rate=0.01,
-        update_momentum=0.9,
-
-        max_epochs=num_epochs,
-        verbose=True,
-        )
-
-    nn.fit(X_train, y_train)
-    nn.predict_proba(X_train)
-    nn.predict(X_train)
-    nn.score(X_train, y_train)
-
-    assert nn.layer_infos_.replace(' ', '').startswith(u'|#|name|size|')
-    assert nn.log_.replace(' ', '').startswith(
-        u'|epoch|trainloss|val''idloss|validbest|train/val|validacc|dur|')
-    assert nn.log_.count('\n') == num_epochs + 1
-
-
-def test_verbose_nn_with_custom_score(mnist):
-    # Just check that no exception is thrown
-    from nolearn.lasagne import NeuralNet
-
-    def my_score(y_true, y_prob):
-        return 1.2345
-
-    X, y = mnist
-    X_train, y_train = X[:1000], y[:1000]
-    num_epochs = 4
-
-    nn = NeuralNet(
-        layers=[
-            ('input', InputLayer),
-            ('hidden1', DenseLayer),
-            ('dropout1', DropoutLayer),
-            ('hidden2', DenseLayer),
-            ('dropout2', DropoutLayer),
-            ('output', DenseLayer),
-            ],
-        input_shape=(None, 784),
-        output_num_units=10,
-        output_nonlinearity=softmax,
-
-        more_params=dict(
-            hidden1_num_units=512,
-            hidden2_num_units=512,
-            ),
-
-        update=nesterov_momentum,
-        update_learning_rate=0.01,
-        update_momentum=0.9,
-
-        custom_score=('score_name', my_score),
-        max_epochs=num_epochs,
-        verbose=True,
-        )
-
-    nn.fit(X_train, y_train)
-    nn.predict_proba(X_train)
-    nn.predict(X_train)
-    nn.score(X_train, y_train)
-
-    assert nn.layer_infos_.replace(' ', '').startswith(u'|#|name|size|')
-    assert nn.log_.replace(' ', '').startswith(
-        u'|epoch|trainloss|val''idloss|validbest|train/val|validacc|'
-        'score_name|dur|')
-    assert nn.log_.count('\n') == num_epochs + 1
-    log_my_score = nn.log_.replace(' ', '').rsplit('\n')[-1].split('|')[-3]
-    assert log_my_score == '1.2345'
-
-
-def test_verbose_cnn(mnist):
-    # Just check that no exception is thrown
-    from nolearn.lasagne import NeuralNet
-
-    X, y = mnist
-    X_train, y_train = X[:100].reshape(-1, 1, 28, 28), y[:100]
-    X_train = X_train.reshape(-1, 1, 28, 28)
-    num_epochs = 3
-
-    nn = NeuralNet(
-        layers=[
-            ('input', InputLayer),
-            ('conv1', Conv2DLayer),
-            ('conv2', Conv2DLayer),
-            ('pool2', MaxPool2DLayer),
-            ('conv3', Conv2DLayer),
-            ('conv4', Conv2DLayer),
-            ('pool4', MaxPool2DLayer),
-            ('hidden1', DenseLayer),
-            ('output', DenseLayer),
-            ],
-        input_shape=(None, 1, 28, 28),
-        output_num_units=10,
-        output_nonlinearity=softmax,
-
-        more_params=dict(
-            conv1_filter_size=(5, 5), conv1_num_filters=16,
-            conv2_filter_size=(3, 3), conv2_num_filters=16,
-            pool2_ds=(3, 3),
-            conv3_filter_size=(3, 3), conv3_num_filters=16,
-            conv4_filter_size=(3, 3), conv4_num_filters=16,
-            pool4_ds=(2, 2),
-            hidden1_num_units=512,
-            ),
-
-        update=nesterov_momentum,
-        update_learning_rate=0.01,
-        update_momentum=0.9,
-
-        max_epochs=num_epochs,
-        verbose=2,
-        )
-
-    nn.fit(X_train, y_train)
-    nn.predict_proba(X_train)
-    nn.predict(X_train)
-    nn.score(X_train, y_train)
-
-    assert nn.layer_infos_.replace(' ', '').startswith(
-        u'namesizetotalcap.Y[%]cap.X[%]cov.Y[%]cov.X[%]filterYfilterXfieldY'
-        'fieldX')
-    assert nn.log_.replace(' ', '').startswith(
-        u'|epoch|trainloss|val''idloss|validbest|train/val|validacc|dur|')
-    assert nn.log_.count('\n') == num_epochs + 1
