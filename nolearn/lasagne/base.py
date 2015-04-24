@@ -23,20 +23,10 @@ from sklearn.preprocessing import LabelEncoder
 import theano
 from theano import tensor as T
 
-
-class _list(list):
-    pass
-
-
-class _dict(dict):
-    def __contains__(self, key):
-        return True
-
-
-class ansi:
-    BLUE = '\033[94m'
-    GREEN = '\033[32m'
-    ENDC = '\033[0m'
+from .utils import _dict
+from .utils import _list
+from .utils import ansi
+from .utils import get_conv_infos
 
 
 class BatchIterator(object):
