@@ -183,6 +183,7 @@ class NeuralNet(BaseEstimator):
             self.layers = layers
         self.layers_ = OrderedDict()
 
+        layer = None
         for i, layer_def in enumerate(self.layers):
 
             if isinstance(layer_def[0], str):
@@ -226,7 +227,7 @@ class NeuralNet(BaseEstimator):
         X_batch = input_type('x_batch')
         y_batch = output_type('y_batch')
 
-        output_layer = layers.values()[-1]
+        output_layer = list(layers.values())[-1]
         objective_params = self._get_params_for('objective')
         obj = objective(output_layer, **objective_params)
         if not hasattr(obj, 'layers'):
