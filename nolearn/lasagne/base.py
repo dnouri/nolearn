@@ -126,7 +126,6 @@ class NeuralNet(BaseEstimator):
             assert not hasattr(self, key)
         vars(self).update(kwargs)
         self._kwarg_keys = list(kwargs.keys())
-        self._check_for_unused_kwargs()
 
         self.train_history_ = []
 
@@ -137,7 +136,7 @@ class NeuralNet(BaseEstimator):
                 )
 
     def _check_for_unused_kwargs(self):
-        names = [n for n, _ in self.layers] + ['update', 'objective']
+        names = list(self.layers_.keys()) + ['update', 'objective']
         for k in self._kwarg_keys:
             for n in names:
                 prefix = '{}_'.format(n)
@@ -153,6 +152,8 @@ class NeuralNet(BaseEstimator):
         out = getattr(self, '_output_layer', None)
         if out is None:
             out = self._output_layer = self.initialize_layers()
+        self._check_for_unused_kwargs()
+
         if self.verbose:
             self._print_layer_info(self.layers_.values())
 
@@ -180,26 +181,44 @@ class NeuralNet(BaseEstimator):
     def initialize_layers(self, layers=None):
         if layers is not None:
             self.layers = layers
-
         self.layers_ = OrderedDict()
-        input_layer_name, input_layer_factory = self.layers[0]
-        input_layer_params = self._get_params_for(input_layer_name)
-        layer = input_layer_factory(
-            name=input_layer_name, **input_layer_params)
-        self.layers_[input_layer_name] = layer
 
-        for (layer_name, layer_factory) in self.layers[1:]:
-            layer_params = self._get_params_for(layer_name)
-            incoming = layer_params.pop('incoming', None)
-            if incoming is not None:
-                if isinstance(incoming, (list, tuple)):
-                    layer = [self.layers_[name] for name in incoming]
+        layer = None
+        for i, layer_def in enumerate(self.layers):
+
+            if isinstance(layer_def[0], str):
+                # The legacy format: ('name', Layer)
+                layer_name, layer_factory = layer_def
+                layer_kwargs = {'name': layer_name}
+            else:
+                # New format: (Layer, {'layer': 'kwargs'})
+                layer_factory, layer_kwargs = layer_def
+
+            if 'name' not in layer_kwargs:
+                layer_kwargs['name'] = "{}{}".format(
+                    layer_factory.__class__.__name__.lower(), i)
+                                  
+            more_params = self._get_params_for(layer_kwargs['name'])
+            layer_kwargs.update(more_params)
+
+            # Any layer other than the first one is assumed to require
+            # an 'incoming' paramter.  By default, we'll use the
+            # previous layer:
+            if i > 0:
+                incoming = layer_kwargs.pop('incoming', None)
+                if incoming is not None:
+                    if isinstance(incoming, (list, tuple)):
+                        layer_kwargs['incoming'] = [
+                            self.layers_[name] for name in incoming]
+                    else:
+                        layer_kwargs['incoming'] = self.layers_[incoming]
                 else:
-                    layer = self.layers_[incoming]
-            layer = layer_factory(layer, name=layer_name, **layer_params)
-            self.layers_[layer_name] = layer
+                    layer_kwargs['incoming'] = layer
 
-        return self.layers_['output']
+            layer = layer_factory(**layer_kwargs)
+            self.layers_[layer_kwargs['name']] = layer
+
+        return layer
 
     def _create_iter_funcs(self, layers, objective, update, input_type,
                            output_type):
@@ -208,7 +227,7 @@ class NeuralNet(BaseEstimator):
         X_batch = input_type('x_batch')
         y_batch = output_type('y_batch')
 
-        output_layer = layers['output']
+        output_layer = list(layers.values())[-1]
         objective_params = self._get_params_for('objective')
         obj = objective(output_layer, **objective_params)
         if not hasattr(obj, 'layers'):
