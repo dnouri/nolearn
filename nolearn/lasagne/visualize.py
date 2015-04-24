@@ -18,10 +18,15 @@ def plot_loss(net):
 
 def plot_conv_weights(layer, figsize=(6, 6)):
     """Plot the weights of a specific layer. Only really makes sense
-    with convolutional layers.
+    with convolutional layers. Colors channels not yet supported.
     Parameters
     ----------
-    layer : netz.layers.layer
+    layer : lasagne.layer
+      Use a Conv2DLayer or a Conv2DCCLayer.
+      
+    figsize : tuple of ints (default=(6, 6))
+      Size of the figure.
+
     """
     W = layer.W.get_value()
     shape = W.shape
