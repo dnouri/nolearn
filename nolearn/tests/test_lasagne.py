@@ -98,11 +98,12 @@ def test_lasagne_functional_mnist(mnist):
     nn = clone(nn_def)
     nn.fit(X_train, y_train)
     assert len(epochs) == 2
-    assert epochs[0]['valid_accuracy'] > 0.8
-    assert epochs[1]['valid_accuracy'] > epochs[0]['valid_accuracy']
-    assert sorted(epochs[0].keys()) == [
-        'epoch', 'train_loss', 'valid_accuracy', 'valid_loss',
-        ]
+    assert epochs[0]['valid acc'] > 0.8
+    assert epochs[1]['valid acc'] > epochs[0]['valid acc']
+    assert set(epochs[0].keys()) == set([
+        'epoch', 'train loss', 'valid acc', 'valid loss', 'valid best',
+        'train/val', 'dur',
+        ])
 
     y_pred = nn.predict(X_test)
     assert accuracy_score(y_pred, y_test) > 0.85
@@ -201,7 +202,8 @@ def test_clone():
         'batch_iterator_test',
         'output_nonlinearity',
         'loss',
-        'objective'
+        'objective',
+        'custom_score'
         ):
         for par in (params, params1, params2):
             par.pop(ignore, None)
@@ -447,7 +449,6 @@ def test_visualize_functions_with_cnn(mnist):
 
 
 def test_verbose_nn(mnist):
-    # Just check that no exception is thrown
     from nolearn.lasagne import NeuralNet
 
     X, y = mnist
@@ -490,9 +491,16 @@ def test_verbose_nn(mnist):
         u'|epoch|trainloss|val''idloss|validbest|train/val|validacc|dur|')
     assert nn.log_.count('\n') == num_epochs + 1
 
+    # after additional training, log should be continued
+    nn.fit(X_train, y_train)
+    assert nn.log_.replace(' ', '').startswith(
+        u'|epoch|trainloss|validloss|validbest|train/val|validacc|dur|')
+    assert nn.log_.count('\n') == 2 * num_epochs + 1
+
 
 def test_verbose_nn_with_custom_score(mnist):
-    # Just check that no exception is thrown
+    # Just check that no exception is thrown and that strings look
+    # right
     from nolearn.lasagne import NeuralNet
 
     def my_score(y_true, y_prob):
@@ -536,7 +544,7 @@ def test_verbose_nn_with_custom_score(mnist):
 
     assert nn.layer_infos_.replace(' ', '').startswith(u'|#|name|size|')
     assert nn.log_.replace(' ', '').startswith(
-        u'|epoch|trainloss|val''idloss|validbest|train/val|validacc|'
+        u'|epoch|trainloss|validloss|validbest|train/val|validacc|'
         'score_name|dur|')
     assert nn.log_.count('\n') == num_epochs + 1
     log_my_score = nn.log_.replace(' ', '').rsplit('\n')[-1].split('|')[-3]
