@@ -3,11 +3,9 @@ import pickle
 import matplotlib.pyplot as plt
 from mock import patch
 from mock import Mock
-from lasagne.layers import Conv2DLayer
 from lasagne.layers import DenseLayer
 from lasagne.layers import DropoutLayer
 from lasagne.layers import InputLayer
-from lasagne.layers import MaxPool2DLayer
 from lasagne.nonlinearities import identity
 from lasagne.nonlinearities import softmax
 from lasagne.objectives import categorical_crossentropy
@@ -94,20 +92,17 @@ def test_lasagne_functional_mnist(mnist):
         update_momentum=0.9,
 
         max_epochs=5,
-        verbose=1,
         on_epoch_finished=on_epoch_finished,
         )
 
     nn = clone(nn_def)
     nn.fit(X_train, y_train)
     assert len(epochs) == 2
-    assert epochs[0]['valid acc'] > 0.8
-    assert epochs[1]['valid acc'] > epochs[0]['valid acc']
-    expected_keys = [
-        'epoch', 'train loss', 'valid loss', 'valid best',
-        'train/val', 'valid acc', 'dur',
+    assert epochs[0]['valid_accuracy'] > 0.8
+    assert epochs[1]['valid_accuracy'] > epochs[0]['valid_accuracy']
+    assert sorted(epochs[0].keys()) == [
+        'epoch', 'train_loss', 'valid_accuracy', 'valid_loss',
         ]
-    assert set(epochs[0].keys()) == set(expected_keys)
 
     y_pred = nn.predict(X_test)
     assert accuracy_score(y_pred, y_test) > 0.85
@@ -121,7 +116,6 @@ def test_lasagne_functional_mnist(mnist):
 
     # Use load_weights_from to initialize an untrained model:
     nn3 = clone(nn_def)
-    nn3.initialize()
     nn3.load_weights_from(nn2)
     assert np.array_equal(nn3.predict(X_test), y_pred)
 
@@ -194,7 +188,6 @@ def test_clone():
         on_training_finished=None,
         max_epochs=100,
         eval_size=0.1,
-        custom_score=None,
         verbose=0,
         )
     nn = NeuralNet(**params)
@@ -209,7 +202,6 @@ def test_clone():
         'output_nonlinearity',
         'loss',
         'objective'
-        'custom_score',
         ):
         for par in (params, params1, params2):
             par.pop(ignore, None)
