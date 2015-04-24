@@ -30,6 +30,22 @@ class ansi:
     ENDC = '\033[0m'
 
 
+def layers_have_conv2d(layers):
+    try:
+        return any([isinstance(layer, (Conv2DLayer, Conv2DCCLayer))
+                    for layer in layers])
+    except TypeError:
+        return isinstance(layers, (Conv2DLayer, Conv2DCCLayer))
+
+
+def layers_have_maxpool2d(layers):
+    try:
+        return any([isinstance(layer, (MaxPool2DLayer, MaxPool2DCCLayer))
+                    for layer in layers])
+    except TypeError:
+        return isinstance(layers, (MaxPool2DLayer, MaxPool2DCCLayer))
+
+
 def get_real_filter(layers, img_size):
     """Get the real filter sizes of each layer involved in
     convoluation. See Xudong Cao:
@@ -51,7 +67,7 @@ def get_real_filter(layers, img_size):
             real_filter[j] = img_size
             continue
 
-        if isinstance(layer, Conv2DLayer):
+        if layers_have_conv2d(layer):
             if not first_conv_layer:
                 new_filter = np.array(layer.filter_size) * expon
                 real_filter[j] = new_filter
@@ -59,8 +75,7 @@ def get_real_filter(layers, img_size):
                 new_filter = np.array(layer.filter_size) * expon
                 real_filter[j] = new_filter
                 first_conv_layer = False
-        elif (isinstance(layer, MaxPool2DLayer) or
-              isinstance(layer, MaxPool2DCCLayer)):
+        elif layers_have_maxpool2d(layer):
             real_filter[j] = real_filter[i]
             expon *= np.array(layer.ds)
         else:
@@ -91,7 +106,7 @@ def get_receptive_field(layers, img_size):
             receptive_field[j] = img_size
             continue
 
-        if isinstance(layer, Conv2DLayer):
+        if layers_have_conv2d(layer):
             if not first_conv_layer:
                 last_field = receptive_field[i]
                 new_field = (last_field + expon *
@@ -100,8 +115,7 @@ def get_receptive_field(layers, img_size):
             else:
                 receptive_field[j] = layer.filter_size
                 first_conv_layer = False
-        elif (isinstance(layer, MaxPool2DLayer) or
-              isinstance(layer, MaxPool2DCCLayer)):
+        elif layers_have_maxpool2d(layer):
             receptive_field[j] = receptive_field[i]
             expon *= np.array(layer.ds)
         else:
