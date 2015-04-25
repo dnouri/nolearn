@@ -13,6 +13,7 @@ except IOError:
 
 install_requires = [
     'joblib',
+    'matplotlib',
     'scikit-learn',
     ]
 
