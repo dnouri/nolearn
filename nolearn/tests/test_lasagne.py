@@ -3,9 +3,11 @@ import pickle
 import matplotlib.pyplot as plt
 from mock import patch
 from mock import Mock
+from lasagne.layers import Conv2DLayer
 from lasagne.layers import DenseLayer
 from lasagne.layers import DropoutLayer
 from lasagne.layers import InputLayer
+from lasagne.layers import MaxPool2DLayer
 from lasagne.nonlinearities import identity
 from lasagne.nonlinearities import softmax
 from lasagne.objectives import categorical_crossentropy
