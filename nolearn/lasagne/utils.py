@@ -1,5 +1,7 @@
-import operator as op
+from itertools import product
+import operator
 
+from lasagne.layers import Layer
 from lasagne.layers import Conv2DLayer
 from lasagne.layers import MaxPool2DLayer
 try:
@@ -30,20 +32,18 @@ class ansi:
     ENDC = '\033[0m'
 
 
-def layers_have_conv2d(layers):
-    try:
-        return any([isinstance(layer, (Conv2DLayer, Conv2DCCLayer))
-                    for layer in layers])
-    except TypeError:
+def is_conv2d(layers):
+    if isinstance(layers, Layer):
         return isinstance(layers, (Conv2DLayer, Conv2DCCLayer))
+    return any([isinstance(layer, (Conv2DLayer, Conv2DCCLayer))
+                for layer in layers])
 
 
-def layers_have_maxpool2d(layers):
-    try:
-        return any([isinstance(layer, (MaxPool2DLayer, MaxPool2DCCLayer))
-                    for layer in layers])
-    except TypeError:
+def is_maxpool2d(layers):
+    if isinstance(layers, Layer):
         return isinstance(layers, (MaxPool2DLayer, MaxPool2DCCLayer))
+    return any([isinstance(layer, (MaxPool2DLayer, MaxPool2DCCLayer))
+                for layer in layers])
 
 
 def get_real_filter(layers, img_size):
@@ -67,7 +67,7 @@ def get_real_filter(layers, img_size):
             real_filter[j] = img_size
             continue
 
-        if layers_have_conv2d(layer):
+        if is_conv2d(layer):
             if not first_conv_layer:
                 new_filter = np.array(layer.filter_size) * expon
                 real_filter[j] = new_filter
@@ -75,7 +75,7 @@ def get_real_filter(layers, img_size):
                 new_filter = np.array(layer.filter_size) * expon
                 real_filter[j] = new_filter
                 first_conv_layer = False
-        elif layers_have_maxpool2d(layer):
+        elif is_maxpool2d(layer):
             real_filter[j] = real_filter[i]
             expon *= np.array(layer.ds)
         else:
@@ -106,7 +106,7 @@ def get_receptive_field(layers, img_size):
             receptive_field[j] = img_size
             continue
 
-        if layers_have_conv2d(layer):
+        if is_conv2d(layer):
             if not first_conv_layer:
                 last_field = receptive_field[i]
                 new_field = (last_field + expon *
@@ -115,7 +115,7 @@ def get_receptive_field(layers, img_size):
             else:
                 receptive_field[j] = layer.filter_size
                 first_conv_layer = False
-        elif layers_have_maxpool2d(layer):
+        elif is_maxpool2d(layer):
             receptive_field[j] = receptive_field[i]
             expon *= np.array(layer.ds)
         else:
@@ -142,7 +142,7 @@ def get_conv_infos(net, min_capacity=100. / 6, tablefmt='pipe',
         header += ['filter Y', 'filter X', 'field Y', 'field X']
 
     shapes = [layer.get_output_shape()[1:] for layer in layers]
-    totals = [str(reduce(op.mul, shape)) for shape in shapes]
+    totals = [str(reduce(operator.mul, shape)) for shape in shapes]
     shapes = ['x'.join(map(str, shape)) for shape in shapes]
     shapes = np.array(shapes).reshape(-1, 1)
     totals = np.array(totals).reshape(-1, 1)
@@ -177,3 +177,54 @@ def get_conv_infos(net, min_capacity=100. / 6, tablefmt='pipe',
                            receptive_fields.astype(int)))
 
     return tabulate(table, header, tablefmt=tablefmt, floatfmt='.2f')
+
+
+def occlusion_heatmap(net, x, y, square_length=7):
+    """An occlusion test that checks an image for its critical parts.
+    In this test, a square part of the image is occluded (i.e. set to
+    0) and then the net is tested for its propensity to predict the
+    correct label. One should expect that this propensity shrinks of
+    critical parts of the image are occluded. If not, this indicates
+    overfitting.
+    Depending on the depth of the net and the size of the image, this
+    function may take awhile to finish, since one prediction for each
+    pixel of the image is made.
+    Currently, all color channels are occluded at the same time. Also,
+    this does not really work if images are randomly distorted.
+    See paper: Zeiler, Fergus 2013
+    Parameters
+    ----------
+    net : NeuralNet instance
+      The neural net to test.
+    x : np.array
+      The input data, should be of shape (1, c, x, y). Only makes
+      sense with image data.
+    y : np.array
+      The true value of the image.
+    square_length : int (default=7)
+      The length of the side of the square that occludes the image.
+    Results
+    -------
+    heat_array : np.array (with same size as image)
+      An 2D np.array that at each point (i, j) contains the predicted
+      probability of the correct class if the image is occluded by a
+      square with center (i, j).
+    """
+    if (x.ndim != 4) or x.shape[0] != 1:
+        raise ValueError("This function requires the input data to be of "
+                         "shape (1, c, x, y), instead got {}".format(x.shape))
+    img = x[0].copy()
+    shape = x.shape
+    heat_array = np.zeros(shape[2:])
+    pad = square_length // 2
+    x_occluded = np.zeros((shape[2] * shape[3], 1, shape[2], shape[3]),
+                          dtype=img.dtype)
+    for i, j in product(*map(range, shape[2:])):
+        x_padded = np.pad(img, ((0, 0), (pad, pad), (pad, pad)), 'constant')
+        x_padded[:, i:i + square_length, j:j + square_length] = 0.
+        x_occluded[i * shape[0] + j, 0] = x_padded[:, pad:-pad, pad:-pad]
+
+    probs = net.predict_proba(x_occluded)
+    for i, j in product(*map(range, shape[2:])):
+        heat_array[i, j] = probs[i * shape[0] + j, y.astype(int)]
+    return heat_array

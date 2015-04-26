@@ -1,9 +1,12 @@
 import pickle
 
+import matplotlib.pyplot as plt
 from mock import patch
 from mock import Mock
+from lasagne.layers import Conv2DLayer
 from lasagne.layers import DenseLayer
 from lasagne.layers import DropoutLayer
+from lasagne.layers import MaxPool2DLayer
 from lasagne.layers import InputLayer
 from lasagne.nonlinearities import identity
 from lasagne.nonlinearities import softmax
@@ -264,29 +267,66 @@ class TestTrainTestSplit:
 
 class TestCheckForUnusedKwargs:
     def test_okay(self, NeuralNet):
-        NeuralNet(
-            layers=[('input', object()), ('mylayer', object())],
+        net = NeuralNet(
+            layers=[('input', Mock()), ('mylayer', Mock())],
             input_shape=(10, 10),
             mylayer_hey='hey',
             update_foo=1,
             update_bar=2,
             )
+        net._create_iter_funcs = lambda *args: (1, 2, 3)
+        net.initialize()
 
     def test_unused(self, NeuralNet):
+        net = NeuralNet(
+            layers=[('input', Mock()), ('mylayer', Mock())],
+            input_shape=(10, 10),
+            mylayer_hey='hey',
+            yourlayer_ho='ho',
+            update_foo=1,
+            update_bar=2,
+            )
+        net._create_iter_funcs = lambda *args: (1, 2, 3)
+
         with pytest.raises(ValueError) as err:
-            NeuralNet(
-                layers=[('input', object()), ('mylayer', object())],
-                input_shape=(10, 10),
-                mylayer_hey='hey',
-                yourlayer_ho='ho',
-                update_foo=1,
-                update_bar=2,
-                )
+            net.initialize()
         assert str(err.value) == 'Unused kwarg: yourlayer_ho'
 
 
 class TestInitializeLayers:
     def test_initialization(self, NeuralNet):
+        input, hidden1, hidden2, output = Mock(), Mock(), Mock(), Mock()
+        nn = NeuralNet(
+            layers=[
+                (input, {'shape': (10, 10), 'name': 'input'}),
+                (hidden1, {'some': 'param', 'another': 'param'}),
+                (hidden2, {}),
+                (output, {'name': 'output'}),
+                ],
+            input_shape=(10, 10),
+            mock1_some='iwin',
+            )
+        out = nn.initialize_layers(nn.layers)
+
+        input.assert_called_with(
+            name='input', shape=(10, 10))
+        nn.layers_['input'] is input.return_value
+
+        hidden1.assert_called_with(
+            incoming=input.return_value, name='mock1',
+            some='iwin', another='param')
+        nn.layers_['mock1'] is hidden1.return_value
+
+        hidden2.assert_called_with(
+            incoming=hidden1.return_value, name='mock2')
+        nn.layers_['mock2'] is hidden2.return_value
+
+        output.assert_called_with(
+            incoming=hidden2.return_value, name='output')
+
+        assert out is nn.layers_['output']
+
+    def test_initialization_legacy(self, NeuralNet):
         input, hidden1, hidden2, output = Mock(), Mock(), Mock(), Mock()
         nn = NeuralNet(
             layers=[
@@ -305,14 +345,15 @@ class TestInitializeLayers:
         nn.layers_['input'] is input.return_value
 
         hidden1.assert_called_with(
-            input.return_value, name='hidden1', some='param')
+            incoming=input.return_value, name='hidden1', some='param')
         nn.layers_['hidden1'] is hidden1.return_value
 
         hidden2.assert_called_with(
-            hidden1.return_value, name='hidden2')
+            incoming=hidden1.return_value, name='hidden2')
         nn.layers_['hidden2'] is hidden2.return_value
 
-        output.assert_called_with(hidden2.return_value, name='output')
+        output.assert_called_with(
+            incoming=hidden2.return_value, name='output')
 
         assert out is nn.layers_['output']
 
@@ -334,11 +375,13 @@ class TestInitializeLayers:
         nn.initialize_layers(nn.layers)
 
         input.assert_called_with(name='input', shape=(10, 10))
-        hidden1.assert_called_with(input.return_value, name='hidden1')
-        hidden2.assert_called_with(input.return_value, name='hidden2')
-        concat.assert_called_with([hidden1.return_value, hidden2.return_value],
-                                  name='concat')
-        output.assert_called_with(concat.return_value, name='output')
+        hidden1.assert_called_with(incoming=input.return_value, name='hidden1')
+        hidden2.assert_called_with(incoming=input.return_value, name='hidden2')
+        concat.assert_called_with(
+            incoming=[hidden1.return_value, hidden2.return_value],
+            name='concat'
+            )
+        output.assert_called_with(incoming=concat.return_value, name='output')
 
 
 def test_verbose_nn(mnist):
@@ -419,7 +462,7 @@ def test_verbose_cnn(mnist):
             conv3_filter_size=(3, 3), conv3_num_filters=16,
             conv4_filter_size=(3, 3), conv4_num_filters=16,
             pool4_ds=(2, 2),
-            hidden1_num_units=512,
+            hidden1_num_units=16,
             ),
 
         update=nesterov_momentum,
@@ -438,3 +481,67 @@ def test_verbose_cnn(mnist):
     assert nn.layer_infos_.replace(' ', '').startswith(
         u'namesizetotalcap.Y[%]cap.X[%]cov.Y[%]cov.X[%]filterYfilterXfieldY'
         'fieldX')
+
+
+def test_visualize_functions_with_cnn(mnist):
+    # this test simply tests that no exception is raised when using
+    # the plotting functions
+
+    from nolearn.lasagne import NeuralNet
+    from nolearn.lasagne.visualize import plot_conv_activity
+    from nolearn.lasagne.visualize import plot_conv_weights
+    from nolearn.lasagne.visualize import plot_loss
+    from nolearn.lasagne.visualize import plot_occlusion
+
+    X, y = mnist
+    X_train, y_train = X[:100].reshape(-1, 1, 28, 28), y[:100]
+    X_train = X_train.reshape(-1, 1, 28, 28)
+    num_epochs = 3
+
+    nn = NeuralNet(
+        layers=[
+            ('input', InputLayer),
+            ('conv1', Conv2DLayer),
+            ('conv2', Conv2DLayer),
+            ('pool2', MaxPool2DLayer),
+            ('conv3', Conv2DLayer),
+            ('conv4', Conv2DLayer),
+            ('pool4', MaxPool2DLayer),
+            ('hidden1', DenseLayer),
+            ('output', DenseLayer),
+            ],
+        input_shape=(None, 1, 28, 28),
+        output_num_units=10,
+        output_nonlinearity=softmax,
+
+        more_params=dict(
+            conv1_filter_size=(5, 5), conv1_num_filters=16,
+            conv2_filter_size=(3, 3), conv2_num_filters=16,
+            pool2_ds=(3, 3),
+            conv3_filter_size=(3, 3), conv3_num_filters=16,
+            conv4_filter_size=(3, 3), conv4_num_filters=16,
+            pool4_ds=(2, 2),
+            hidden1_num_units=16,
+            ),
+
+        update=nesterov_momentum,
+        update_learning_rate=0.01,
+        update_momentum=0.9,
+
+        max_epochs=num_epochs,
+        )
+
+    nn.fit(X_train, y_train)
+
+    plot_loss(nn)
+    plot_conv_weights(nn.layers_['conv1'])
+    plot_conv_weights(nn.layers_['conv2'], figsize=(1, 2))
+    plot_conv_activity(nn.layers_['conv3'], X_train[:1])
+    plot_conv_activity(nn.layers_['conv4'], X_train[10:11], figsize=(3, 4))
+    plot_occlusion(nn, X_train[:1], y_train[:1])
+    plot_occlusion(nn, X_train[2:4], y_train[2:4], square_length=3,
+                   figsize=(5, 5))
+
+    # clear figures from memory
+    plt.clf()
+    plt.cla()
