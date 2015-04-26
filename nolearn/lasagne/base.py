@@ -155,6 +155,7 @@ class NeuralNet(BaseEstimator):
         out = getattr(self, '_output_layer', None)
         if out is None:
             out = self._output_layer = self.initialize_layers()
+        self._check_for_unused_kwargs()
         if self.verbose:
             self._print_layer_info(self.layers_.values())
 
