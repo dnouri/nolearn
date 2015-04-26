@@ -106,6 +106,7 @@ def test_lasagne_functional_mnist(mnist):
         'dur', 'epoch', 'train loss', 'train/val', 'valid acc',
         'valid best', 'valid loss'
         ])
+
     y_pred = nn.predict(X_test)
     assert accuracy_score(y_pred, y_test) > 0.85
 
@@ -190,7 +191,6 @@ def test_clone():
         on_training_finished=None,
         max_epochs=100,
         eval_size=0.1,
-        custom_score=None,
         verbose=0,
         )
     nn = NeuralNet(**params)
