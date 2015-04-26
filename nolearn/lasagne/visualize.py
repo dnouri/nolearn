@@ -9,8 +9,8 @@ from .utils import occlusion_heatmap
 
 
 def plot_loss(net):
-    train_loss = [row['train_loss'] for row in net.train_history_]
-    valid_loss = [row['valid_loss'] for row in net.train_history_]
+    train_loss = [row['train loss'] for row in net.train_history_]
+    valid_loss = [row['valid loss'] for row in net.train_history_]
     plt.plot(train_loss, label='train loss')
     plt.plot(valid_loss, label='valid loss')
     plt.legend(loc='best')

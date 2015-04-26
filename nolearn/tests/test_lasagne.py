@@ -100,12 +100,12 @@ def test_lasagne_functional_mnist(mnist):
     nn = clone(nn_def)
     nn.fit(X_train, y_train)
     assert len(epochs) == 2
-    assert epochs[0]['valid_accuracy'] > 0.8
-    assert epochs[1]['valid_accuracy'] > epochs[0]['valid_accuracy']
-    assert sorted(epochs[0].keys()) == [
-        'epoch', 'train_loss', 'valid_accuracy', 'valid_loss',
-        ]
-
+    assert epochs[0]['valid acc'] > 0.8
+    assert epochs[1]['valid acc'] > epochs[0]['valid acc']
+    assert set(epochs[0].keys()) == set([
+        'dur', 'epoch', 'train loss', 'train/val', 'valid acc',
+        'valid best', 'valid loss'
+        ])
     y_pred = nn.predict(X_test)
     assert accuracy_score(y_pred, y_test) > 0.85
 
@@ -203,7 +203,8 @@ def test_clone():
         'batch_iterator_test',
         'output_nonlinearity',
         'loss',
-        'objective'
+        'objective',
+        'custom_score',
         ):
         for par in (params, params1, params2):
             par.pop(ignore, None)
