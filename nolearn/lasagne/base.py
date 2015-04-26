@@ -28,7 +28,7 @@ from .utils import _dict
 from .utils import _list
 from .utils import ansi
 from .utils import get_conv_infos
-from .utils import layers_have_conv2d
+from .utils import is_conv2d
 
 
 class BatchIterator(object):
@@ -457,8 +457,8 @@ class NeuralNet(BaseEstimator):
         print("## Layer information")
 
         layers = self.layers_.values()
-        contains_conv2d = layers_have_conv2d(layers)
-        if contains_conv2d and (self.verbose > 1):
+        layers_contain_conv2d = is_conv2d(layers)
+        if layers_contain_conv2d and (self.verbose > 1):
             self._print_layer_info_conv()
         else:
             self._print_layer_info_plain()
