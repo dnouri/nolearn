@@ -5,6 +5,7 @@ from collections import OrderedDict
 import functools
 import itertools
 import operator
+from warnings import warn
 from time import time
 import pdb
 
@@ -409,27 +410,50 @@ class NeuralNet(BaseEstimator):
         params = sum([l.get_params() for l in layers], [])
         return unique(params)
 
-    def load_weights_from(self, source):
+    def get_all_params_values(self):
+        return_value = OrderedDict()
+        for name, layer in self.layers_.items():
+            return_value[name] = [p.get_value() for p in layer.get_params()]
+        return return_value
+
+    def load_params_from(self, source):
         self.initialize()
 
         if isinstance(source, str):
-            source = np.load(source)
+            with open(source, 'rb') as f:
+                source = pickle.load(f)
 
         if isinstance(source, NeuralNet):
-            source = source.get_all_params()
+            source = source.get_all_params_values()
 
-        source_weights = [
-            w.get_value() if hasattr(w, 'get_value') else w for w in source]
+        for key, values in source.items():
+            layer = self.layers_.get(key)
+            if layer is not None:
+                for p1, p2v in zip(layer.get_params(), values):
+                    if p1.get_value().shape == p2v.shape:
+                        p1.set_value(p2v)
 
-        for w1, w2 in zip(source_weights, self.get_all_params()):
-            if w1.shape != w2.get_value().shape:
-                continue
-            w2.set_value(w1)
+    def save_params_to(self, fname):
+        params = self.get_all_params_values()
+        with open(fname, 'wb') as f:
+            pickle.dump(params, f, -1)
+
+    def load_weights_from(self, source):
+        warn("The 'load_weights_from' method will be removed in nolearn 0.6. "
+             "Please use 'load_params_from' instead.")
+
+        if isinstance(source, list):
+            raise ValueError(
+                "Loading weights from a list of parameter values is no "
+                "longer supported.  Please send me something like the "
+                "return value of 'net.get_all_param_values()' instead.")
+
+        return self.load_params_from(source)
 
     def save_weights_to(self, fname):
-        weights = [w.get_value() for w in self.get_all_params()]
-        with open(fname, 'wb') as f:
-            pickle.dump(weights, f, -1)
+        warn("The 'save_weights_to' method will be removed in nolearn 0.6. "
+             "Please use 'save_params_to' instead.")
+        return self.save_params_to(fname)
 
     def __getstate__(self):
         state = dict(self.__dict__)
