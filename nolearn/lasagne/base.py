@@ -95,13 +95,6 @@ class NeuralNet(BaseEstimator):
             objective_loss_function = (
                 mse if regression else categorical_crossentropy)
 
-        if X_tensor_type is None:
-            types = {
-                2: T.matrix,
-                3: T.tensor3,
-                4: T.tensor4,
-                }
-            X_tensor_type = types[len(kwargs['input_shape'])]
         if y_tensor_type is None:
             y_tensor_type = T.fmatrix if regression else T.ivector
 
@@ -156,6 +149,15 @@ class NeuralNet(BaseEstimator):
 
         if self.verbose:
             self._print_layer_info(self.layers_.values())
+
+        if self.X_tensor_type is None:
+            types = {
+                2: T.matrix,
+                3: T.tensor3,
+                4: T.tensor4,
+                }
+            first_layer = list(self.layers_.values())[0]
+            self.X_tensor_type = types[len(first_layer.shape)]
 
         iter_funcs = self._create_iter_funcs(
             self.layers_, self.objective, self.update,

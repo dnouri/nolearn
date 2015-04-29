@@ -268,7 +268,7 @@ class TestTrainTestSplit:
 class TestCheckForUnusedKwargs:
     def test_okay(self, NeuralNet):
         net = NeuralNet(
-            layers=[('input', Mock()), ('mylayer', Mock())],
+            layers=[('input', Mock), ('mylayer', Mock)],
             input_shape=(10, 10),
             mylayer_hey='hey',
             update_foo=1,
@@ -279,7 +279,7 @@ class TestCheckForUnusedKwargs:
 
     def test_unused(self, NeuralNet):
         net = NeuralNet(
-            layers=[('input', Mock()), ('mylayer', Mock())],
+            layers=[('input', Mock), ('mylayer', Mock)],
             input_shape=(10, 10),
             mylayer_hey='hey',
             yourlayer_ho='ho',
