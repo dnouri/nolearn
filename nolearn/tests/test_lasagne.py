@@ -295,7 +295,8 @@ class TestCheckForUnusedKwargs:
 
 class TestInitializeLayers:
     def test_initialization(self, NeuralNet):
-        input, hidden1, hidden2, output = Mock(), Mock(), Mock(), Mock()
+        input, hidden1, hidden2, output = [
+            Mock(__name__='MockLayer') for i in range(4)]
         nn = NeuralNet(
             layers=[
                 (input, {'shape': (10, 10), 'name': 'input'}),
@@ -327,7 +328,8 @@ class TestInitializeLayers:
         assert out is nn.layers_['output']
 
     def test_initialization_legacy(self, NeuralNet):
-        input, hidden1, hidden2, output = Mock(), Mock(), Mock(), Mock()
+        input, hidden1, hidden2, output = [
+            Mock(__name__='MockLayer') for i in range(4)]
         nn = NeuralNet(
             layers=[
                 ('input', input),
@@ -358,8 +360,8 @@ class TestInitializeLayers:
         assert out is nn.layers_['output']
 
     def test_diamond(self, NeuralNet):
-        input, hidden1, hidden2, concat, output = (
-            Mock(), Mock(), Mock(), Mock(), Mock())
+        input, hidden1, hidden2, concat, output = [
+            Mock(__name__='MockLayer') for i in range(5)]
         nn = NeuralNet(
             layers=[
                 ('input', input),

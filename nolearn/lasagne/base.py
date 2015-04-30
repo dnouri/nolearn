@@ -198,7 +198,7 @@ class NeuralNet(BaseEstimator):
 
             if 'name' not in layer_kwargs:
                 layer_kwargs['name'] = "{}{}".format(
-                    layer_factory.__name__.lower(), i)
+                    layer_factory.__name__.lower().replace("layer", ""), i)
                                   
             more_params = self._get_params_for(layer_kwargs['name'])
             layer_kwargs.update(more_params)
