@@ -23,6 +23,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_absolute_error
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
+from tabulate import tabulate
 import theano.tensor as T
 
 
@@ -102,9 +103,10 @@ def test_lasagne_functional_mnist(mnist):
     assert len(epochs) == 2
     assert epochs[0]['valid_accuracy'] > 0.8
     assert epochs[1]['valid_accuracy'] > epochs[0]['valid_accuracy']
-    assert sorted(epochs[0].keys()) == [
-        'epoch', 'train_loss', 'valid_accuracy', 'valid_loss',
-        ]
+    assert set(epochs[0].keys()) == set([
+        'dur', 'epoch', 'train_loss', 'train/val', 'valid_accuracy',
+        'valid_best', 'valid_loss'
+        ])
 
     y_pred = nn.predict(X_test)
     assert accuracy_score(y_pred, y_test) > 0.85
@@ -203,7 +205,8 @@ def test_clone():
         'batch_iterator_test',
         'output_nonlinearity',
         'loss',
-        'objective'
+        'objective',
+        'custom_score',
         ):
         for par in (params, params1, params2):
             par.pop(ignore, None)
@@ -448,3 +451,114 @@ def test_visualize_functions_with_cnn(mnist):
     # clear figures from memory
     plt.clf()
     plt.cla()
+
+
+def test_verbose_nn(mnist):
+    # Just check that no exception is thrown and that strings look
+    # right
+    from nolearn.lasagne import NeuralNet
+
+    X, y = mnist
+    X_train, y_train = X[:1000], y[:1000]
+    num_epochs = 7
+
+    nn = NeuralNet(
+        layers=[
+            ('input', InputLayer),
+            ('hidden1', DenseLayer),
+            ('dropout1', DropoutLayer),
+            ('hidden2', DenseLayer),
+            ('dropout2', DropoutLayer),
+            ('output', DenseLayer),
+            ],
+        input_shape=(None, 784),
+        output_num_units=10,
+        output_nonlinearity=softmax,
+
+        more_params=dict(
+            hidden1_num_units=512,
+            hidden2_num_units=512,
+            ),
+
+        update=nesterov_momentum,
+        update_learning_rate=0.01,
+        update_momentum=0.9,
+
+        max_epochs=num_epochs,
+        verbose=True,
+        )
+
+    nn.fit(X_train, y_train)
+    nn.predict_proba(X_train)
+    nn.predict(X_train)
+    nn.score(X_train, y_train)
+
+    log = tabulate(nn.train_history_, headers='keys',
+                   tablefmt='pipe', floatfmt='.4f')
+    assert log.replace(' ', '').startswith(
+        u'|epoch|train_loss|valid_loss|valid_best|train/val|'
+        'valid_accuracy|dur|')
+    assert log.count('\n') == num_epochs + 1
+
+    # after additional training, log should be continued
+    nn.fit(X_train, y_train)
+    log = tabulate(nn.train_history_, headers='keys',
+                   tablefmt='pipe', floatfmt='.4f')
+    assert log.replace(' ', '').startswith(
+        u'|epoch|train_loss|valid_loss|valid_best|train/val|'
+        'valid_accuracy|dur|')
+    assert log.count('\n') == 2 * num_epochs + 1
+
+
+def test_verbose_nn_with_custom_score(mnist):
+    # Just check that no exception is thrown and that strings look
+    # right
+    from nolearn.lasagne import NeuralNet
+
+    def my_score(y_true, y_prob):
+        return 1.2345
+
+    X, y = mnist
+    X_train, y_train = X[:1000], y[:1000]
+    num_epochs = 4
+
+    nn = NeuralNet(
+        layers=[
+            ('input', InputLayer),
+            ('hidden1', DenseLayer),
+            ('dropout1', DropoutLayer),
+            ('hidden2', DenseLayer),
+            ('dropout2', DropoutLayer),
+            ('output', DenseLayer),
+            ],
+        input_shape=(None, 784),
+        output_num_units=10,
+        output_nonlinearity=softmax,
+
+        more_params=dict(
+            hidden1_num_units=512,
+            hidden2_num_units=512,
+            ),
+
+        update=nesterov_momentum,
+        update_learning_rate=0.01,
+        update_momentum=0.9,
+
+        custom_score=('score_name', my_score),
+        max_epochs=num_epochs,
+        verbose=True,
+        )
+
+    nn.fit(X_train, y_train)
+    nn.predict_proba(X_train)
+    nn.predict(X_train)
+    nn.score(X_train, y_train)
+
+    log = tabulate(nn.train_history_, headers='keys',
+                   tablefmt='pipe', floatfmt='.4f')
+    assert log.replace(' ', '').startswith(
+        u'|epoch|train_loss|valid_loss|valid_best|train/val|valid_accuracy|'
+        'score_name|dur|')
+    assert log.count('\n') == num_epochs + 1
+    log_my_score = log.replace(' ', '').rsplit('\n')[-1].split('|')[-3]
+    assert log_my_score == '1.2345'
