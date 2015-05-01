@@ -305,11 +305,11 @@ class NeuralNet(BaseEstimator):
 
         epoch = 0
         best_valid_loss = (
-            min([row['valid loss'] for row in self.train_history_]) if
+            min([row['valid_loss'] for row in self.train_history_]) if
             self.train_history_ else np.inf
             )
         best_train_loss = (
-            min([row['train loss'] for row in self.train_history_]) if
+            min([row['train_loss'] for row in self.train_history_]) if
             self.train_history_ else np.inf
             )
         first_iteration = True
@@ -352,25 +352,31 @@ class NeuralNet(BaseEstimator):
 
             info = OrderedDict([
                 ('epoch', num_epochs_past + epoch),
-                ('train loss', avg_train_loss),
-                ('valid loss', avg_valid_loss),
-                ('valid best', avg_valid_loss if best_valid else None),
+                ('train_loss', avg_train_loss),
+                ('valid_loss', avg_valid_loss),
+                ('valid_best', avg_valid_loss if best_valid else None),
                 ('train/val', avg_train_loss / avg_valid_loss),
-                ('valid acc', avg_valid_accuracy),
+                ('valid_accuracy', avg_valid_accuracy),
                 ])
+            headers = {
+                'epoch': 'epoch', 'train_loss': 'train loss',
+                'valid_loss': 'valid loss', 'valid_best': 'valid best',
+                'train/val': 'train/val', 'valid_accuracy': 'val acc',
+                }
+
             if self.custom_score:
                 info.update({self.custom_score[0]: avg_custom_score})
             info.update({'dur': time() - t0})
 
             self.train_history_.append(info)
-            self.log_ = tabulate(self.train_history_, headers='keys',
+            train_log = tabulate(self.train_history_, headers=headers,
                                  tablefmt='pipe', floatfmt='.4f')
             if self.verbose:
                 if first_iteration:
-                    print(self.log_.split('\n', 2)[0])
-                    print(self.log_.split('\n', 2)[1])
+                    print(train_log.split('\n', 2)[0])
+                    print(train_log.split('\n', 2)[1])
                     first_iteration = False
-                print(self.log_.rsplit('\n', 1)[-1])
+                print(train_log.rsplit('\n', 1)[-1])
 
             try:
                 for func in on_epoch_finished:

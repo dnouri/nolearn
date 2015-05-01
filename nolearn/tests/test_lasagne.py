@@ -23,6 +23,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_absolute_error
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
+from tabulate import tabulate
 import theano.tensor as T
 
 
@@ -100,11 +101,11 @@ def test_lasagne_functional_mnist(mnist):
     nn = clone(nn_def)
     nn.fit(X_train, y_train)
     assert len(epochs) == 2
-    assert epochs[0]['valid acc'] > 0.8
-    assert epochs[1]['valid acc'] > epochs[0]['valid acc']
+    assert epochs[0]['valid_accuracy'] > 0.8
+    assert epochs[1]['valid_accuracy'] > epochs[0]['valid_accuracy']
     assert set(epochs[0].keys()) == set([
-        'dur', 'epoch', 'train loss', 'train/val', 'valid acc',
-        'valid best', 'valid loss'
+        'dur', 'epoch', 'train_loss', 'train/val', 'valid_accuracy',
+        'valid_best', 'valid_loss'
         ])
 
     y_pred = nn.predict(X_test)
@@ -492,15 +493,21 @@ def test_verbose_nn(mnist):
     nn.predict(X_train)
     nn.score(X_train, y_train)
 
-    assert nn.log_.replace(' ', '').startswith(
-        u'|epoch|trainloss|validloss|validbest|train/val|validacc|dur|')
-    assert nn.log_.count('\n') == num_epochs + 1
+    log = tabulate(nn.train_history_, headers='keys',
+                   tablefmt='pipe', floatfmt='.4f')
+    assert log.replace(' ', '').startswith(
+        u'|epoch|train_loss|valid_loss|valid_best|train/val|'
+        'valid_accuracy|dur|')
+    assert log.count('\n') == num_epochs + 1
 
     # after additional training, log should be continued
     nn.fit(X_train, y_train)
-    assert nn.log_.replace(' ', '').startswith(
-        u'|epoch|trainloss|validloss|validbest|train/val|validacc|dur|')
-    assert nn.log_.count('\n') == 2 * num_epochs + 1
+    log = tabulate(nn.train_history_, headers='keys',
+                   tablefmt='pipe', floatfmt='.4f')
+    assert log.replace(' ', '').startswith(
+        u'|epoch|train_loss|valid_loss|valid_best|train/val|'
+        'valid_accuracy|dur|')
+    assert log.count('\n') == 2 * num_epochs + 1
 
 
 def test_verbose_nn_with_custom_score(mnist):
@@ -547,9 +554,11 @@ def test_verbose_nn_with_custom_score(mnist):
     nn.predict(X_train)
     nn.score(X_train, y_train)
 
-    assert nn.log_.replace(' ', '').startswith(
-        u'|epoch|trainloss|validloss|validbest|train/val|validacc|'
+    log = tabulate(nn.train_history_, headers='keys',
+                   tablefmt='pipe', floatfmt='.4f')
+    assert log.replace(' ', '').startswith(
+        u'|epoch|train_loss|valid_loss|valid_best|train/val|valid_accuracy|'
         'score_name|dur|')
-    assert nn.log_.count('\n') == num_epochs + 1
-    log_my_score = nn.log_.replace(' ', '').rsplit('\n')[-1].split('|')[-3]
+    assert log.count('\n') == num_epochs + 1
+    log_my_score = log.replace(' ', '').rsplit('\n')[-1].split('|')[-3]
     assert log_my_score == '1.2345'
