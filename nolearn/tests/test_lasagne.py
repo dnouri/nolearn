@@ -268,11 +268,7 @@ class TestTrainTestSplit:
 class TestCheckForUnusedKwargs:
     def test_okay(self, NeuralNet):
         net = NeuralNet(
-<<<<<<< HEAD
             layers=[('input', Mock), ('mylayer', Mock)],
-=======
-            layers=[('input', Mock()), ('mylayer', Mock())],
->>>>>>> More detailed architecture information is now printed for convolutional nets (see Xudong Cao); layer infos are saved in layer_infos_ attribute for potential later use.  New dependency: tabulate.
             input_shape=(10, 10),
             mylayer_hey='hey',
             update_foo=1,
@@ -283,11 +279,7 @@ class TestCheckForUnusedKwargs:
 
     def test_unused(self, NeuralNet):
         net = NeuralNet(
-<<<<<<< HEAD
             layers=[('input', Mock), ('mylayer', Mock)],
-=======
-            layers=[('input', Mock()), ('mylayer', Mock())],
->>>>>>> More detailed architecture information is now printed for convolutional nets (see Xudong Cao); layer infos are saved in layer_infos_ attribute for potential later use.  New dependency: tabulate.
             input_shape=(10, 10),
             mylayer_hey='hey',
             yourlayer_ho='ho',
@@ -368,37 +360,6 @@ class TestInitializeLayers:
 
         assert out is nn.layers_['output']
 
-    def test_initialization_legacy(self, NeuralNet):
-        input, hidden1, hidden2, output = Mock(), Mock(), Mock(), Mock()
-        nn = NeuralNet(
-            layers=[
-                ('input', input),
-                ('hidden1', hidden1),
-                ('hidden2', hidden2),
-                ('output', output),
-                ],
-            input_shape=(10, 10),
-            hidden1_some='param',
-            )
-        out = nn.initialize_layers(nn.layers)
-
-        input.assert_called_with(
-            name='input', shape=(10, 10))
-        nn.layers_['input'] is input.return_value
-
-        hidden1.assert_called_with(
-            incoming=input.return_value, name='hidden1', some='param')
-        nn.layers_['hidden1'] is hidden1.return_value
-
-        hidden2.assert_called_with(
-            incoming=hidden1.return_value, name='hidden2')
-        nn.layers_['hidden2'] is hidden2.return_value
-
-        output.assert_called_with(
-            incoming=hidden2.return_value, name='output')
-
-        assert out is nn.layers_['output']
-
     def test_diamond(self, NeuralNet):
         input, hidden1, hidden2, concat, output = [
             Mock(__name__='MockLayer') for i in range(5)]
@@ -417,10 +378,6 @@ class TestInitializeLayers:
         nn.initialize_layers(nn.layers)
 
         input.assert_called_with(name='input', shape=(10, 10))
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> More detailed architecture information is now printed for convolutional nets (see Xudong Cao); layer infos are saved in layer_infos_ attribute for potential later use.  New dependency: tabulate.
         hidden1.assert_called_with(incoming=input.return_value, name='hidden1')
         hidden2.assert_called_with(incoming=input.return_value, name='hidden2')
         concat.assert_called_with(
@@ -428,155 +385,6 @@ class TestInitializeLayers:
             name='concat'
             )
         output.assert_called_with(incoming=concat.return_value, name='output')
-<<<<<<< HEAD
-
-
-def test_visualize_functions_with_cnn(mnist):
-    # this test simply tests that no exception is raised when using
-    # the plotting functions
-
-    from nolearn.lasagne import NeuralNet
-    from nolearn.lasagne.visualize import plot_conv_activity
-    from nolearn.lasagne.visualize import plot_conv_weights
-    from nolearn.lasagne.visualize import plot_loss
-    from nolearn.lasagne.visualize import plot_occlusion
-=======
-        hidden1.assert_called_with(input.return_value, name='hidden1')
-        hidden2.assert_called_with(input.return_value, name='hidden2')
-        concat.assert_called_with([hidden1.return_value, hidden2.return_value],
-                                  name='concat')
-        output.assert_called_with(concat.return_value, name='output')
-=======
->>>>>>> More detailed architecture information is now printed for convolutional nets (see Xudong Cao); layer infos are saved in layer_infos_ attribute for potential later use.  New dependency: tabulate.
-
-
-def test_verbose_nn(mnist):
-    # Just check that no exception is thrown and that strings look
-    # right
-    from nolearn.lasagne import NeuralNet
-
-    X, y = mnist
-    X_train, y_train = X[:1000], y[:1000]
-    num_epochs = 7
-
-    nn = NeuralNet(
-        layers=[
-            ('input', InputLayer),
-            ('hidden1', DenseLayer),
-            ('dropout1', DropoutLayer),
-            ('hidden2', DenseLayer),
-            ('dropout2', DropoutLayer),
-            ('output', DenseLayer),
-            ],
-        input_shape=(None, 784),
-        output_num_units=10,
-        output_nonlinearity=softmax,
-
-        more_params=dict(
-            hidden1_num_units=512,
-            hidden2_num_units=512,
-            ),
-
-        update=nesterov_momentum,
-        update_learning_rate=0.01,
-        update_momentum=0.9,
-
-        max_epochs=num_epochs,
-        verbose=True,
-        )
-
-    nn.fit(X_train, y_train)
-    nn.predict_proba(X_train)
-    nn.predict(X_train)
-    nn.score(X_train, y_train)
-
-    assert nn.layer_infos_.replace(' ', '').startswith(u'|#|name|size|')
-
-
-def test_verbose_cnn(mnist):
-    # Just check that no exception is thrown and that strings look
-    # right
-    from nolearn.lasagne import NeuralNet
-    from lasagne.layers import Conv2DLayer
-    from lasagne.layers import MaxPool2DLayer
->>>>>>> More detailed architecture information is now printed for convolutional nets (see Xudong Cao); layer infos are saved in layer_infos_ attribute for potential later use.  New dependency: tabulate.
-
-    X, y = mnist
-    X_train, y_train = X[:100].reshape(-1, 1, 28, 28), y[:100]
-    X_train = X_train.reshape(-1, 1, 28, 28)
-    num_epochs = 3
-
-    nn = NeuralNet(
-        layers=[
-            ('input', InputLayer),
-            ('conv1', Conv2DLayer),
-            ('conv2', Conv2DLayer),
-            ('pool2', MaxPool2DLayer),
-            ('conv3', Conv2DLayer),
-            ('conv4', Conv2DLayer),
-            ('pool4', MaxPool2DLayer),
-            ('hidden1', DenseLayer),
-            ('output', DenseLayer),
-            ],
-        input_shape=(None, 1, 28, 28),
-        output_num_units=10,
-        output_nonlinearity=softmax,
-
-        more_params=dict(
-            conv1_filter_size=(5, 5), conv1_num_filters=16,
-            conv2_filter_size=(3, 3), conv2_num_filters=16,
-            pool2_ds=(3, 3),
-            conv3_filter_size=(3, 3), conv3_num_filters=16,
-            conv4_filter_size=(3, 3), conv4_num_filters=16,
-            pool4_ds=(2, 2),
-<<<<<<< HEAD
-<<<<<<< HEAD
-            hidden1_num_units=16,
-=======
-            hidden1_num_units=512,
->>>>>>> More detailed architecture information is now printed for convolutional nets (see Xudong Cao); layer infos are saved in layer_infos_ attribute for potential later use.  New dependency: tabulate.
-=======
-            hidden1_num_units=16,
->>>>>>> More detailed architecture information is now printed for convolutional nets (see Xudong Cao); layer infos are saved in layer_infos_ attribute for potential later use.  New dependency: tabulate.
-            ),
-
-        update=nesterov_momentum,
-        update_learning_rate=0.01,
-        update_momentum=0.9,
-
-        max_epochs=num_epochs,
-<<<<<<< HEAD
-        )
-
-    nn.fit(X_train, y_train)
-
-    plot_loss(nn)
-    plot_conv_weights(nn.layers_['conv1'])
-    plot_conv_weights(nn.layers_['conv2'], figsize=(1, 2))
-    plot_conv_activity(nn.layers_['conv3'], X_train[:1])
-    plot_conv_activity(nn.layers_['conv4'], X_train[10:11], figsize=(3, 4))
-    plot_occlusion(nn, X_train[:1], y_train[:1])
-    plot_occlusion(nn, X_train[2:4], y_train[2:4], square_length=3,
-                   figsize=(5, 5))
-
-    # clear figures from memory
-    plt.clf()
-    plt.cla()
-=======
-        verbose=3,
-        )
-
-    nn.fit(X_train, y_train)
-    nn.predict_proba(X_train)
-    nn.predict(X_train)
-    nn.score(X_train, y_train)
-
-    assert nn.layer_infos_.replace(' ', '').startswith(
-        u'namesizetotalcap.Y[%]cap.X[%]cov.Y[%]cov.X[%]filterYfilterXfieldY'
-        'fieldX')
-<<<<<<< HEAD
->>>>>>> More detailed architecture information is now printed for convolutional nets (see Xudong Cao); layer infos are saved in layer_infos_ attribute for potential later use.  New dependency: tabulate.
-=======
 
 
 def test_visualize_functions_with_cnn(mnist):
@@ -641,4 +449,3 @@ def test_visualize_functions_with_cnn(mnist):
     # clear figures from memory
     plt.clf()
     plt.cla()
->>>>>>> More detailed architecture information is now printed for convolutional nets (see Xudong Cao); layer infos are saved in layer_infos_ attribute for potential later use.  New dependency: tabulate.
