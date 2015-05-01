@@ -332,13 +332,13 @@ class TestInitializeLayers:
             Mock(__name__='MockLayer') for i in range(4)]
         nn = NeuralNet(
             layers=[
-                (input, {'shape': (10, 10), 'name': 'input'}),
-                (hidden1, {'some': 'param', 'another': 'param'}),
-                (hidden2, {}),
-                (output, {'name': 'output'}),
+                ('input', input),
+                ('hidden1', hidden1),
+                ('hidden2', hidden2),
+                ('output', output),
                 ],
             input_shape=(10, 10),
-            mock1_some='iwin',
+            hidden1_some='param',
             )
         out = nn.initialize_layers(nn.layers)
 
@@ -347,13 +347,12 @@ class TestInitializeLayers:
         nn.layers_['input'] is input.return_value
 
         hidden1.assert_called_with(
-            incoming=input.return_value, name='mock1',
-            some='iwin', another='param')
-        nn.layers_['mock1'] is hidden1.return_value
+            incoming=input.return_value, name='hidden1', some='param')
+        nn.layers_['hidden1'] is hidden1.return_value
 
         hidden2.assert_called_with(
-            incoming=hidden1.return_value, name='mock2')
-        nn.layers_['mock2'] is hidden2.return_value
+            incoming=hidden1.return_value, name='hidden2')
+        nn.layers_['hidden2'] is hidden2.return_value
 
         output.assert_called_with(
             incoming=hidden2.return_value, name='output')
