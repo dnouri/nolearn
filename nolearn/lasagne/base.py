@@ -193,34 +193,33 @@ class NeuralNet(BaseEstimator):
             if isinstance(layer_def[0], str):
                 # The legacy format: ('name', Layer)
                 layer_name, layer_factory = layer_def
-                layer_kwargs = {'name': layer_name}
+                layer_kw = {'name': layer_name}
             else:
                 # New format: (Layer, {'layer': 'kwargs'})
-                layer_factory, layer_kwargs = layer_def
+                layer_factory, layer_kw = layer_def
 
-            if 'name' not in layer_kwargs:
-                layer_kwargs['name'] = "{}{}".format(
+            if 'name' not in layer_kw:
+                layer_kw['name'] = "{}{}".format(
                     layer_factory.__name__.lower().replace("layer", ""), i)
                                   
-            more_params = self._get_params_for(layer_kwargs['name'])
-            layer_kwargs.update(more_params)
+            more_params = self._get_params_for(layer_kw['name'])
+            layer_kw.update(more_params)
 
             # Any layer other than the first one is assumed to require
             # an 'incoming' paramter.  By default, we'll use the
             # previous layer:
             if i > 0:
-                incoming = layer_kwargs.pop('incoming', None)
-                if incoming is not None:
-                    if isinstance(incoming, (list, tuple)):
-                        layer_kwargs['incoming'] = [
-                            self.layers_[name] for name in incoming]
-                    else:
-                        layer_kwargs['incoming'] = self.layers_[incoming]
+                if 'incoming' in layer_kw:
+                    layer_kw['incoming'] = self.layers_[
+                        layer_kw['incoming']]
+                elif 'incomings' in layer_kw:
+                    layer_kw['incomings'] = [
+                        self.layers_[name] for name in layer_kw['incomings']]
                 else:
-                    layer_kwargs['incoming'] = layer
+                    layer_kw['incoming'] = layer
 
-            layer = layer_factory(**layer_kwargs)
-            self.layers_[layer_kwargs['name']] = layer
+            layer = layer_factory(**layer_kw)
+            self.layers_[layer_kw['name']] = layer
 
         return layer
 

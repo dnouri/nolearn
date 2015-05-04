@@ -375,7 +375,7 @@ class TestInitializeLayers:
                 ],
             input_shape=(10, 10),
             hidden2_incoming='input',
-            concat_incoming=['hidden1', 'hidden2'],
+            concat_incomings=['hidden1', 'hidden2'],
             )
         nn.initialize_layers(nn.layers)
 
@@ -383,7 +383,7 @@ class TestInitializeLayers:
         hidden1.assert_called_with(incoming=input.return_value, name='hidden1')
         hidden2.assert_called_with(incoming=input.return_value, name='hidden2')
         concat.assert_called_with(
-            incoming=[hidden1.return_value, hidden2.return_value],
+            incomings=[hidden1.return_value, hidden2.return_value],
             name='concat'
             )
         output.assert_called_with(incoming=concat.return_value, name='output')
