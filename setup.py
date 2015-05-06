@@ -15,6 +15,7 @@ install_requires = [
     'joblib',
     'matplotlib',
     'scikit-learn',
+    'tabulate',
     ]
 
 tests_require = [
