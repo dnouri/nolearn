@@ -423,10 +423,10 @@ def test_visualize_functions_with_cnn(mnist):
         more_params=dict(
             conv1_filter_size=(5, 5), conv1_num_filters=16,
             conv2_filter_size=(3, 3), conv2_num_filters=16,
-            pool2_ds=(3, 3),
+            pool2_pool_size=(3, 3),
             conv3_filter_size=(3, 3), conv3_num_filters=16,
             conv4_filter_size=(3, 3), conv4_num_filters=16,
-            pool4_ds=(2, 2),
+            pool4_pool_size=(2, 2),
             hidden1_num_units=16,
             ),
 
