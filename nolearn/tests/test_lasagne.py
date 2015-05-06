@@ -104,8 +104,8 @@ def test_lasagne_functional_mnist(mnist):
     assert epochs[0]['valid_accuracy'] > 0.8
     assert epochs[1]['valid_accuracy'] > epochs[0]['valid_accuracy']
     assert set(epochs[0].keys()) == set([
-        'dur', 'epoch', 'train_loss', 'train/val', 'valid_accuracy',
-        'valid_best', 'valid_loss'
+        'dur', 'epoch', 'train_loss', 'train_loss_best',
+        'valid_loss', 'valid_loss_best', 'valid_accuracy',
         ])
 
     y_pred = nn.predict(X_test)
@@ -206,6 +206,8 @@ def test_clone():
         'output_nonlinearity',
         'loss',
         'objective',
+        'on_epoch_finished',
+        'on_training_finished',
         'custom_score',
         ):
         for par in (params, params1, params2):
@@ -453,112 +455,27 @@ def test_visualize_functions_with_cnn(mnist):
     plt.cla()
 
 
-def test_verbose_nn(mnist):
-    # Just check that no exception is thrown and that strings look
-    # right
-    from nolearn.lasagne import NeuralNet
+def test_print_log(mnist):
+    from nolearn.lasagne import PrintLog
 
-    X, y = mnist
-    X_train, y_train = X[:1000], y[:1000]
-    num_epochs = 7
-
-    nn = NeuralNet(
-        layers=[
-            ('input', InputLayer),
-            ('hidden1', DenseLayer),
-            ('dropout1', DropoutLayer),
-            ('hidden2', DenseLayer),
-            ('dropout2', DropoutLayer),
-            ('output', DenseLayer),
-            ],
-        input_shape=(None, 784),
-        output_num_units=10,
-        output_nonlinearity=softmax,
-
-        more_params=dict(
-            hidden1_num_units=512,
-            hidden2_num_units=512,
-            ),
-
-        update=nesterov_momentum,
-        update_learning_rate=0.01,
-        update_momentum=0.9,
-
-        max_epochs=num_epochs,
-        verbose=True,
+    nn = Mock(
+        regression=False,
+        custom_score=('my_score', 0.99),
         )
 
-    nn.fit(X_train, y_train)
-    nn.predict_proba(X_train)
-    nn.predict(X_train)
-    nn.score(X_train, y_train)
-
-    log = tabulate(nn.train_history_, headers='keys',
-                   tablefmt='pipe', floatfmt='.4f')
-    assert log.replace(' ', '').startswith(
-        u'|epoch|train_loss|valid_loss|valid_best|train/val|'
-        'valid_accuracy|dur|')
-    assert log.count('\n') == num_epochs + 1
-
-    # after additional training, log should be continued
-    nn.fit(X_train, y_train)
-    log = tabulate(nn.train_history_, headers='keys',
-                   tablefmt='pipe', floatfmt='.4f')
-    assert log.replace(' ', '').startswith(
-        u'|epoch|train_loss|valid_loss|valid_best|train/val|'
-        'valid_accuracy|dur|')
-    assert log.count('\n') == 2 * num_epochs + 1
-
-
-def test_verbose_nn_with_custom_score(mnist):
-    # Just check that no exception is thrown and that strings look
-    # right
-    from nolearn.lasagne import NeuralNet
-
-    def my_score(y_true, y_prob):
-        return 1.2345
-
-    X, y = mnist
-    X_train, y_train = X[:1000], y[:1000]
-    num_epochs = 4
-
-    nn = NeuralNet(
-        layers=[
-            ('input', InputLayer),
-            ('hidden1', DenseLayer),
-            ('dropout1', DropoutLayer),
-            ('hidden2', DenseLayer),
-            ('dropout2', DropoutLayer),
-            ('output', DenseLayer),
-            ],
-        input_shape=(None, 784),
-        output_num_units=10,
-        output_nonlinearity=softmax,
-
-        more_params=dict(
-            hidden1_num_units=512,
-            hidden2_num_units=512,
-            ),
-
-        update=nesterov_momentum,
-        update_learning_rate=0.01,
-        update_momentum=0.9,
-
-        custom_score=('score_name', my_score),
-        max_epochs=num_epochs,
-        verbose=True,
-        )
-
-    nn.fit(X_train, y_train)
-    nn.predict_proba(X_train)
-    nn.predict(X_train)
-    nn.score(X_train, y_train)
-
-    log = tabulate(nn.train_history_, headers='keys',
-                   tablefmt='pipe', floatfmt='.4f')
-    assert log.replace(' ', '').startswith(
-        u'|epoch|train_loss|valid_loss|valid_best|train/val|valid_accuracy|'
-        'score_name|dur|')
-    assert log.count('\n') == num_epochs + 1
-    log_my_score = log.replace(' ', '').rsplit('\n')[-1].split('|')[-3]
-    assert log_my_score == '1.2345'
+    train_history = [{
+        'epoch': 1,
+        'train_loss': 0.8,
+        'valid_loss': 0.7,
+        'train_loss_best': False,
+        'valid_loss_best': False,
+        'valid_accuracy': 0.9,
+        'my_score': 0.99,
+        'dur': 1.0,
+        }]
+    output = PrintLog().table(nn, train_history)
+    assert output == """\
+  epoch    train loss    valid loss    train/val    valid acc    my_score  dur
+-------  ------------  ------------  -----------  -----------  ----------  -----
+      1       0.80000       0.70000      1.14286      0.90000     0.99000  1.00s\
+"""
