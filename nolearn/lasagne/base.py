@@ -23,7 +23,7 @@ from sklearn.preprocessing import LabelEncoder
 import theano
 from theano import tensor as T
 
-from .utils import PrintLog
+from .util import PrintLog
 
 
 class _list(list):

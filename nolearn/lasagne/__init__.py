@@ -2,4 +2,4 @@ from .base import (
     BatchIterator,
     NeuralNet,
     )
-from .utils import PrintLog
+from .util import PrintLog
