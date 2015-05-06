@@ -20,9 +20,10 @@ from sklearn.cross_validation import StratifiedKFold
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
-from tabulate import tabulate
 import theano
 from theano import tensor as T
+
+from .util import PrintLog
 
 
 class _list(list):
@@ -32,12 +33,6 @@ class _list(list):
 class _dict(dict):
     def __contains__(self, key):
         return True
-
-
-class ansi:
-    BLUE = '\033[94m'
-    GREEN = '\033[32m'
-    ENDC = '\033[0m'
 
 
 class BatchIterator(object):
@@ -83,8 +78,8 @@ class NeuralNet(BaseEstimator):
         X_tensor_type=None,
         y_tensor_type=None,
         use_label_encoder=False,
-        on_epoch_finished=(),
-        on_training_finished=(),
+        on_epoch_finished=None,
+        on_training_finished=None,
         more_params=None,
         verbose=0,
         **kwargs
@@ -113,10 +108,12 @@ class NeuralNet(BaseEstimator):
         self.X_tensor_type = X_tensor_type
         self.y_tensor_type = y_tensor_type
         self.use_label_encoder = use_label_encoder
-        self.on_epoch_finished = on_epoch_finished
-        self.on_training_finished = on_training_finished
+        self.on_epoch_finished = on_epoch_finished or []
+        self.on_training_finished = on_training_finished or []
         self.more_params = more_params or {}
         self.verbose = verbose
+        if self.verbose:
+            self.on_epoch_finished.insert(0, PrintLog())
 
         for key in kwargs.keys():
             assert not hasattr(self, key)
@@ -346,36 +343,19 @@ class NeuralNet(BaseEstimator):
                 best_train_loss = avg_train_loss
             if avg_valid_loss < best_valid_loss:
                 best_valid_loss = avg_valid_loss
-            best_train_loss == avg_train_loss
-            best_valid = best_valid_loss == avg_valid_loss
 
-            info = OrderedDict([
-                ('epoch', num_epochs_past + epoch),
-                ('train_loss', avg_train_loss),
-                ('valid_loss', avg_valid_loss),
-                ('valid_best', avg_valid_loss if best_valid else None),
-                ('train/val', avg_train_loss / avg_valid_loss),
-                ('valid_accuracy', avg_valid_accuracy),
-                ])
-            headers = {
-                'epoch': 'epoch', 'train_loss': 'train loss',
-                'valid_loss': 'valid loss', 'valid_best': 'valid best',
-                'train/val': 'train/val', 'valid_accuracy': 'val acc',
+            info = {
+                'epoch': num_epochs_past + epoch,
+                'train_loss': avg_train_loss,
+                'train_loss_best': best_train_loss == avg_train_loss,
+                'valid_loss': avg_valid_loss,
+                'valid_loss_best': best_valid_loss == avg_valid_loss,
+                'valid_accuracy': avg_valid_accuracy,
+                'dur': time() - t0,
                 }
-
             if self.custom_score:
-                info.update({self.custom_score[0]: avg_custom_score})
-            info.update({'dur': time() - t0})
-
+                info[self.custom_score[0]] = avg_custom_score
             self.train_history_.append(info)
-            train_log = tabulate(self.train_history_, headers=headers,
-                                 tablefmt='pipe', floatfmt='.4f')
-            if self.verbose:
-                if first_iteration:
-                    print(train_log.split('\n', 2)[0])
-                    print(train_log.split('\n', 2)[1])
-                    first_iteration = False
-                print(train_log.rsplit('\n', 1)[-1])
 
             try:
                 for func in on_epoch_finished:
