@@ -113,7 +113,7 @@ class NeuralNet(BaseEstimator):
         self.more_params = more_params or {}
         self.verbose = verbose
         if self.verbose:
-            self.on_epoch_finished.insert(0, PrintLog())
+            self.on_epoch_finished.append(PrintLog())
 
         for key in kwargs.keys():
             assert not hasattr(self, key)
