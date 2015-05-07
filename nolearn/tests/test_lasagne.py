@@ -60,6 +60,7 @@ def boston():
 def test_lasagne_functional_mnist(mnist):
     # Run a full example on the mnist dataset
     from nolearn.lasagne import NeuralNet
+    from sklearn.svm import SVC
 
     X, y = mnist
     X_train, y_train = X[:10000], y[:10000]
@@ -84,6 +85,7 @@ def test_lasagne_functional_mnist(mnist):
         input_shape=(None, 784),
         output_num_units=10,
         output_nonlinearity=softmax,
+        transform_layer_name='hidden2',
 
         more_params=dict(
             hidden1_num_units=512,
@@ -109,7 +111,8 @@ def test_lasagne_functional_mnist(mnist):
         ])
 
     y_pred = nn.predict(X_test)
-    assert accuracy_score(y_pred, y_test) > 0.85
+    nn_accuracy = accuracy_score(y_pred, y_test)
+    assert nn_accuracy > 0.85
 
     # Pickle, load again, and predict; should give us the same predictions:
     global on_epoch_finished  # pickle
@@ -123,6 +126,15 @@ def test_lasagne_functional_mnist(mnist):
     nn3.load_weights_from(nn2)
     assert np.array_equal(nn3.predict(X_test), y_pred)
 
+    # Use hidden representation to train a linear SVM
+    X_train_hidden = nn3.transform(X_train)
+    X_test_hidden = nn3.transform(X_test)
+
+    clf = SVC()
+    clf.fit(X_train_hidden, y_train)
+    y_pred_hidden = clf.predict(X_test_hidden)
+    clf_accuracy = accuracy_score(y_pred_hidden, y_test)
+    assert clf_accuracy >= nn_accuracy
 
 def test_lasagne_functional_grid_search(mnist, monkeypatch):
     # Make sure that we can satisfy the grid search interface.
@@ -181,6 +193,7 @@ def test_clone():
         update_learning_rate=0.01,
         update_momentum=0.9,
 
+        transform_layer_name='hidden',
         regression=False,
         objective=Objective,
         objective_loss_function=categorical_crossentropy,
@@ -279,7 +292,7 @@ class TestCheckForUnusedKwargs:
             update_foo=1,
             update_bar=2,
             )
-        net._create_iter_funcs = lambda *args: (1, 2, 3)
+        net._create_iter_funcs = lambda *args: (1, 2, 3, 4)
         net.initialize()
 
     def test_unused(self, NeuralNet):
