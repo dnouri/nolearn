@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+from .._compat import chain_exception
 from .._compat import pickle
 from collections import OrderedDict
 import functools
@@ -215,7 +216,13 @@ class NeuralNet(BaseEstimator):
                 else:
                     layer_kw['incoming'] = layer
 
-            layer = layer_factory(**layer_kw)
+            try:
+                layer = layer_factory(**layer_kw)
+            except TypeError as e:
+                msg = ("Failed to instantiate {} with args {}.\n"
+                       "Maybe parameter names have changed?".format(
+                           layer_factory, layer_kw))
+                chain_exception(TypeError(msg), e)
             self.layers_[layer_kw['name']] = layer
 
         return layer
