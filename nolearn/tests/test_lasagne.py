@@ -25,6 +25,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
 import theano.tensor as T
 
+from nolearn._compat import builtins
+
 
 @pytest.fixture(scope='session')
 def NeuralNet():
@@ -513,3 +515,72 @@ def test_print_log(mnist):
 -------  ------------  ------------  -----------  -----------  ----------  -----
       1       0.80000       0.70000      1.14286      0.90000     0.99000  1.00s\
 """
+
+
+class TestSaveWeights():
+    @pytest.fixture
+    def SaveWeights(self):
+        from nolearn.lasagne import SaveWeights
+        return SaveWeights
+
+    def test_every_n_epochs_true(self, SaveWeights):
+        train_history = [{'epoch': 9, 'valid_loss': 1.1}]
+        nn = Mock()
+        handler = SaveWeights('mypath', every_n_epochs=3)
+        handler(nn, train_history)
+        assert nn.save_params_to.call_count == 1
+        nn.save_params_to.assert_called_with('mypath')
+
+    def test_every_n_epochs_false(self, SaveWeights):
+        train_history = [{'epoch': 9, 'valid_loss': 1.1}]
+        nn = Mock()
+        handler = SaveWeights('mypath', every_n_epochs=4)
+        handler(nn, train_history)
+        assert nn.save_params_to.call_count == 0
+
+    def test_only_best_true_single_entry(self, SaveWeights):
+        train_history = [{'epoch': 9, 'valid_loss': 1.1}]
+        nn = Mock()
+        handler = SaveWeights('mypath', only_best=True)
+        handler(nn, train_history)
+        assert nn.save_params_to.call_count == 1
+
+    def test_only_best_true_two_entries(self, SaveWeights):
+        train_history = [
+            {'epoch': 9, 'valid_loss': 1.2},
+            {'epoch': 10, 'valid_loss': 1.1},
+            ]
+        nn = Mock()
+        handler = SaveWeights('mypath', only_best=True)
+        handler(nn, train_history)
+        assert nn.save_params_to.call_count == 1
+
+    def test_only_best_false_two_entries(self, SaveWeights):
+        train_history = [
+            {'epoch': 9, 'valid_loss': 1.2},
+            {'epoch': 10, 'valid_loss': 1.3},
+            ]
+        nn = Mock()
+        handler = SaveWeights('mypath', only_best=True)
+        handler(nn, train_history)
+        assert nn.save_params_to.call_count == 0
+
+    def test_with_path_interpolation(self, SaveWeights):
+        train_history = [{'epoch': 9, 'valid_loss': 1.1}]
+        nn = Mock()
+        handler = SaveWeights('mypath-{epoch}-{timestamp}-{loss}.pkl')
+        handler(nn, train_history)
+        path = nn.save_params_to.call_args[0][0]
+        assert path.startswith('mypath-0009-2')
+        assert path.endswith('-1.1.pkl')
+
+    def test_pickle(self, SaveWeights):
+        train_history = [{'epoch': 9, 'valid_loss': 1.1}]
+        nn = Mock()
+        with patch('nolearn.lasagne.handlers.pickle') as pickle:
+            with patch.object(builtins, 'open') as mock_open:
+                handler = SaveWeights('mypath', every_n_epochs=3, pickle=True)
+                handler(nn, train_history)
+
+        mock_open.assert_called_with('mypath', 'wb')
+        pickle.dump.assert_called_with(nn, mock_open().__enter__(), -1)
