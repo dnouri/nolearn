@@ -419,68 +419,74 @@ class TestInitializeLayers:
         output.assert_called_with(incoming=concat.return_value, name='output')
 
 
-def test_visualize_functions_with_cnn(mnist):
-    # this test simply tests that no exception is raised when using
-    # the plotting functions
+class TestCNNVisualizeFunctions:
+    @pytest.fixture(scope='session')
+    def X_train(self, mnist):
+        X, y = mnist
+        return X[:100].reshape(-1, 1, 28, 28)
 
-    from nolearn.lasagne import NeuralNet
-    from nolearn.lasagne.visualize import plot_conv_activity
-    from nolearn.lasagne.visualize import plot_conv_weights
-    from nolearn.lasagne.visualize import plot_loss
-    from nolearn.lasagne.visualize import plot_occlusion
+    @pytest.fixture(scope='session')
+    def y_train(self, mnist):
+        X, y = mnist
+        return y[:100]
 
-    X, y = mnist
-    X_train, y_train = X[:100].reshape(-1, 1, 28, 28), y[:100]
-    X_train = X_train.reshape(-1, 1, 28, 28)
-    num_epochs = 3
+    @pytest.fixture(scope='session')
+    def net_fitted(self, NeuralNet, X_train, y_train):
+        nn = NeuralNet(
+            layers=[
+                ('input', InputLayer),
+                ('conv1', Conv2DLayer),
+                ('conv2', Conv2DLayer),
+                ('pool2', MaxPool2DLayer),
+                ('output', DenseLayer),
+                ],
+            input_shape=(None, 1, 28, 28),
+            output_num_units=10,
+            output_nonlinearity=softmax,
 
-    nn = NeuralNet(
-        layers=[
-            ('input', InputLayer),
-            ('conv1', Conv2DLayer),
-            ('conv2', Conv2DLayer),
-            ('pool2', MaxPool2DLayer),
-            ('conv3', Conv2DLayer),
-            ('conv4', Conv2DLayer),
-            ('pool4', MaxPool2DLayer),
-            ('hidden1', DenseLayer),
-            ('output', DenseLayer),
-            ],
-        input_shape=(None, 1, 28, 28),
-        output_num_units=10,
-        output_nonlinearity=softmax,
+            more_params=dict(
+                conv1_filter_size=(5, 5), conv1_num_filters=16,
+                conv2_filter_size=(3, 3), conv2_num_filters=16,
+                pool2_pool_size=(8, 8),
+                hidden1_num_units=16,
+                ),
 
-        more_params=dict(
-            conv1_filter_size=(5, 5), conv1_num_filters=16,
-            conv2_filter_size=(3, 3), conv2_num_filters=16,
-            pool2_pool_size=(3, 3),
-            conv3_filter_size=(3, 3), conv3_num_filters=16,
-            conv4_filter_size=(3, 3), conv4_num_filters=16,
-            pool4_pool_size=(2, 2),
-            hidden1_num_units=16,
-            ),
+            update=nesterov_momentum,
+            update_learning_rate=0.01,
+            update_momentum=0.9,
 
-        update=nesterov_momentum,
-        update_learning_rate=0.01,
-        update_momentum=0.9,
+            max_epochs=3,
+            )
 
-        max_epochs=num_epochs,
-        )
+        return nn.fit(X_train, y_train)
 
-    nn.fit(X_train, y_train)
+    def test_plot_loss(self, net_fitted):
+        from nolearn.lasagne.visualize import plot_loss
+        plot_loss(net_fitted)
+        plt.clf()
+        plt.cla()
 
-    plot_loss(nn)
-    plot_conv_weights(nn.layers_['conv1'])
-    plot_conv_weights(nn.layers_['conv2'], figsize=(1, 2))
-    plot_conv_activity(nn.layers_['conv3'], X_train[:1])
-    plot_conv_activity(nn.layers_['conv4'], X_train[10:11], figsize=(3, 4))
-    plot_occlusion(nn, X_train[:1], y_train[:1])
-    plot_occlusion(nn, X_train[2:4], y_train[2:4], square_length=3,
-                   figsize=(5, 5))
+    def test_plot_conv_weights(self, net_fitted):
+        from nolearn.lasagne.visualize import plot_conv_weights
+        plot_conv_weights(net_fitted.layers_['conv1'])
+        plot_conv_weights(net_fitted.layers_['conv2'], figsize=(1, 2))
+        plt.clf()
+        plt.cla()
 
-    # clear figures from memory
-    plt.clf()
-    plt.cla()
+    def test_plot_conv_activity(self, net_fitted, X_train):
+        from nolearn.lasagne.visualize import plot_conv_activity
+        plot_conv_activity(net_fitted.layers_['conv1'], X_train[:1])
+        plot_conv_activity(net_fitted.layers_['conv2'], X_train[10:11],
+                           figsize=(3, 4))
+        plt.clf()
+        plt.cla()
+
+    def test_plot_occlusion(self, net_fitted, X_train, y_train):
+        from nolearn.lasagne.visualize import plot_occlusion
+        plot_occlusion(net_fitted, X_train[2:4], y_train[2:4],
+                       square_length=3, figsize=(5, 5))
+        plt.clf()
+        plt.cla()
 
 
 def test_print_log(mnist):
