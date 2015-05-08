@@ -23,11 +23,10 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_absolute_error
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
-from tabulate import tabulate
 import theano.tensor as T
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def NeuralNet():
     from nolearn.lasagne import NeuralNet
     return NeuralNet
@@ -57,71 +56,100 @@ def boston():
     return shuffle(X, y, random_state=42)
 
 
-def test_lasagne_functional_mnist(mnist):
-    # Run a full example on the mnist dataset
-    from nolearn.lasagne import NeuralNet
-
-    X, y = mnist
-    X_train, y_train = X[:10000], y[:10000]
-    X_test, y_test = X[60000:], y[60000:]
-
-    epochs = []
-
-    def on_epoch_finished(nn, train_history):
-        epochs[:] = train_history
-        if len(epochs) > 1:
+class _OnEpochFinished:
+    def __call__(self, nn, train_history):
+        self.train_history = train_history
+        if len(train_history) > 1:
             raise StopIteration()
 
-    nn_def = NeuralNet(
-        layers=[
-            ('input', InputLayer),
-            ('hidden1', DenseLayer),
-            ('dropout1', DropoutLayer),
-            ('hidden2', DenseLayer),
-            ('dropout2', DropoutLayer),
-            ('output', DenseLayer),
-            ],
-        input_shape=(None, 784),
-        output_num_units=10,
-        output_nonlinearity=softmax,
 
-        more_params=dict(
-            hidden1_num_units=512,
-            hidden2_num_units=512,
-            ),
+class TestLasagneFunctionalMNIST:
+    @pytest.fixture(scope='session')
+    def net(self, NeuralNet):
+        return NeuralNet(
+            layers=[
+                ('input', InputLayer),
+                ('hidden1', DenseLayer),
+                ('dropout1', DropoutLayer),
+                ('hidden2', DenseLayer),
+                ('dropout2', DropoutLayer),
+                ('output', DenseLayer),
+                ],
+            input_shape=(None, 784),
+            output_num_units=10,
+            output_nonlinearity=softmax,
 
-        update=nesterov_momentum,
-        update_learning_rate=0.01,
-        update_momentum=0.9,
+            more_params=dict(
+                hidden1_num_units=512,
+                hidden2_num_units=512,
+                ),
 
-        max_epochs=5,
-        on_epoch_finished=on_epoch_finished,
-        )
+            update=nesterov_momentum,
+            update_learning_rate=0.01,
+            update_momentum=0.9,
 
-    nn = clone(nn_def)
-    nn.fit(X_train, y_train)
-    assert len(epochs) == 2
-    assert epochs[0]['valid_accuracy'] > 0.8
-    assert epochs[1]['valid_accuracy'] > epochs[0]['valid_accuracy']
-    assert set(epochs[0].keys()) == set([
-        'dur', 'epoch', 'train_loss', 'train_loss_best',
-        'valid_loss', 'valid_loss_best', 'valid_accuracy',
-        ])
+            max_epochs=5,
+            on_epoch_finished=[_OnEpochFinished()],
+            )
 
-    y_pred = nn.predict(X_test)
-    assert accuracy_score(y_pred, y_test) > 0.85
+    @pytest.fixture(scope='session')
+    def net_fitted(self, net, mnist):
+        X, y = mnist
+        X_train, y_train = X[:10000], y[:10000]
+        return net.fit(X_train, y_train)
 
-    # Pickle, load again, and predict; should give us the same predictions:
-    global on_epoch_finished  # pickle
-    on_epoch_finished = on_epoch_finished
-    pickled = pickle.dumps(nn, -1)
-    nn2 = pickle.loads(pickled)
-    assert np.array_equal(nn2.predict(X_test), y_pred)
+    @pytest.fixture(scope='session')
+    def y_pred(self, net_fitted, mnist):
+        X, y = mnist
+        X_test = X[60000:]
+        return net_fitted.predict(X_test)
 
-    # Use load_weights_from to initialize an untrained model:
-    nn3 = clone(nn_def)
-    nn3.load_weights_from(nn2)
-    assert np.array_equal(nn3.predict(X_test), y_pred)
+    def test_accuracy(self, net_fitted, mnist, y_pred):
+        X, y = mnist
+        y_test = y[60000:]
+        assert accuracy_score(y_pred, y_test) > 0.85
+
+    def test_train_history(self, net_fitted):
+        history = net_fitted.train_history_
+        assert len(history) == 2  # due to early stopping
+        assert history[0]['valid_accuracy'] > 0.8
+        assert history[1]['valid_accuracy'] > history[0]['valid_accuracy']
+        assert set(history[0].keys()) == set([
+            'dur', 'epoch', 'train_loss', 'train_loss_best',
+            'valid_loss', 'valid_loss_best', 'valid_accuracy',
+            ])
+
+    def test_early_stopping(self, net_fitted):
+        early_stopping = net_fitted.on_epoch_finished[0]
+        assert early_stopping.train_history == net_fitted.train_history_
+
+    @pytest.fixture
+    def X_test(self, mnist):
+        X, y = mnist
+        return X[60000:]
+
+    def test_pickle(self, net_fitted, X_test, y_pred):
+        pickled = pickle.dumps(net_fitted, -1)
+        net_loaded = pickle.loads(pickled)
+        assert np.array_equal(net_loaded.predict(X_test), y_pred)
+
+    def test_load_params_from_net(self, net, net_fitted, X_test, y_pred):
+        net_loaded = clone(net)
+        net_loaded.load_params_from(net_fitted)
+        assert np.array_equal(net_loaded.predict(X_test), y_pred)
+
+    def test_load_params_from_params_values(self, net, net_fitted,
+                                            X_test, y_pred):
+        net_loaded = clone(net)
+        net_loaded.load_params_from(net_fitted.get_all_params_values())
+        assert np.array_equal(net_loaded.predict(X_test), y_pred)
+
+    def test_save_params_to_path(self, net, net_fitted, X_test, y_pred):
+        path = '/tmp/test_lasagne_functional_mnist.params'
+        net_fitted.save_params_to(path)
+        net_loaded = clone(net)
+        net_loaded.load_params_from(path)
+        assert np.array_equal(net_loaded.predict(X_test), y_pred)
 
 
 def test_lasagne_functional_grid_search(mnist, monkeypatch):
