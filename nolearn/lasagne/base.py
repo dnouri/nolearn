@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from .._compat import chain_exception
 from .._compat import pickle
 from collections import OrderedDict
+from difflib import SequenceMatcher
 import functools
 import itertools
 import operator
@@ -416,27 +417,54 @@ class NeuralNet(BaseEstimator):
         params = sum([l.get_params() for l in layers], [])
         return unique(params)
 
-    def load_weights_from(self, source):
-        self.initialize()
-
-        if isinstance(source, str):
-            source = np.load(source)
-
-        if isinstance(source, NeuralNet):
-            source = source.get_all_params()
-
-        source_weights = [
-            w.get_value() if hasattr(w, 'get_value') else w for w in source]
-
-        for w1, w2 in zip(source_weights, self.get_all_params()):
-            if w1.shape != w2.get_value().shape:
-                continue
-            w2.set_value(w1)
-
     def save_weights_to(self, fname):
         weights = [w.get_value() for w in self.get_all_params()]
         with open(fname, 'wb') as f:
             pickle.dump(weights, f, -1)
+
+    @staticmethod
+    def _param_alignment(shapes0, shapes1):
+        shapes0 = list(map(str, shapes0))
+        shapes1 = list(map(str, shapes1))
+        matcher = SequenceMatcher(a=shapes0, b=shapes1)
+        matches = []
+        for block in matcher.get_matching_blocks():
+            if block.size == 0:
+                continue
+            matches.append((list(range(block.a, block.a + block.size)),
+                            list(range(block.b, block.b + block.size))))
+        result = [line for match in matches for line in zip(*match)]
+        return result
+
+    def load_weights_from(self, src):
+        if not hasattr(self, '_initialized'):
+            raise AttributeError(
+                "Please initialize the net before loading weights using "
+                "the '.initialize()' method.")
+
+        if isinstance(src, str):
+            src = np.load(src)
+        if isinstance(src, NeuralNet):
+            src = src.get_all_params()
+
+        target = self.get_all_params()
+        src_params = [p.get_value() if hasattr(p, 'get_value') else p
+                      for p in src]
+        target_params = [p.get_value() for p in target]
+
+        src_shapes = [p.shape for p in src_params]
+        target_shapes = [p.shape for p in target_params]
+        matches = self._param_alignment(src_shapes, target_shapes)
+
+        for i, j in matches:
+            target[j].set_value(src_params[i])
+
+            if not self.verbose:
+                continue
+            param_shape = 'x'.join(map(str, src_params[i].shape))
+            param_name = target[j].name + ' ' if target[j].name else None
+            print("* Loaded parameter {}(shape: {})".format(
+                param_name, param_shape))
 
     def __getstate__(self):
         state = dict(self.__dict__)

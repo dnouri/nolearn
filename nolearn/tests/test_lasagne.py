@@ -120,8 +120,59 @@ def test_lasagne_functional_mnist(mnist):
 
     # Use load_weights_from to initialize an untrained model:
     nn3 = clone(nn_def)
+    nn3.initialize()
     nn3.load_weights_from(nn2)
     assert np.array_equal(nn3.predict(X_test), y_pred)
+
+
+def test_lasagne_loading_params_matches():
+    # Loading mechanism should find layers with matching parameter
+    # shapes, even if they are not perfectly aligned.
+    from nolearn.lasagne import NeuralNet
+
+    layers0 = [('input', InputLayer),
+               ('dense0', DenseLayer),
+               ('dense1', DenseLayer),
+               ('output', DenseLayer)]
+    net0 = NeuralNet(
+        layers=layers0,
+        input_shape=(None, 784),
+        dense0_num_units=100,
+        dense1_num_units=200,
+        output_nonlinearity=softmax, output_num_units=10,
+        update=nesterov_momentum,
+        update_learning_rate=0.01,
+        max_epochs=5,
+        )
+    net0.initialize()
+    net0.save_weights_to('tmp_params.np')
+
+    layers1 = [('input', InputLayer),
+               ('dense0', DenseLayer),
+               ('dense1', DenseLayer),
+               ('dense2', DenseLayer),
+               ('output', DenseLayer)]
+    net1 = NeuralNet(
+        layers=layers1,
+        input_shape=(None, 784),
+        dense0_num_units=100,
+        dense1_num_units=20,
+        dense2_num_units=200,
+        output_nonlinearity=softmax, output_num_units=10,
+        update=nesterov_momentum,
+        update_learning_rate=0.01,
+        max_epochs=5,
+        )
+    net1.initialize()
+
+    # output weights have the same shape but should differ
+    assert not (net0.layers_['output'].W.get_value() ==
+                net1.layers_['output'].W.get_value()).all()
+    # after loading, these weights should be equal, despite the
+    # additional dense layer
+    net1.load_weights_from('tmp_params.np')
+    assert (net0.layers_['output'].W.get_value() ==
+            net1.layers_['output'].W.get_value()).all()
 
 
 def test_lasagne_functional_grid_search(mnist, monkeypatch):
