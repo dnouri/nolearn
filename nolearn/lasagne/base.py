@@ -505,6 +505,7 @@ class NeuralNet(BaseEstimator):
             'train_iter_',
             'eval_iter_',
             'predict_iter_',
+            'transform_iter_',
             '_initialized',
             ):
             if attr in state:
