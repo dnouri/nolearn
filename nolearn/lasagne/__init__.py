@@ -1,5 +1,8 @@
+from .handlers import (
+    PrintLog,
+    SaveWeights,
+    )
 from .base import (
     BatchIterator,
     NeuralNet,
     )
-from .util import PrintLog

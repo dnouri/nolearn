@@ -1,6 +1,9 @@
 from collections import OrderedDict
+from datetime import datetime
 
 from tabulate import tabulate
+
+from .._compat import pickle
 
 
 class ansi:
@@ -53,3 +56,39 @@ class PrintLog:
 
         out += tabulated.rsplit('\n', 1)[-1]
         return out
+
+
+class SaveWeights:
+    def __init__(self, path, every_n_epochs=1, only_best=False,
+                 pickle=False, verbose=0):
+        self.path = path
+        self.every_n_epochs = every_n_epochs
+        self.only_best = only_best
+        self.pickle = pickle
+        self.verbose = verbose
+
+    def __call__(self, nn, train_history):
+        if self.only_best:
+            this_loss = train_history[-1]['valid_loss']
+            best_loss = min([h['valid_loss'] for h in train_history])
+            if this_loss > best_loss:
+                return
+
+        if train_history[-1]['epoch'] % self.every_n_epochs != 0:
+            return
+
+        format_args = {
+            'loss': train_history[-1]['valid_loss'],
+            'timestamp': datetime.now().strftime('%Y-%m-%d-%H-%M-%S'),
+            'epoch': '{:04d}'.format(train_history[-1]['epoch']),
+            }
+        path = self.path.format(**format_args)
+
+        if self.verbose:
+            print("Writing {}".format(path))
+
+        if self.pickle:
+            with open(path, 'wb') as f:
+                pickle.dump(nn, f, -1)
+        else:
+            nn.save_params_to(path)
