@@ -1,15 +1,13 @@
 from collections import OrderedDict
 from datetime import datetime
+import operator
 
 from tabulate import tabulate
 
 from .._compat import pickle
-
-
-class ansi:
-    BLUE = '\033[94m'
-    GREEN = '\033[32m'
-    ENDC = '\033[0m'
+from .util import ansi
+from .util import get_conv_infos
+from .util import is_conv2d
 
 
 class PrintLog:
@@ -92,3 +90,78 @@ class SaveWeights:
                 pickle.dump(nn, f, -1)
         else:
             nn.save_params_to(path)
+
+
+class PrintLayerInfo:
+    def __init__(self):
+        pass
+
+    def __call__(self, nn):
+        message = self._get_greeting(nn)
+        print(message)
+        print("## Layer information")
+        print("")
+
+        layers_contain_conv2d = is_conv2d(nn.layers_.values())
+        if not layers_contain_conv2d or (nn.verbose < 2):
+            layer_info = self._get_layer_info_plain(nn)
+            legend = None
+        else:
+            layer_info, legend = self._get_layer_info_conv(nn)
+        print(layer_info)
+        if legend is not None:
+            print(legend)
+        print("")
+
+    @staticmethod
+    def _get_greeting(nn):
+        shapes = [param.get_value().shape for param in
+                  nn.get_all_params() if param]
+        nparams = reduce(operator.add, [reduce(operator.mul, shape) for
+                                        shape in shapes])
+        message = ("# Neural Network with {} learnable parameters"
+                   "\n".format(nparams))
+        return message
+
+    @staticmethod
+    def _get_layer_info_plain(nn):
+        nums = list(range(len(nn.layers)))
+        names = [layer.name for layer in nn.layers_.values()]
+        output_shapes = ['x'.join(map(str, layer.get_output_shape()[1:]))
+                         for layer in nn.layers_.values()]
+
+        table = OrderedDict([
+            ('#', nums),
+            ('name', names),
+            ('size', output_shapes),
+        ])
+        layer_infos = tabulate(table, 'keys', tablefmt='pipe')
+        return layer_infos
+
+    @staticmethod
+    def _get_layer_info_conv(nn):
+        if nn.verbose > 2:
+            detailed = True
+            tablefmt = 'simple'
+        else:
+            detailed = False
+            tablefmt = 'pipe'
+
+        layer_infos = get_conv_infos(nn, detailed=detailed,
+                                     tablefmt=tablefmt)
+
+        mag = "{}{}{}".format(ansi.MAGENTA, "magenta", ansi.ENDC)
+        cya = "{}{}{}".format(ansi.CYAN, "cyan", ansi.ENDC)
+        red = "{}{}{}".format(ansi.RED, "red", ansi.ENDC)
+        legend = (
+            "\nExplanation"
+            "\n    X, Y:    image dimensions"
+            "\n    cap.:    learning capacity"
+            "\n    cov.:    coverage of image"
+            "\n    {}: capacity too low (<1/6)"
+            "\n    {}:    image coverage too high (>100%)"
+            "\n    {}:     capacity too low and coverage too high\n"
+            "".format(mag, cya, red)
+            )
+
+        return layer_infos, legend
