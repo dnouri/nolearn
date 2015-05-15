@@ -131,7 +131,7 @@ def get_conv_infos(net, min_capacity=100. / 6, tablefmt='pipe',
 
     layers = net.layers_.values()
     # assume that first layer is input layer
-    img_size = net.layers_.values()[0].get_output_shape()[2:]
+    img_size = list(net.layers_.values())[0].get_output_shape()[2:]
 
     header = ['name', 'size', 'total', 'cap. Y [%]', 'cap. X [%]',
               'cov. Y [%]', 'cov. X [%]']
