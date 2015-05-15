@@ -130,7 +130,7 @@ def get_conv_infos(net, min_capacity=100. / 6, tablefmt='pipe',
     MAG = ansi.MAGENTA
     RED = ansi.RED
 
-    layers = net.layers_.values()
+    layers = list(net.layers_.values())
     # assume that first layer is input layer
     img_size = list(net.layers_.values())[0].get_output_shape()[2:]
 
