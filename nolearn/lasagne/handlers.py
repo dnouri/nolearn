@@ -103,7 +103,7 @@ class PrintLayerInfo:
         print("## Layer information")
         print("")
 
-        layers_contain_conv2d = is_conv2d(nn.layers_.values())
+        layers_contain_conv2d = is_conv2d(list(nn.layers_.values()))
         if not layers_contain_conv2d or (nn.verbose < 2):
             layer_info = self._get_layer_info_plain(nn)
             legend = None
@@ -143,13 +143,11 @@ class PrintLayerInfo:
     def _get_layer_info_conv(nn):
         if nn.verbose > 2:
             detailed = True
-            tablefmt = 'simple'
         else:
             detailed = False
-            tablefmt = 'pipe'
 
         layer_infos = get_conv_infos(nn, detailed=detailed,
-                                     tablefmt=tablefmt)
+                                     tablefmt='pipe')
 
         mag = "{}{}{}".format(ansi.MAGENTA, "magenta", ansi.ENDC)
         cya = "{}{}{}".format(ansi.CYAN, "cyan", ansi.ENDC)
