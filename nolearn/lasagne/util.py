@@ -1,3 +1,4 @@
+from functools import reduce
 from operator import mul
 
 from lasagne.layers import Layer
