@@ -325,7 +325,7 @@ class NeuralNet(BaseEstimator):
             self.train_history_ else np.inf
             )
         for func in on_training_started:
-            func(self)
+            func(self, self.train_history_)
 
         num_epochs_past = len(self.train_history_)
 

@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from datetime import datetime
+from functools import reduce
 import operator
 
 from tabulate import tabulate
@@ -96,7 +97,7 @@ class PrintLayerInfo:
     def __init__(self):
         pass
 
-    def __call__(self, nn):
+    def __call__(self, nn, train_history):
         message = self._get_greeting(nn)
         print(message)
         print("## Layer information")
