@@ -26,6 +26,7 @@ import theano
 from theano import tensor as T
 
 from . import PrintLog
+from . import PrintLayerInfo
 
 
 class _list(list):
@@ -81,6 +82,7 @@ class NeuralNet(BaseEstimator):
         y_tensor_type=None,
         use_label_encoder=False,
         on_epoch_finished=None,
+        on_training_started=None,
         on_training_finished=None,
         more_params=None,
         verbose=0,
@@ -111,11 +113,13 @@ class NeuralNet(BaseEstimator):
         self.y_tensor_type = y_tensor_type
         self.use_label_encoder = use_label_encoder
         self.on_epoch_finished = on_epoch_finished or []
+        self.on_training_started = on_training_started or []
         self.on_training_finished = on_training_finished or []
         self.more_params = more_params or {}
         self.verbose = verbose
         if self.verbose:
             self.on_epoch_finished.append(PrintLog())
+            self.on_training_started.append(PrintLayerInfo())
 
         for key in kwargs.keys():
             assert not hasattr(self, key)
@@ -303,6 +307,10 @@ class NeuralNet(BaseEstimator):
         if not isinstance(on_epoch_finished, (list, tuple)):
             on_epoch_finished = [on_epoch_finished]
 
+        on_training_started = self.on_training_started
+        if not isinstance(on_training_started, (list, tuple)):
+            on_training_started = [on_training_started]
+
         on_training_finished = self.on_training_finished
         if not isinstance(on_training_finished, (list, tuple)):
             on_training_finished = [on_training_finished]
@@ -316,7 +324,9 @@ class NeuralNet(BaseEstimator):
             min([row['train_loss'] for row in self.train_history_]) if
             self.train_history_ else np.inf
             )
-        first_iteration = True
+        for func in on_training_started:
+            func(self, self.train_history_)
+
         num_epochs_past = len(self.train_history_)
 
         while epoch < self.max_epochs:

@@ -1,4 +1,5 @@
 from .handlers import (
+    PrintLayerInfo,
     PrintLog,
     SaveWeights,
     )
