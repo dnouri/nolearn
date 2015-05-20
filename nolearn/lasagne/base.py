@@ -61,6 +61,16 @@ class BatchIterator(object):
     def transform(self, Xb, yb):
         return Xb, yb
 
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        for attr in ('X', 'y',):
+            if attr in state:
+                del state[attr]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
 
 class NeuralNet(BaseEstimator):
     """A scikit-learn estimator based on Lasagne.
