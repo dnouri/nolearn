@@ -1,5 +1,6 @@
 from itertools import product
 
+from lasagne.layers import get_output
 import matplotlib.pyplot as plt
 import numpy as np
 import theano
@@ -51,7 +52,7 @@ def plot_conv_activity(layer, x, figsize=(6, 8)):
     if x.shape[0] != 1:
         raise ValueError("Only one sample can be plotted at a time.")
     xs = T.tensor4('xs').astype(theano.config.floatX)
-    get_activity = theano.function([xs], layer.get_output(xs))
+    get_activity = theano.function([xs], get_output(layer, xs))
     activity = get_activity(x)
     shape = activity.shape
     nrows = np.ceil(np.sqrt(shape[1])).astype(int)

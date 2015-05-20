@@ -132,14 +132,14 @@ def get_conv_infos(net, min_capacity=100. / 6, tablefmt='pipe',
 
     layers = list(net.layers_.values())
     # assume that first layer is input layer
-    img_size = list(net.layers_.values())[0].get_output_shape()[2:]
+    img_size = list(net.layers_.values())[0].output_shape[2:]
 
     header = ['name', 'size', 'total', 'cap. Y [%]', 'cap. X [%]',
               'cov. Y [%]', 'cov. X [%]']
     if detailed:
         header += ['filter Y', 'filter X', 'field Y', 'field X']
 
-    shapes = [layer.get_output_shape()[1:] for layer in layers]
+    shapes = [layer.output_shape[1:] for layer in layers]
     totals = [str(reduce(mul, shape)) for shape in shapes]
     shapes = ['x'.join(map(str, shape)) for shape in shapes]
     shapes = np.array(shapes).reshape(-1, 1)
