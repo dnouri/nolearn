@@ -10,6 +10,7 @@ from warnings import warn
 from time import time
 import pdb
 
+from lasagne.layers import get_output
 from lasagne.objectives import categorical_crossentropy
 from lasagne.objectives import mse
 from lasagne.objectives import Objective
@@ -255,7 +256,7 @@ class NeuralNet(BaseEstimator):
 
         loss_train = obj.get_loss(X_batch, y_batch)
         loss_eval = obj.get_loss(X_batch, y_batch, deterministic=True)
-        predict_proba = output_layer.get_output(X_batch, deterministic=True)
+        predict_proba = get_output(output_layer, X_batch, deterministic=True)
         if not self.regression:
             predict = predict_proba.argmax(axis=1)
             accuracy = T.mean(T.eq(predict, y_batch))
@@ -497,7 +498,7 @@ class NeuralNet(BaseEstimator):
 
     def _print_layer_info(self, layers):
         for layer in layers:
-            output_shape = layer.get_output_shape()
+            output_shape = layer.output_shape
             print("  {:<18}\t{:<20}\tproduces {:>7} outputs".format(
                 layer.name,
                 str(output_shape),
