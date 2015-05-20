@@ -68,9 +68,6 @@ class BatchIterator(object):
                 del state[attr]
         return state
 
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-
 
 class NeuralNet(BaseEstimator):
     """A scikit-learn estimator based on Lasagne.
