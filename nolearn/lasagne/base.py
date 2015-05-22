@@ -3,9 +3,7 @@ from __future__ import absolute_import
 from .._compat import chain_exception
 from .._compat import pickle
 from collections import OrderedDict
-import functools
 import itertools
-import operator
 from warnings import warn
 from time import time
 import pdb
@@ -160,8 +158,6 @@ class NeuralNet(BaseEstimator):
         if out is None:
             out = self._output_layer = self.initialize_layers()
         self._check_for_unused_kwargs()
-        if self.verbose:
-            self._print_layer_info(self.layers_.values())
 
         if self.X_tensor_type is None:
             types = {
@@ -495,15 +491,6 @@ class NeuralNet(BaseEstimator):
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.initialize()
-
-    def _print_layer_info(self, layers):
-        for layer in layers:
-            output_shape = layer.output_shape
-            print("  {:<18}\t{:<20}\tproduces {:>7} outputs".format(
-                layer.name,
-                str(output_shape),
-                str(functools.reduce(operator.mul, output_shape[1:])),
-                ))
 
     def get_params(self, deep=True):
         params = super(NeuralNet, self).get_params(deep=deep)
