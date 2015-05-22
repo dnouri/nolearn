@@ -447,12 +447,27 @@ class NeuralNet(BaseEstimator):
         if isinstance(source, NeuralNet):
             source = source.get_all_params_values()
 
+        success = "Loaded parameters to layer '{}' (shape {})."
+        failure = ("Could not load parameters to layer '{}' because "
+                   "shapes did not match: {} vs {}.")
+
         for key, values in source.items():
             layer = self.layers_.get(key)
             if layer is not None:
                 for p1, p2v in zip(layer.get_params(), values):
-                    if p1.get_value().shape == p2v.shape:
+                    shape1 = p1.get_value().shape
+                    shape2 = p2v.shape
+                    shape1s = 'x'.join(list(map(str, shape1)))
+                    shape2s = 'x'.join(list(map(str, shape2)))
+                    if shape1 == shape2:
                         p1.set_value(p2v)
+                        if self.verbose:
+                            print(success.format(
+                                key, shape1s, shape2s))
+                    else:
+                        if self.verbose:
+                            print(failure.format(
+                                key, shape1s, shape2s))
 
     def save_params_to(self, fname):
         params = self.get_all_params_values()
