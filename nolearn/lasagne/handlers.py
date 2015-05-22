@@ -24,7 +24,7 @@ class PrintLog:
         info_tabulate = OrderedDict([
             ('epoch', info['epoch']),
             ('train loss', "{}{:.5f}{}".format(
-                ansi.BLUE if info['train_loss_best'] else "",
+                ansi.CYAN if info['train_loss_best'] else "",
                 info['train_loss'],
                 ansi.ENDC if info['train_loss_best'] else "",
                 )),
