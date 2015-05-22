@@ -457,8 +457,8 @@ class NeuralNet(BaseEstimator):
                 for p1, p2v in zip(layer.get_params(), values):
                     shape1 = p1.get_value().shape
                     shape2 = p2v.shape
-                    shape1s = 'x'.join(list(map(str, shape1)))
-                    shape2s = 'x'.join(list(map(str, shape2)))
+                    shape1s = 'x'.join(map(str, shape1))
+                    shape2s = 'x'.join(map(str, shape2))
                     if shape1 == shape2:
                         p1.set_value(p2v)
                         if self.verbose:
