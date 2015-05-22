@@ -128,7 +128,7 @@ class PrintLayerInfo:
     def _get_layer_info_plain(nn):
         nums = list(range(len(nn.layers)))
         names = [layer.name for layer in nn.layers_.values()]
-        output_shapes = ['x'.join(map(str, layer.get_output_shape()[1:]))
+        output_shapes = ['x'.join(map(str, layer.output_shape[1:]))
                          for layer in nn.layers_.values()]
 
         table = OrderedDict([

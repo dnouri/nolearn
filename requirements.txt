@@ -2,4 +2,4 @@ joblib==0.8.4
 scikit-learn==0.15.2
 Theano==0.7
 tabulate==0.7.5
-git+https://github.com/benanne/Lasagne.git@91aa9ec44f#egg=Lasagne
+git+https://github.com/benanne/Lasagne.git@4f67fc2774#egg=Lasagne

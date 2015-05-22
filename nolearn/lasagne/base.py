@@ -3,11 +3,14 @@ from __future__ import absolute_import
 from .._compat import chain_exception
 from .._compat import pickle
 from collections import OrderedDict
+import functools
 import itertools
+import operator
 from warnings import warn
 from time import time
 import pdb
 
+from lasagne.layers import get_output
 from lasagne.objectives import categorical_crossentropy
 from lasagne.objectives import mse
 from lasagne.objectives import Objective
@@ -58,6 +61,13 @@ class BatchIterator(object):
 
     def transform(self, Xb, yb):
         return Xb, yb
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        for attr in ('X', 'y',):
+            if attr in state:
+                del state[attr]
+        return state
 
 
 class NeuralNet(BaseEstimator):
@@ -244,7 +254,7 @@ class NeuralNet(BaseEstimator):
 
         loss_train = obj.get_loss(X_batch, y_batch)
         loss_eval = obj.get_loss(X_batch, y_batch, deterministic=True)
-        predict_proba = output_layer.get_output(X_batch, deterministic=True)
+        predict_proba = get_output(output_layer, X_batch, deterministic=True)
         if not self.regression:
             predict = predict_proba.argmax(axis=1)
             accuracy = T.mean(T.eq(predict, y_batch))
@@ -483,6 +493,15 @@ class NeuralNet(BaseEstimator):
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.initialize()
+
+    def _print_layer_info(self, layers):
+        for layer in layers:
+            output_shape = layer.output_shape
+            print("  {:<18}\t{:<20}\tproduces {:>7} outputs".format(
+                layer.name,
+                str(output_shape),
+                str(functools.reduce(operator.mul, output_shape[1:])),
+                ))
 
     def get_params(self, deep=True):
         params = super(NeuralNet, self).get_params(deep=deep)
