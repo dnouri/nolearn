@@ -114,6 +114,21 @@ class TestLasagneFunctionalMNIST:
         net_loaded.load_params_from(path)
         assert np.array_equal(net_loaded.predict(X_test), y_pred)
 
+    def test_load_params_from_message(self, net, capsys):
+        net2 = clone(net)
+        net2.verbose = 1
+        net2.load_params_from(net)
+
+        out = capsys.readouterr()[0]
+        message = """Loaded parameters to layer 'hidden1' (shape 784x512).
+Loaded parameters to layer 'hidden1' (shape 512).
+Loaded parameters to layer 'hidden2' (shape 512x512).
+Loaded parameters to layer 'hidden2' (shape 512).
+Loaded parameters to layer 'output' (shape 512x10).
+Loaded parameters to layer 'output' (shape 10).
+"""
+        assert out == message
+
 
 def test_lasagne_functional_grid_search(mnist, monkeypatch):
     # Make sure that we can satisfy the grid search interface.
