@@ -38,6 +38,12 @@ class _dict(dict):
 
 
 def eval_func(func, Xb, yb=None):
+    if isinstance(Xb, dict):
+        kwargs = dict(Xb)
+        if yb is not None:
+            kwargs['y'] = yb
+        return func(**kwargs)
+
     if yb is not None:
         return func(Xb, yb)
     else:
