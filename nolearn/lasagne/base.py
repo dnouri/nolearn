@@ -256,17 +256,20 @@ class NeuralNet(BaseEstimator):
         update_params = self._get_params_for('update')
         updates = update(loss_train, all_params, **update_params)
 
+        X_inputs = [theano.Param(X_batch)]
+        inputs = X_inputs + [theano.Param(y_batch)]
+
         train_iter = theano.function(
-            inputs=[theano.Param(X_batch), theano.Param(y_batch)],
+            inputs=inputs,
             outputs=[loss_train],
             updates=updates,
             )
         eval_iter = theano.function(
-            inputs=[theano.Param(X_batch), theano.Param(y_batch)],
+            inputs=inputs,
             outputs=[loss_eval, accuracy],
             )
         predict_iter = theano.function(
-            inputs=[theano.Param(X_batch)],
+            inputs=X_inputs,
             outputs=predict_proba,
             )
 
