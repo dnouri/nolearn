@@ -37,6 +37,13 @@ class _dict(dict):
         return True
 
 
+def eval_func(func, Xb, yb=None):
+    if yb is not None:
+        return func(Xb, yb)
+    else:
+        return func(Xb)
+
+
 class BatchIterator(object):
     def __init__(self, batch_size):
         self.batch_size = batch_size
@@ -259,12 +266,13 @@ class NeuralNet(BaseEstimator):
         update_params = self._get_params_for('update')
         updates = update(loss_train, all_params, **update_params)
 
-        input_layers = [layer for layer in layers.values() if isinstance(layer, InputLayer)]
+        input_layers = [layer for layer in layers.values()
+                        if isinstance(layer, InputLayer)]
 
         X_inputs = [theano.Param(input_layer.input_var,
-                                name="%s.X" % input_layer.name)
+                                 name="%s.X" % input_layer.name)
                     for input_layer in input_layers]
-        inputs = X_inputs + [theano.Param(y_batch)]
+        inputs = X_inputs + [theano.Param(y_batch, name="y")]
 
         train_iter = theano.function(
             inputs=inputs,
@@ -336,15 +344,15 @@ class NeuralNet(BaseEstimator):
             t0 = time()
 
             for Xb, yb in self.batch_iterator_train(X_train, y_train):
-                batch_train_loss = self.train_iter_(Xb, yb)
+                batch_train_loss = eval_func(self.train_iter_, Xb, yb)
                 train_losses.append(batch_train_loss)
 
             for Xb, yb in self.batch_iterator_test(X_valid, y_valid):
-                batch_valid_loss, accuracy = self.eval_iter_(Xb, yb)
+                batch_valid_loss, accuracy = eval_func(self.eval_iter_, Xb, yb)
                 valid_losses.append(batch_valid_loss)
                 valid_accuracies.append(accuracy)
                 if self.custom_score:
-                    y_prob = self.predict_iter_(Xb)
+                    y_prob = eval_func(self.predict_iter_, Xb)
                     custom_score.append(self.custom_score[1](yb, y_prob))
 
             avg_train_loss = np.mean(train_losses)
@@ -383,7 +391,7 @@ class NeuralNet(BaseEstimator):
     def predict_proba(self, X):
         probas = []
         for Xb, yb in self.batch_iterator_test(X):
-            probas.append(self.predict_iter_(Xb))
+            probas.append(eval_func(self.predict_iter_, Xb))
         return np.vstack(probas)
 
     def predict(self, X):
