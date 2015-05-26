@@ -8,7 +8,7 @@ from warnings import warn
 from time import time
 import pdb
 
-from lasagne.layers import get_output
+from lasagne.layers import get_output, InputLayer
 from lasagne.objectives import categorical_crossentropy
 from lasagne.objectives import mse
 from lasagne.objectives import Objective
@@ -237,7 +237,6 @@ class NeuralNet(BaseEstimator):
                            output_type):
 
         first_layer = list(self.layers_.values())[0]
-        X_batch = first_layer.input_var
         y_batch = output_type('y_batch')
 
         output_layer = list(layers.values())[-1]
@@ -260,7 +259,11 @@ class NeuralNet(BaseEstimator):
         update_params = self._get_params_for('update')
         updates = update(loss_train, all_params, **update_params)
 
-        X_inputs = [theano.Param(X_batch)]
+        input_layers = [layer for layer in layers.values() if isinstance(layer, InputLayer)]
+
+        X_inputs = [theano.Param(input_layer.input_var,
+                                name="%s.X" % input_layer.name)
+                    for input_layer in input_layers]
         inputs = X_inputs + [theano.Param(y_batch)]
 
         train_iter = theano.function(
