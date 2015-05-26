@@ -15,4 +15,8 @@ install:
   - travis_retry pip install -r requirements.txt
   - travis_retry python setup.py dev
 script: travis_wait py.test
-cache: apt
+cache:
+  - apt
+  - directories:
+    - $HOME/.cache/pip
+    - $HOME/.theano
