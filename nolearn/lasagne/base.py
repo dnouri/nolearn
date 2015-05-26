@@ -225,7 +225,7 @@ class NeuralNet(BaseEstimator):
             # Any layer other than the first one is assumed to require
             # an 'incoming' paramter.  By default, we'll use the
             # previous layer:
-            if i > 0:
+            if i > 0 and not issubclass(layer_factory, InputLayer):
                 if 'incoming' in layer_kw:
                     layer_kw['incoming'] = self.layers_[
                         layer_kw['incoming']]
