@@ -1,63 +1,23 @@
 import pickle
 
-import matplotlib.pyplot as plt
-from mock import patch
-from mock import Mock
-from lasagne.layers import Conv2DLayer
 from lasagne.layers import DenseLayer
 from lasagne.layers import DropoutLayer
-from lasagne.layers import MaxPool2DLayer
 from lasagne.layers import InputLayer
 from lasagne.nonlinearities import identity
 from lasagne.nonlinearities import softmax
 from lasagne.objectives import categorical_crossentropy
 from lasagne.objectives import Objective
 from lasagne.updates import nesterov_momentum
+from mock import Mock
+from mock import patch
 import numpy as np
 import pytest
 from sklearn.base import clone
-from sklearn.datasets import load_boston
-from sklearn.datasets import fetch_mldata
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_absolute_error
-from sklearn.preprocessing import StandardScaler
-from sklearn.utils import shuffle
 from sklearn.svm import SVC
-
 import theano.tensor as T
-
-from nolearn._compat import builtins
-
-
-@pytest.fixture(scope='session')
-def NeuralNet():
-    from nolearn.lasagne import NeuralNet
-    return NeuralNet
-
-
-@pytest.fixture
-def nn(NeuralNet):
-    return NeuralNet([('input', object())], input_shape=(10, 10))
-
-
-@pytest.fixture(scope='session')
-def mnist():
-    dataset = fetch_mldata('mnist-original')
-    X, y = dataset.data, dataset.target
-    X = X.astype(np.float32) / 255.0
-    y = y.astype(np.int32)
-    return shuffle(X, y, random_state=42)
-
-
-@pytest.fixture(scope='session')
-def boston():
-    dataset = load_boston()
-    X, y = dataset.data, dataset.target
-    # X, y = make_regression(n_samples=100000, n_features=13)
-    X = StandardScaler().fit_transform(X).astype(np.float32)
-    y = y.reshape(-1, 1).astype(np.float32)
-    return shuffle(X, y, random_state=42)
 
 
 class _OnEpochFinished:
@@ -173,6 +133,21 @@ class TestLasagneFunctionalMNIST:
         net_loaded.load_params_from(path)
         assert np.array_equal(net_loaded.predict(X_test), y_pred)
 
+    def test_load_params_from_message(self, net, capsys):
+        net2 = clone(net)
+        net2.verbose = 1
+        net2.load_params_from(net)
+
+        out = capsys.readouterr()[0]
+        message = """Loaded parameters to layer 'hidden1' (shape 784x512).
+Loaded parameters to layer 'hidden1' (shape 512).
+Loaded parameters to layer 'hidden2' (shape 512x512).
+Loaded parameters to layer 'hidden2' (shape 512).
+Loaded parameters to layer 'output' (shape 512x10).
+Loaded parameters to layer 'output' (shape 10).
+"""
+        assert out == message
+
 
 def test_lasagne_functional_grid_search(mnist, monkeypatch):
     # Make sure that we can satisfy the grid search interface.
@@ -258,6 +233,7 @@ def test_clone():
         'loss',
         'objective',
         'on_epoch_finished',
+        'on_training_started',
         'on_training_finished',
         'custom_score',
         ):
@@ -440,168 +416,3 @@ class TestInitializeLayers:
             name='concat'
             )
         output.assert_called_with(incoming=concat.return_value, name='output')
-
-
-class TestCNNVisualizeFunctions:
-    @pytest.fixture(scope='session')
-    def X_train(self, mnist):
-        X, y = mnist
-        return X[:100].reshape(-1, 1, 28, 28)
-
-    @pytest.fixture(scope='session')
-    def y_train(self, mnist):
-        X, y = mnist
-        return y[:100]
-
-    @pytest.fixture(scope='session')
-    def net_fitted(self, NeuralNet, X_train, y_train):
-        nn = NeuralNet(
-            layers=[
-                ('input', InputLayer),
-                ('conv1', Conv2DLayer),
-                ('conv2', Conv2DLayer),
-                ('pool2', MaxPool2DLayer),
-                ('output', DenseLayer),
-                ],
-            input_shape=(None, 1, 28, 28),
-            output_num_units=10,
-            output_nonlinearity=softmax,
-
-            more_params=dict(
-                conv1_filter_size=(5, 5), conv1_num_filters=16,
-                conv2_filter_size=(3, 3), conv2_num_filters=16,
-                pool2_pool_size=(8, 8),
-                hidden1_num_units=16,
-                ),
-
-            update=nesterov_momentum,
-            update_learning_rate=0.01,
-            update_momentum=0.9,
-
-            max_epochs=3,
-            )
-
-        return nn.fit(X_train, y_train)
-
-    def test_plot_loss(self, net_fitted):
-        from nolearn.lasagne.visualize import plot_loss
-        plot_loss(net_fitted)
-        plt.clf()
-        plt.cla()
-
-    def test_plot_conv_weights(self, net_fitted):
-        from nolearn.lasagne.visualize import plot_conv_weights
-        plot_conv_weights(net_fitted.layers_['conv1'])
-        plot_conv_weights(net_fitted.layers_['conv2'], figsize=(1, 2))
-        plt.clf()
-        plt.cla()
-
-    def test_plot_conv_activity(self, net_fitted, X_train):
-        from nolearn.lasagne.visualize import plot_conv_activity
-        plot_conv_activity(net_fitted.layers_['conv1'], X_train[:1])
-        plot_conv_activity(net_fitted.layers_['conv2'], X_train[10:11],
-                           figsize=(3, 4))
-        plt.clf()
-        plt.cla()
-
-    def test_plot_occlusion(self, net_fitted, X_train, y_train):
-        from nolearn.lasagne.visualize import plot_occlusion
-        plot_occlusion(net_fitted, X_train[2:4], y_train[2:4],
-                       square_length=3, figsize=(5, 5))
-        plt.clf()
-        plt.cla()
-
-
-def test_print_log(mnist):
-    from nolearn.lasagne import PrintLog
-
-    nn = Mock(
-        regression=False,
-        custom_score=('my_score', 0.99),
-        )
-
-    train_history = [{
-        'epoch': 1,
-        'train_loss': 0.8,
-        'valid_loss': 0.7,
-        'train_loss_best': False,
-        'valid_loss_best': False,
-        'valid_accuracy': 0.9,
-        'my_score': 0.99,
-        'dur': 1.0,
-        }]
-    output = PrintLog().table(nn, train_history)
-    assert output == """\
-  epoch    train loss    valid loss    train/val    valid acc    my_score  dur
--------  ------------  ------------  -----------  -----------  ----------  -----
-      1       0.80000       0.70000      1.14286      0.90000     0.99000  1.00s\
-"""
-
-
-class TestSaveWeights():
-    @pytest.fixture
-    def SaveWeights(self):
-        from nolearn.lasagne import SaveWeights
-        return SaveWeights
-
-    def test_every_n_epochs_true(self, SaveWeights):
-        train_history = [{'epoch': 9, 'valid_loss': 1.1}]
-        nn = Mock()
-        handler = SaveWeights('mypath', every_n_epochs=3)
-        handler(nn, train_history)
-        assert nn.save_params_to.call_count == 1
-        nn.save_params_to.assert_called_with('mypath')
-
-    def test_every_n_epochs_false(self, SaveWeights):
-        train_history = [{'epoch': 9, 'valid_loss': 1.1}]
-        nn = Mock()
-        handler = SaveWeights('mypath', every_n_epochs=4)
-        handler(nn, train_history)
-        assert nn.save_params_to.call_count == 0
-
-    def test_only_best_true_single_entry(self, SaveWeights):
-        train_history = [{'epoch': 9, 'valid_loss': 1.1}]
-        nn = Mock()
-        handler = SaveWeights('mypath', only_best=True)
-        handler(nn, train_history)
-        assert nn.save_params_to.call_count == 1
-
-    def test_only_best_true_two_entries(self, SaveWeights):
-        train_history = [
-            {'epoch': 9, 'valid_loss': 1.2},
-            {'epoch': 10, 'valid_loss': 1.1},
-            ]
-        nn = Mock()
-        handler = SaveWeights('mypath', only_best=True)
-        handler(nn, train_history)
-        assert nn.save_params_to.call_count == 1
-
-    def test_only_best_false_two_entries(self, SaveWeights):
-        train_history = [
-            {'epoch': 9, 'valid_loss': 1.2},
-            {'epoch': 10, 'valid_loss': 1.3},
-            ]
-        nn = Mock()
-        handler = SaveWeights('mypath', only_best=True)
-        handler(nn, train_history)
-        assert nn.save_params_to.call_count == 0
-
-    def test_with_path_interpolation(self, SaveWeights):
-        train_history = [{'epoch': 9, 'valid_loss': 1.1}]
-        nn = Mock()
-        handler = SaveWeights('mypath-{epoch}-{timestamp}-{loss}.pkl')
-        handler(nn, train_history)
-        path = nn.save_params_to.call_args[0][0]
-        assert path.startswith('mypath-0009-2')
-        assert path.endswith('-1.1.pkl')
-
-    def test_pickle(self, SaveWeights):
-        train_history = [{'epoch': 9, 'valid_loss': 1.1}]
-        nn = Mock()
-        with patch('nolearn.lasagne.handlers.pickle') as pickle:
-            with patch.object(builtins, 'open') as mock_open:
-                handler = SaveWeights('mypath', every_n_epochs=3, pickle=True)
-                handler(nn, train_history)
-
-        mock_open.assert_called_with('mypath', 'wb')
-        pickle.dump.assert_called_with(nn, mock_open().__enter__(), -1)

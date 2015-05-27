@@ -3,13 +3,12 @@ from __future__ import absolute_import
 from .._compat import chain_exception
 from .._compat import pickle
 from collections import OrderedDict
-import functools
 import itertools
-import operator
 from warnings import warn
 from time import time
 import pdb
 
+from lasagne.layers import get_output
 from lasagne.objectives import categorical_crossentropy
 from lasagne.objectives import mse
 from lasagne.objectives import Objective
@@ -26,6 +25,7 @@ import theano
 from theano import tensor as T
 
 from . import PrintLog
+from . import PrintLayerInfo
 
 
 class _list(list):
@@ -60,6 +60,13 @@ class BatchIterator(object):
     def transform(self, Xb, yb):
         return Xb, yb
 
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        for attr in ('X', 'y',):
+            if attr in state:
+                del state[attr]
+        return state
+
 
 class NeuralNet(BaseEstimator):
     """A scikit-learn estimator based on Lasagne.
@@ -82,6 +89,7 @@ class NeuralNet(BaseEstimator):
         y_tensor_type=None,
         use_label_encoder=False,
         on_epoch_finished=None,
+        on_training_started=None,
         on_training_finished=None,
         more_params=None,
         verbose=0,
@@ -113,11 +121,13 @@ class NeuralNet(BaseEstimator):
         self.y_tensor_type = y_tensor_type
         self.use_label_encoder = use_label_encoder
         self.on_epoch_finished = on_epoch_finished or []
+        self.on_training_started = on_training_started or []
         self.on_training_finished = on_training_finished or []
         self.more_params = more_params or {}
         self.verbose = verbose
         if self.verbose:
             self.on_epoch_finished.append(PrintLog())
+            self.on_training_started.append(PrintLayerInfo())
 
         for key in kwargs.keys():
             assert not hasattr(self, key)
@@ -150,8 +160,6 @@ class NeuralNet(BaseEstimator):
         if out is None:
             out = self._output_layer = self.initialize_layers()
         self._check_for_unused_kwargs()
-        if self.verbose:
-            self._print_layer_info(self.layers_.values())
         
         transform = getattr(self,'_transform_layer',None)
         if transform is None:
@@ -256,7 +264,7 @@ class NeuralNet(BaseEstimator):
 
         loss_train = obj.get_loss(X_batch, y_batch)
         loss_eval = obj.get_loss(X_batch, y_batch, deterministic=True)
-        predict_proba = output_layer.get_output(X_batch, deterministic=True)
+        predict_proba = get_output(output_layer, X_batch, deterministic=True)
         if transform_layer is not None:
             transform_output = transform_layer.get_output(X_batch, deterministic=True)
 
@@ -328,6 +336,10 @@ class NeuralNet(BaseEstimator):
         if not isinstance(on_epoch_finished, (list, tuple)):
             on_epoch_finished = [on_epoch_finished]
 
+        on_training_started = self.on_training_started
+        if not isinstance(on_training_started, (list, tuple)):
+            on_training_started = [on_training_started]
+
         on_training_finished = self.on_training_finished
         if not isinstance(on_training_finished, (list, tuple)):
             on_training_finished = [on_training_finished]
@@ -341,7 +353,9 @@ class NeuralNet(BaseEstimator):
             min([row['train_loss'] for row in self.train_history_]) if
             self.train_history_ else np.inf
             )
-        first_iteration = True
+        for func in on_training_started:
+            func(self, self.train_history_)
+
         num_epochs_past = len(self.train_history_)
 
         while epoch < self.max_epochs:
@@ -470,12 +484,27 @@ class NeuralNet(BaseEstimator):
         if isinstance(source, NeuralNet):
             source = source.get_all_params_values()
 
+        success = "Loaded parameters to layer '{}' (shape {})."
+        failure = ("Could not load parameters to layer '{}' because "
+                   "shapes did not match: {} vs {}.")
+
         for key, values in source.items():
             layer = self.layers_.get(key)
             if layer is not None:
                 for p1, p2v in zip(layer.get_params(), values):
-                    if p1.get_value().shape == p2v.shape:
+                    shape1 = p1.get_value().shape
+                    shape2 = p2v.shape
+                    shape1s = 'x'.join(map(str, shape1))
+                    shape2s = 'x'.join(map(str, shape2))
+                    if shape1 == shape2:
                         p1.set_value(p2v)
+                        if self.verbose:
+                            print(success.format(
+                                key, shape1s, shape2s))
+                    else:
+                        if self.verbose:
+                            print(failure.format(
+                                key, shape1s, shape2s))
 
     def save_params_to(self, fname):
         params = self.get_all_params_values()
@@ -515,15 +544,6 @@ class NeuralNet(BaseEstimator):
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.initialize()
-
-    def _print_layer_info(self, layers):
-        for layer in layers:
-            output_shape = layer.get_output_shape()
-            print("  {:<18}\t{:<20}\tproduces {:>7} outputs".format(
-                layer.name,
-                str(output_shape),
-                str(functools.reduce(operator.mul, output_shape[1:])),
-                ))
 
     def get_params(self, deep=True):
         params = super(NeuralNet, self).get_params(deep=deep)
