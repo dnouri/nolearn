@@ -159,14 +159,7 @@ class NeuralNet(BaseEstimator):
             out = self._output_layer = self.initialize_layers()
         self._check_for_unused_kwargs()
 
-        if self.X_tensor_type is None:
-            types = {
-                2: T.matrix,
-                3: T.tensor3,
-                4: T.tensor4,
-                }
-            first_layer = list(self.layers_.values())[0]
-            self.X_tensor_type = types[len(first_layer.shape)]
+        assert self.X_tensor_type is None
 
         iter_funcs = self._create_iter_funcs(
             self.layers_, self.objective, self.update,
@@ -208,7 +201,7 @@ class NeuralNet(BaseEstimator):
             if 'name' not in layer_kw:
                 layer_kw['name'] = "{}{}".format(
                     layer_factory.__name__.lower().replace("layer", ""), i)
-                                  
+
             more_params = self._get_params_for(layer_kw['name'])
             layer_kw.update(more_params)
 
@@ -238,9 +231,9 @@ class NeuralNet(BaseEstimator):
 
     def _create_iter_funcs(self, layers, objective, update, input_type,
                            output_type):
-        X = input_type('x')
-        y = output_type('y')
-        X_batch = input_type('x_batch')
+
+        first_layer = list(self.layers_.values())[0]
+        X_batch = first_layer.input_var
         y_batch = output_type('y_batch')
 
         output_layer = list(layers.values())[-1]
@@ -250,9 +243,9 @@ class NeuralNet(BaseEstimator):
             # XXX breaking the Lasagne interface a little:
             obj.layers = layers
 
-        loss_train = obj.get_loss(X_batch, y_batch)
-        loss_eval = obj.get_loss(X_batch, y_batch, deterministic=True)
-        predict_proba = get_output(output_layer, X_batch, deterministic=True)
+        loss_train = obj.get_loss(None, y_batch)
+        loss_eval = obj.get_loss(None, y_batch, deterministic=True)
+        predict_proba = get_output(output_layer, None, deterministic=True)
         if not self.regression:
             predict = predict_proba.argmax(axis=1)
             accuracy = T.mean(T.eq(predict, y_batch))
@@ -263,29 +256,21 @@ class NeuralNet(BaseEstimator):
         update_params = self._get_params_for('update')
         updates = update(loss_train, all_params, **update_params)
 
+        X_inputs = [theano.Param(X_batch)]
+        inputs = X_inputs + [theano.Param(y_batch)]
+
         train_iter = theano.function(
-            inputs=[theano.Param(X_batch), theano.Param(y_batch)],
+            inputs=inputs,
             outputs=[loss_train],
             updates=updates,
-            givens={
-                X: X_batch,
-                y: y_batch,
-                },
             )
         eval_iter = theano.function(
-            inputs=[theano.Param(X_batch), theano.Param(y_batch)],
+            inputs=inputs,
             outputs=[loss_eval, accuracy],
-            givens={
-                X: X_batch,
-                y: y_batch,
-                },
             )
         predict_iter = theano.function(
-            inputs=[theano.Param(X_batch)],
+            inputs=X_inputs,
             outputs=predict_proba,
-            givens={
-                X: X_batch,
-                },
             )
 
         return train_iter, eval_iter, predict_iter
