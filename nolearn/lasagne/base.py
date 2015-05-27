@@ -80,6 +80,7 @@ class NeuralNet(BaseEstimator):
         objective_loss_function=None,
         batch_iterator_train=BatchIterator(batch_size=128),
         batch_iterator_test=BatchIterator(batch_size=128),
+        transform_layer_name='',
         regression=False,
         max_epochs=100,
         eval_size=0.2,
@@ -111,6 +112,7 @@ class NeuralNet(BaseEstimator):
         self.objective_loss_function = objective_loss_function
         self.batch_iterator_train = batch_iterator_train
         self.batch_iterator_test = batch_iterator_test
+        self.transform_layer_name = transform_layer_name
         self.regression = regression
         self.max_epochs = max_epochs
         self.eval_size = eval_size
@@ -158,6 +160,10 @@ class NeuralNet(BaseEstimator):
         if out is None:
             out = self._output_layer = self.initialize_layers()
         self._check_for_unused_kwargs()
+        
+        transform = getattr(self,'_transform_layer',None)
+        if transform is None:
+                self._transform_layer = None
 
         if self.X_tensor_type is None:
             types = {
@@ -170,10 +176,13 @@ class NeuralNet(BaseEstimator):
 
         iter_funcs = self._create_iter_funcs(
             self.layers_, self.objective, self.update,
+            self._transform_layer,
             self.X_tensor_type,
             self.y_tensor_type,
             )
-        self.train_iter_, self.eval_iter_, self.predict_iter_ = iter_funcs
+        
+        (self.train_iter_, self.eval_iter_, self.predict_iter_,
+            self.transform_iter_) = iter_funcs
         self._initialized = True
 
     def _get_params_for(self, name):
@@ -234,9 +243,12 @@ class NeuralNet(BaseEstimator):
                 chain_exception(TypeError(msg), e)
             self.layers_[layer_kw['name']] = layer
 
+            if layer_kw['name'] == self.transform_layer_name:
+                self._transform_layer = layer
+
         return layer
 
-    def _create_iter_funcs(self, layers, objective, update, input_type,
+    def _create_iter_funcs(self, layers, objective, update, transform_layer, input_type,
                            output_type):
         X = input_type('x')
         y = output_type('y')
@@ -253,6 +265,9 @@ class NeuralNet(BaseEstimator):
         loss_train = obj.get_loss(X_batch, y_batch)
         loss_eval = obj.get_loss(X_batch, y_batch, deterministic=True)
         predict_proba = get_output(output_layer, X_batch, deterministic=True)
+        if transform_layer is not None:
+            transform_output = transform_layer.get_output(X_batch, deterministic=True)
+
         if not self.regression:
             predict = predict_proba.argmax(axis=1)
             accuracy = T.mean(T.eq(predict, y_batch))
@@ -288,7 +303,17 @@ class NeuralNet(BaseEstimator):
                 },
             )
 
-        return train_iter, eval_iter, predict_iter
+        transform_iter = None
+        if transform_layer is not None:
+            transform_iter = theano.function(
+                inputs=[theano.Param(X_batch)],
+                outputs=transform_output,
+                givens={
+                    X: X_batch,
+                    },
+                )
+
+        return train_iter, eval_iter, predict_iter, transform_iter
 
     def fit(self, X, y):
         if self.use_label_encoder:
@@ -403,6 +428,18 @@ class NeuralNet(BaseEstimator):
                 y_pred = self.enc_.inverse_transform(y_pred)
             return y_pred
 
+    def transform(self, X):
+        if self.transform_iter_ == None:
+            raise ValueError(('No transform layer found. Use the '
+                    'transform_layer_name parameter name to specifiy the layer '
+                    'output you want to extract when .transform(X) is called.'))
+
+        transforms = []
+
+        for Xb, yb in self.batch_iterator_test(X):
+            transforms.append(self.transform_iter_(Xb))
+        return np.vstack(transforms)
+
     def score(self, X, y):
         score = mean_squared_error if self.regression else accuracy_score
         return float(score(self.predict(X), y))
@@ -497,6 +534,7 @@ class NeuralNet(BaseEstimator):
             'train_iter_',
             'eval_iter_',
             'predict_iter_',
+            'transform_iter_',
             '_initialized',
             ):
             if attr in state:

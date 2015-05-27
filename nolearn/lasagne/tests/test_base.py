@@ -16,6 +16,7 @@ from sklearn.base import clone
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_absolute_error
+from sklearn.svm import SVC
 import theano.tensor as T
 
 
@@ -41,6 +42,7 @@ class TestLasagneFunctionalMNIST:
             input_shape=(None, 784),
             output_num_units=10,
             output_nonlinearity=softmax,
+            transform_layer_name='hidden2',
 
             more_params=dict(
                 hidden1_num_units=512,
@@ -62,15 +64,32 @@ class TestLasagneFunctionalMNIST:
         return net.fit(X_train, y_train)
 
     @pytest.fixture(scope='session')
+    def svm_net_fitted(self, net_fitted, mnist):
+        X, y = mnist
+        X_train, y_train = X[:10000], y[:10000]
+        X_train_hidden = net_fitted.transform(X_train)
+        clf = SVC()
+        clf.fit(X_train_hidden, y_train)
+        return clf
+
+    @pytest.fixture(scope='session')
     def y_pred(self, net_fitted, mnist):
         X, y = mnist
         X_test = X[60000:]
         return net_fitted.predict(X_test)
 
-    def test_accuracy(self, net_fitted, mnist, y_pred):
+    @pytest.fixture(scope='session')
+    def y_pred_svm(self, net_fitted, svm_net_fitted , mnist):
+        X, y = mnist
+        X_test = X[60000:]
+        return svm_net_fitted.predict(net_fitted.transform(X_test))
+    
+    def test_accuracy(self, net_fitted, mnist, y_pred, y_pred_svm):
         X, y = mnist
         y_test = y[60000:]
-        assert accuracy_score(y_pred, y_test) > 0.85
+        net_accuracy = accuracy_score(y_pred, y_test)
+        assert net_accuracy > 0.85
+        assert accuracy_score(y_pred_svm, y_test) >= net_accuracy
 
     def test_train_history(self, net_fitted):
         history = net_fitted.train_history_
@@ -179,6 +198,7 @@ def test_clone():
         input_shape=(100, 784),
         output_num_units=10,
         output_nonlinearity=softmax,
+        transform_layer_name='hidden',
 
         more_params={
             'hidden_num_units': 100,
@@ -286,7 +306,7 @@ class TestCheckForUnusedKwargs:
             update_foo=1,
             update_bar=2,
             )
-        net._create_iter_funcs = lambda *args: (1, 2, 3)
+        net._create_iter_funcs = lambda *args: (1, 2, 3, 4)
         net.initialize()
 
     def test_unused(self, NeuralNet):
@@ -298,7 +318,7 @@ class TestCheckForUnusedKwargs:
             update_foo=1,
             update_bar=2,
             )
-        net._create_iter_funcs = lambda *args: (1, 2, 3)
+        net._create_iter_funcs = lambda *args: (1, 2, 3, 4)
 
         with pytest.raises(ValueError) as err:
             net.initialize()
