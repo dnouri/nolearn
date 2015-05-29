@@ -172,6 +172,19 @@ class NeuralNet(BaseEstimator):
             else:
                 raise ValueError("Unused kwarg: {}".format(k))
 
+    @staticmethod
+    def _check_good_input(X, y=None):
+        if isinstance(X, dict):
+            lengths = [len(X1) for X1 in X.values()]
+            if len(set(lengths)) > 1:
+                raise ValueError("Not all values of X are of equal length.")
+            x_len = lengths[0]
+        else:
+            x_len = len(X)
+        if y is not None:
+            if len(y) != x_len:
+                raise ValueError("X and y are not of equal length.")
+
     def initialize(self):
         if getattr(self, '_initialized', False):
             return
@@ -296,6 +309,8 @@ class NeuralNet(BaseEstimator):
         return train_iter, eval_iter, predict_iter
 
     def fit(self, X, y):
+        self._check_good_input(X, y)
+
         if self.use_label_encoder:
             self.enc_ = LabelEncoder()
             y = self.enc_.fit_transform(y).astype(np.int32)

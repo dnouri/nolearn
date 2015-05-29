@@ -352,6 +352,46 @@ class TestInitializeLayers:
         output.assert_called_with(incoming=concat.return_value, name='output')
 
 
+class TestCheckGoodInput:
+    @pytest.fixture
+    def check_good_input(self, NeuralNet):
+        return NeuralNet._check_good_input
+
+    def test_X_and_y_OK(self, check_good_input):
+        check_good_input(
+            np.arange(100).reshape(10, 10),
+            np.arange(10),
+            )
+
+    def test_X_and_y_length_mismatch(self, check_good_input):
+        with pytest.raises(ValueError):
+            check_good_input(
+                np.arange(90).reshape(9, 10),
+                np.arange(10),
+                )
+
+    def test_X_dict_and_y_length_mismatch(self, check_good_input):
+        with pytest.raises(ValueError):
+            check_good_input({
+                'one': np.arange(100).reshape(10, 10),
+                'two': np.arange(90).reshape(9, 10),
+                },
+                np.arange(10),
+                )
+
+    def test_X_OK(self, check_good_input):
+        check_good_input(
+            np.arange(100).reshape(10, 10),
+            )
+
+    def test_X_dict_length_mismatch(self, check_good_input):
+        with pytest.raises(ValueError):
+            check_good_input({
+                'one': np.arange(100).reshape(10, 10),
+                'two': np.arange(90).reshape(9, 10),
+                })
+
+
 class TestMultiInputFunctional:
     @pytest.fixture(scope='session')
     def net(self, NeuralNet):
