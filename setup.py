@@ -30,8 +30,10 @@ docs_require = [
 
 setup(name='nolearn',
       version=version,
-      description="scikit-learn compatible wrappers for neural net libraries, "
-      "and other utilities.",
+      description="nolearn contains a number of wrappers and abstractions "
+      "around existing neural network libraries, most notably Lasagne, "
+      "along with a few machine learning utility modules.  "
+      "All code is written to be compatible with scikit-learn.",
       long_description='\n\n'.join([README, CHANGES]),
       classifiers=[
           "Development Status :: 4 - Beta",
