@@ -12,6 +12,7 @@ except IOError:
     README = CHANGES = ''
 
 install_requires = [
+    'gdbn',
     'joblib',
     'matplotlib',
     'scikit-learn',

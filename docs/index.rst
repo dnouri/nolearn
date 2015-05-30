@@ -41,6 +41,7 @@ Modules
    :maxdepth: 2
 
    cache
+   dbn
    decaf
    inischema
    lasagne
