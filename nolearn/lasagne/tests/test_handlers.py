@@ -224,41 +224,38 @@ class TestPrintLayerInfo():
 
     def test_print_layer_info_plain_nn(self, nn, print_info):
         expected = """\
-|   # | name   | size    |
-|----:|:-------|:--------|
-|   0 | input  | 1x28x28 |
-|   1 | dense0 | 16      |
-|   2 | dense1 | 16      |
-|   3 | output | 10      |\
-"""
+  #  name    size
+---  ------  -------
+  0  input   1x28x28
+  1  dense0  16
+  2  dense1  16
+  3  output  10"""
         message = print_info._get_layer_info_plain(nn)
         assert message == expected
 
     def test_print_layer_info_plain_cnn(self, cnn, print_info):
         expected = """\
-|   # | name   | size     |
-|----:|:-------|:---------|
-|   0 | input  | 1x28x28  |
-|   1 | conv1  | 16x24x24 |
-|   2 | conv2  | 16x22x22 |
-|   3 | pool2  | 16x3x3   |
-|   4 | conv3  | 16x1x1   |
-|   5 | output | 10       |\
-"""
+  #  name    size
+---  ------  --------
+  0  input   1x28x28
+  1  conv1   16x24x24
+  2  conv2   16x22x22
+  3  pool2   16x3x3
+  4  conv3   16x1x1
+  5  output  10"""
         message = print_info._get_layer_info_plain(cnn)
         assert message == expected
 
     def test_print_layer_info_conv_cnn(self, cnn, print_info):
         expected = """\
-| name   | size     |   total |   cap. Y [%] |   cap. X [%] |   cov. Y [%] |   cov. X [%] |
-|:-------|:---------|--------:|-------------:|-------------:|-------------:|-------------:|
-| input  | 1x28x28  |     784 |       100.00 |       100.00 |       100.00 |       100.00 |
-| conv1  | 16x24x24 |    9216 |       100.00 |       100.00 |        17.86 |        17.86 |
-| conv2  | 16x22x22 |    7744 |        42.86 |        42.86 |        25.00 |        25.00 |
-| pool2  | 16x3x3   |     144 |        42.86 |        42.86 |        25.00 |        25.00 |
-| conv3  | 16x1x1   |      16 |       104.35 |       104.35 |        82.14 |        82.14 |
-| output | 10       |      10 |       100.00 |       100.00 |       100.00 |       100.00 |\
-"""
+name    size        total    cap.Y    cap.X    cov.Y    cov.X
+------  --------  -------  -------  -------  -------  -------
+input   1x28x28       784   100.00   100.00   100.00   100.00
+conv1   16x24x24     9216   100.00   100.00    17.86    17.86
+conv2   16x22x22     7744    42.86    42.86    25.00    25.00
+pool2   16x3x3        144    42.86    42.86    25.00    25.00
+conv3   16x1x1         16   104.35   104.35    82.14    82.14
+output  10             10   100.00   100.00   100.00   100.00"""
         message, legend = print_info._get_layer_info_conv(cnn)
         assert message == expected
 

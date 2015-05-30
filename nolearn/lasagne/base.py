@@ -124,6 +124,9 @@ class NeuralNet(BaseEstimator):
         self.more_params = more_params or {}
         self.verbose = verbose
         if self.verbose:
+            # XXX: PrintLog should come before any other handlers,
+            # because early stopping will otherwise cause the last
+            # line not to be printed
             self.on_epoch_finished.append(PrintLog())
             self.on_training_started.append(PrintLayerInfo())
 
@@ -197,6 +200,7 @@ class NeuralNet(BaseEstimator):
             else:
                 # New format: (Layer, {'layer': 'kwargs'})
                 layer_factory, layer_kw = layer_def
+                layer_kw = layer_kw.copy()
 
             if 'name' not in layer_kw:
                 layer_kw['name'] = "{}{}".format(

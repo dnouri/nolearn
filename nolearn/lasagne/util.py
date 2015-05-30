@@ -123,8 +123,7 @@ def get_receptive_field(layers, img_size):
     return receptive_field
 
 
-def get_conv_infos(net, min_capacity=100. / 6, tablefmt='pipe',
-                   detailed=False):
+def get_conv_infos(net, min_capacity=100. / 6, detailed=False):
     CYA = ansi.CYAN
     END = ansi.ENDC
     MAG = ansi.MAGENTA
@@ -134,8 +133,8 @@ def get_conv_infos(net, min_capacity=100. / 6, tablefmt='pipe',
     # assume that first layer is input layer
     img_size = list(net.layers_.values())[0].output_shape[2:]
 
-    header = ['name', 'size', 'total', 'cap. Y [%]', 'cap. X [%]',
-              'cov. Y [%]', 'cov. X [%]']
+    header = ['name', 'size', 'total', 'cap.Y', 'cap.X',
+              'cov.Y', 'cov.X']
     if detailed:
         header += ['filter Y', 'filter X', 'field Y', 'field X']
 
@@ -174,4 +173,4 @@ def get_conv_infos(net, min_capacity=100. / 6, tablefmt='pipe',
         table = np.hstack((table, real_filters.astype(int),
                            receptive_fields.astype(int)))
 
-    return tabulate(table, header, tablefmt=tablefmt, floatfmt='.2f')
+    return tabulate(table, header, floatfmt='.2f')

@@ -1,7 +1,6 @@
 import pickle
 
 from lasagne.layers import DenseLayer
-from lasagne.layers import DropoutLayer
 from lasagne.layers import InputLayer
 from lasagne.nonlinearities import identity
 from lasagne.nonlinearities import softmax
@@ -19,54 +18,7 @@ from sklearn.metrics import mean_absolute_error
 import theano.tensor as T
 
 
-class _OnEpochFinished:
-    def __call__(self, nn, train_history):
-        self.train_history = train_history
-        if len(train_history) > 1:
-            raise StopIteration()
-
-
-class TestLasagneFunctionalMNIST:
-    @pytest.fixture(scope='session')
-    def net(self, NeuralNet):
-        return NeuralNet(
-            layers=[
-                ('input', InputLayer),
-                ('hidden1', DenseLayer),
-                ('dropout1', DropoutLayer),
-                ('hidden2', DenseLayer),
-                ('dropout2', DropoutLayer),
-                ('output', DenseLayer),
-                ],
-            input_shape=(None, 784),
-            output_num_units=10,
-            output_nonlinearity=softmax,
-
-            more_params=dict(
-                hidden1_num_units=512,
-                hidden2_num_units=512,
-                ),
-
-            update=nesterov_momentum,
-            update_learning_rate=0.01,
-            update_momentum=0.9,
-
-            max_epochs=5,
-            on_epoch_finished=[_OnEpochFinished()],
-            )
-
-    @pytest.fixture(scope='session')
-    def net_fitted(self, net, mnist):
-        X, y = mnist
-        X_train, y_train = X[:10000], y[:10000]
-        return net.fit(X_train, y_train)
-
-    @pytest.fixture(scope='session')
-    def y_pred(self, net_fitted, mnist):
-        X, y = mnist
-        X_test = X[60000:]
-        return net_fitted.predict(X_test)
-
+class TestFunctionalMNIST:
     def test_accuracy(self, net_fitted, mnist, y_pred):
         X, y = mnist
         y_test = y[60000:]
@@ -75,7 +27,7 @@ class TestLasagneFunctionalMNIST:
     def test_train_history(self, net_fitted):
         history = net_fitted.train_history_
         assert len(history) == 2  # due to early stopping
-        assert history[0]['valid_accuracy'] > 0.8
+        assert history[1]['valid_accuracy'] > 0.85
         assert history[1]['valid_accuracy'] > history[0]['valid_accuracy']
         assert set(history[0].keys()) == set([
             'dur', 'epoch', 'train_loss', 'train_loss_best',
@@ -85,11 +37,6 @@ class TestLasagneFunctionalMNIST:
     def test_early_stopping(self, net_fitted):
         early_stopping = net_fitted.on_epoch_finished[0]
         assert early_stopping.train_history == net_fitted.train_history_
-
-    @pytest.fixture
-    def X_test(self, mnist):
-        X, y = mnist
-        return X[60000:]
 
     def test_pickle(self, net_fitted, X_test, y_pred):
         pickled = pickle.dumps(net_fitted, -1)
@@ -107,24 +54,27 @@ class TestLasagneFunctionalMNIST:
         net_loaded.load_params_from(net_fitted.get_all_params_values())
         assert np.array_equal(net_loaded.predict(X_test), y_pred)
 
-    def test_save_params_to_path(self, net, net_fitted, X_test, y_pred):
+    def test_save_params_to_path(self, net_fitted, X_test, y_pred):
         path = '/tmp/test_lasagne_functional_mnist.params'
         net_fitted.save_params_to(path)
-        net_loaded = clone(net)
+        net_loaded = clone(net_fitted)
         net_loaded.load_params_from(path)
         assert np.array_equal(net_loaded.predict(X_test), y_pred)
 
-    def test_load_params_from_message(self, net, capsys):
+    def test_load_params_from_message(self, net, net_fitted, capsys):
         net2 = clone(net)
         net2.verbose = 1
-        net2.load_params_from(net)
+        net2.load_params_from(net_fitted)
 
         out = capsys.readouterr()[0]
-        message = """Loaded parameters to layer 'hidden1' (shape 784x512).
-Loaded parameters to layer 'hidden1' (shape 512).
-Loaded parameters to layer 'hidden2' (shape 512x512).
-Loaded parameters to layer 'hidden2' (shape 512).
-Loaded parameters to layer 'output' (shape 512x10).
+        message = """\
+Loaded parameters to layer 'conv1' (shape 8x1x5x5).
+Loaded parameters to layer 'conv1' (shape 8).
+Loaded parameters to layer 'conv2' (shape 8x8x5x5).
+Loaded parameters to layer 'conv2' (shape 8).
+Loaded parameters to layer 'hidden1' (shape 128x128).
+Loaded parameters to layer 'hidden1' (shape 128).
+Loaded parameters to layer 'output' (shape 128x10).
 Loaded parameters to layer 'output' (shape 10).
 """
         assert out == message

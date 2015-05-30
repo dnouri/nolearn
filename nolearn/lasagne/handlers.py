@@ -136,7 +136,7 @@ class PrintLayerInfo:
             ('name', names),
             ('size', output_shapes),
         ])
-        layer_infos = tabulate(table, 'keys', tablefmt='pipe')
+        layer_infos = tabulate(table, 'keys')
         return layer_infos
 
     @staticmethod
@@ -146,8 +146,7 @@ class PrintLayerInfo:
         else:
             detailed = False
 
-        layer_infos = get_conv_infos(nn, detailed=detailed,
-                                     tablefmt='pipe')
+        layer_infos = get_conv_infos(nn, detailed=detailed)
 
         mag = "{}{}{}".format(ansi.MAGENTA, "magenta", ansi.ENDC)
         cya = "{}{}{}".format(ansi.CYAN, "cyan", ansi.ENDC)
