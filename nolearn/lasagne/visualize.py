@@ -127,6 +127,7 @@ def occlusion_heatmap(net, x, target, square_length=7):
 
     square_length : int (default=7)
       The length of the side of the square that occludes the image.
+      Must be an odd number.
 
     Results
     -------
@@ -139,13 +140,16 @@ def occlusion_heatmap(net, x, target, square_length=7):
     if (x.ndim != 4) or x.shape[0] != 1:
         raise ValueError("This function requires the input data to be of "
                          "shape (1, c, x, y), instead got {}".format(x.shape))
+    if square_length % 2 == 0:
+        raise ValueError("Square length has to be an odd number, instead "
+                         "got {}.".format(square_length))
 
     num_classes = list(net.layers_.values())[-1].num_units
     img = x[0].copy()
     shape = x.shape
 
     heat_array = np.zeros(shape[2:])
-    pad = square_length // 2
+    pad = square_length // 2 + 1
     x_occluded = np.zeros((shape[2], shape[3], shape[2], shape[3]),
                           dtype=img.dtype)
 
@@ -188,6 +192,7 @@ def plot_occlusion(net, X, target, square_length=7, figsize=(9, None)):
 
     square_length : int (default=7)
       The length of the side of the square that occludes the image.
+      Must be an odd number.
 
     figsize : tuple (int, int)
       Size of the figure.
