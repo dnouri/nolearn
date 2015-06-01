@@ -9,6 +9,7 @@ from time import time
 import pdb
 
 from lasagne.layers import get_output
+from lasagne.layers import InputLayer
 from lasagne.objectives import categorical_crossentropy
 from lasagne.objectives import mse
 from lasagne.objectives import Objective
@@ -37,6 +38,13 @@ class _dict(dict):
         return True
 
 
+def _sldict(arr, sl):
+    if isinstance(arr, dict):
+        return {k: v[sl] for k, v in arr.items()}
+    else:
+        return arr[sl]
+
+
 class BatchIterator(object):
     def __init__(self, batch_size):
         self.batch_size = batch_size
@@ -46,16 +54,23 @@ class BatchIterator(object):
         return self
 
     def __iter__(self):
-        n_samples = self.X.shape[0]
         bs = self.batch_size
-        for i in range((n_samples + bs - 1) // bs):
+        for i in range((self.n_samples + bs - 1) // bs):
             sl = slice(i * bs, (i + 1) * bs)
-            Xb = self.X[sl]
+            Xb = _sldict(self.X, sl)
             if self.y is not None:
                 yb = self.y[sl]
             else:
                 yb = None
             yield self.transform(Xb, yb)
+
+    @property
+    def n_samples(self):
+        X = self.X
+        if isinstance(X, dict):
+            return len(list(X.values())[0])
+        else:
+            return len(X)
 
     def transform(self, Xb, yb):
         return Xb, yb
@@ -105,6 +120,11 @@ class NeuralNet(BaseEstimator):
         if y_tensor_type is None:
             y_tensor_type = T.fmatrix if regression else T.ivector
 
+        if X_tensor_type is not None:
+            raise ValueError(
+                "The 'X_tensor_type' parameter has been removed. "
+                "It's unnecessary.")  # BBB
+
         self.layers = layers
         self.update = update
         self.objective = objective
@@ -115,7 +135,6 @@ class NeuralNet(BaseEstimator):
         self.max_epochs = max_epochs
         self.eval_size = eval_size
         self.custom_score = custom_score
-        self.X_tensor_type = X_tensor_type
         self.y_tensor_type = y_tensor_type
         self.use_label_encoder = use_label_encoder
         self.on_epoch_finished = on_epoch_finished or []
@@ -153,6 +172,19 @@ class NeuralNet(BaseEstimator):
             else:
                 raise ValueError("Unused kwarg: {}".format(k))
 
+    @staticmethod
+    def _check_good_input(X, y=None):
+        if isinstance(X, dict):
+            lengths = [len(X1) for X1 in X.values()]
+            if len(set(lengths)) > 1:
+                raise ValueError("Not all values of X are of equal length.")
+            x_len = lengths[0]
+        else:
+            x_len = len(X)
+        if y is not None:
+            if len(y) != x_len:
+                raise ValueError("X and y are not of equal length.")
+
     def initialize(self):
         if getattr(self, '_initialized', False):
             return
@@ -162,11 +194,8 @@ class NeuralNet(BaseEstimator):
             out = self._output_layer = self.initialize_layers()
         self._check_for_unused_kwargs()
 
-        assert self.X_tensor_type is None
-
         iter_funcs = self._create_iter_funcs(
             self.layers_, self.objective, self.update,
-            self.X_tensor_type,
             self.y_tensor_type,
             )
         self.train_iter_, self.eval_iter_, self.predict_iter_ = iter_funcs
@@ -209,10 +238,10 @@ class NeuralNet(BaseEstimator):
             more_params = self._get_params_for(layer_kw['name'])
             layer_kw.update(more_params)
 
-            # Any layer other than the first one is assumed to require
-            # an 'incoming' paramter.  By default, we'll use the
-            # previous layer:
-            if i > 0:
+            # Any layers that aren't subclasses of InputLayer are
+            # assumed to require an 'incoming' paramter.  By default,
+            # we'll use the previous layer as input:
+            if not issubclass(layer_factory, InputLayer):
                 if 'incoming' in layer_kw:
                     layer_kw['incoming'] = self.layers_[
                         layer_kw['incoming']]
@@ -233,11 +262,7 @@ class NeuralNet(BaseEstimator):
 
         return layer
 
-    def _create_iter_funcs(self, layers, objective, update, input_type,
-                           output_type):
-
-        first_layer = list(self.layers_.values())[0]
-        X_batch = first_layer.input_var
+    def _create_iter_funcs(self, layers, objective, update, output_type):
         y_batch = output_type('y_batch')
 
         output_layer = list(layers.values())[-1]
@@ -260,8 +285,12 @@ class NeuralNet(BaseEstimator):
         update_params = self._get_params_for('update')
         updates = update(loss_train, all_params, **update_params)
 
-        X_inputs = [theano.Param(X_batch)]
-        inputs = X_inputs + [theano.Param(y_batch)]
+        input_layers = [layer for layer in layers.values()
+                        if isinstance(layer, InputLayer)]
+
+        X_inputs = [theano.Param(input_layer.input_var, name=input_layer.name)
+                    for input_layer in input_layers]
+        inputs = X_inputs + [theano.Param(y_batch, name="y")]
 
         train_iter = theano.function(
             inputs=inputs,
@@ -280,6 +309,8 @@ class NeuralNet(BaseEstimator):
         return train_iter, eval_iter, predict_iter
 
     def fit(self, X, y):
+        self._check_good_input(X, y)
+
         if self.use_label_encoder:
             self.enc_ = LabelEncoder()
             y = self.enc_.fit_transform(y).astype(np.int32)
@@ -333,15 +364,18 @@ class NeuralNet(BaseEstimator):
             t0 = time()
 
             for Xb, yb in self.batch_iterator_train(X_train, y_train):
-                batch_train_loss = self.train_iter_(Xb, yb)
+                batch_train_loss = self.apply_batch_func(
+                    self.train_iter_, Xb, yb)
                 train_losses.append(batch_train_loss)
 
             for Xb, yb in self.batch_iterator_test(X_valid, y_valid):
-                batch_valid_loss, accuracy = self.eval_iter_(Xb, yb)
+                batch_valid_loss, accuracy = self.apply_batch_func(
+                    self.eval_iter_, Xb, yb)
                 valid_losses.append(batch_valid_loss)
                 valid_accuracies.append(accuracy)
+
                 if self.custom_score:
-                    y_prob = self.predict_iter_(Xb)
+                    y_prob = self.apply_batch_func(self.predict_iter_, Xb)
                     custom_score.append(self.custom_score[1](yb, y_prob))
 
             avg_train_loss = np.mean(train_losses)
@@ -377,10 +411,20 @@ class NeuralNet(BaseEstimator):
         for func in on_training_finished:
             func(self, self.train_history_)
 
+    @staticmethod
+    def apply_batch_func(func, Xb, yb=None):
+        if isinstance(Xb, dict):
+            kwargs = dict(Xb)
+            if yb is not None:
+                kwargs['y'] = yb
+            return func(**kwargs)
+        else:
+            return func(Xb) if yb is None else func(Xb, yb)
+
     def predict_proba(self, X):
         probas = []
         for Xb, yb in self.batch_iterator_test(X):
-            probas.append(self.predict_iter_(Xb))
+            probas.append(self.apply_batch_func(self.predict_iter_, Xb))
         return np.vstack(probas)
 
     def predict(self, X):
@@ -404,11 +448,11 @@ class NeuralNet(BaseEstimator):
                 kf = StratifiedKFold(y, round(1. / eval_size))
 
             train_indices, valid_indices = next(iter(kf))
-            X_train, y_train = X[train_indices], y[train_indices]
-            X_valid, y_valid = X[valid_indices], y[valid_indices]
+            X_train, y_train = _sldict(X, train_indices), y[train_indices]
+            X_valid, y_valid = _sldict(X, valid_indices), y[valid_indices]
         else:
             X_train, y_train = X, y
-            X_valid, y_valid = X[len(X):], y[len(y):]
+            X_valid, y_valid = _sldict(X, slice(len(X), None)), y[len(y):]
 
         return X_train, X_valid, y_train, y_valid
 

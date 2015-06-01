@@ -1,7 +1,9 @@
 import pickle
 
+from lasagne.layers import ConcatLayer
 from lasagne.layers import DenseLayer
 from lasagne.layers import InputLayer
+from lasagne.layers import Layer
 from lasagne.nonlinearities import identity
 from lasagne.nonlinearities import softmax
 from lasagne.objectives import categorical_crossentropy
@@ -86,7 +88,6 @@ def test_lasagne_functional_grid_search(mnist, monkeypatch):
 
     nn = NeuralNet(
         layers=[],
-        X_tensor_type=T.matrix,
         )
 
     param_grid = {
@@ -141,7 +142,6 @@ def test_clone():
         objective=Objective,
         objective_loss_function=categorical_crossentropy,
         batch_iterator_train=BatchIterator(batch_size=100),
-        X_tensor_type=T.matrix,
         y_tensor_type=T.ivector,
         use_label_encoder=False,
         on_epoch_finished=None,
@@ -162,6 +162,7 @@ def test_clone():
         'output_nonlinearity',
         'loss',
         'objective',
+        'X_tensor_type',
         'on_epoch_finished',
         'on_training_started',
         'on_training_finished',
@@ -257,8 +258,9 @@ class TestCheckForUnusedKwargs:
 
 class TestInitializeLayers:
     def test_initialization(self, NeuralNet):
-        input, hidden1, hidden2, output = [
-            Mock(__name__='MockLayer') for i in range(4)]
+        input = Mock(__name__='InputLayer', __bases__=(InputLayer,))
+        hidden1, hidden2, output = [
+            Mock(__name__='MockLayer', __bases__=(Layer,)) for i in range(3)]
         nn = NeuralNet(
             layers=[
                 (input, {'shape': (10, 10), 'name': 'input'}),
@@ -290,8 +292,9 @@ class TestInitializeLayers:
         assert out is nn.layers_['output']
 
     def test_initialization_legacy(self, NeuralNet):
-        input, hidden1, hidden2, output = [
-            Mock(__name__='MockLayer') for i in range(4)]
+        input = Mock(__name__='InputLayer', __bases__=(InputLayer,))
+        hidden1, hidden2, output = [
+            Mock(__name__='MockLayer', __bases__=(Layer,)) for i in range(3)]
         nn = NeuralNet(
             layers=[
                 ('input', input),
@@ -322,8 +325,9 @@ class TestInitializeLayers:
         assert out is nn.layers_['output']
 
     def test_diamond(self, NeuralNet):
-        input, hidden1, hidden2, concat, output = [
-            Mock(__name__='MockLayer') for i in range(5)]
+        input = Mock(__name__='InputLayer', __bases__=(InputLayer,))
+        hidden1, hidden2, concat, output = [
+            Mock(__name__='MockLayer', __bases__=(Layer,)) for i in range(4)]
         nn = NeuralNet(
             layers=[
                 ('input', input),
@@ -346,3 +350,92 @@ class TestInitializeLayers:
             name='concat'
             )
         output.assert_called_with(incoming=concat.return_value, name='output')
+
+
+class TestCheckGoodInput:
+    @pytest.fixture
+    def check_good_input(self, NeuralNet):
+        return NeuralNet._check_good_input
+
+    def test_X_and_y_OK(self, check_good_input):
+        check_good_input(
+            np.arange(100).reshape(10, 10),
+            np.arange(10),
+            )
+
+    def test_X_and_y_length_mismatch(self, check_good_input):
+        with pytest.raises(ValueError):
+            check_good_input(
+                np.arange(90).reshape(9, 10),
+                np.arange(10),
+                )
+
+    def test_X_dict_and_y_length_mismatch(self, check_good_input):
+        with pytest.raises(ValueError):
+            check_good_input({
+                'one': np.arange(100).reshape(10, 10),
+                'two': np.arange(90).reshape(9, 10),
+                },
+                np.arange(10),
+                )
+
+    def test_X_OK(self, check_good_input):
+        check_good_input(
+            np.arange(100).reshape(10, 10),
+            )
+
+    def test_X_dict_length_mismatch(self, check_good_input):
+        with pytest.raises(ValueError):
+            check_good_input({
+                'one': np.arange(100).reshape(10, 10),
+                'two': np.arange(90).reshape(9, 10),
+                })
+
+
+class TestMultiInputFunctional:
+    @pytest.fixture(scope='session')
+    def net(self, NeuralNet):
+        return NeuralNet(
+            layers=[
+                (InputLayer,
+                 {'name': 'input1', 'shape': (None, 392)}),
+                (DenseLayer,
+                 {'name': 'hidden1', 'num_units': 98}),
+                (InputLayer,
+                 {'name': 'input2', 'shape': (None, 392)}),
+                (DenseLayer,
+                 {'name': 'hidden2', 'num_units': 98}),
+                (ConcatLayer,
+                 {'incomings': ['hidden1', 'hidden2']}),
+                (DenseLayer,
+                 {'name': 'hidden3', 'num_units': 98}),
+                (DenseLayer,
+                 {'name': 'output', 'num_units': 10, 'nonlinearity': softmax}),
+                ],
+
+            update=nesterov_momentum,
+            update_learning_rate=0.01,
+            update_momentum=0.9,
+
+            max_epochs=2,
+            verbose=4,
+            )
+
+    @pytest.fixture(scope='session')
+    def net_fitted(self, net, mnist):
+        X, y = mnist
+        X_train, y_train = X[:10000], y[:10000]
+        X_train1, X_train2 = X_train[:, :392], X_train[:, 392:]
+        return net.fit({'input1': X_train1, 'input2': X_train2}, y_train)
+
+    @pytest.fixture(scope='session')
+    def y_pred(self, net_fitted, mnist):
+        X, y = mnist
+        X_test = X[60000:]
+        X_test1, X_test2 = X_test[:, :392], X_test[:, 392:]
+        return net_fitted.predict({'input1': X_test1, 'input2': X_test2})
+
+    def test_accuracy(self, net_fitted, mnist, y_pred):
+        X, y = mnist
+        y_test = y[60000:]
+        assert accuracy_score(y_pred, y_test) > 0.85
