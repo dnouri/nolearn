@@ -251,6 +251,11 @@ class NeuralNet(BaseEstimator):
                 else:
                     layer_kw['incoming'] = layer
 
+            for attr in ('W', 'b'):
+                if isinstance(layer_kw.get(attr), str):
+                    name = layer_kw[attr]
+                    layer_kw[attr] = getattr(self.layers_[name], attr)
+
             try:
                 layer = layer_factory(**layer_kw)
             except TypeError as e:
