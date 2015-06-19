@@ -98,6 +98,9 @@ class PrintLayerInfo:
         pass
 
     def __call__(self, nn, train_history):
+        if train_history:
+            return
+
         message = self._get_greeting(nn)
         print(message)
         print("## Layer information")
