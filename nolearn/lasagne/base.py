@@ -83,6 +83,14 @@ class BatchIterator(object):
         return state
 
 
+class NeuralNetTrainTestSplit(object):
+    def __init__(self, eval_size):
+        self.eval_size = eval_size
+
+    def __call__(self, nn, X, y):
+        return nn.train_test_split(X, y, self.eval_size)
+
+
 class NeuralNet(BaseEstimator):
     """A scikit-learn estimator based on Lasagne.
     """
@@ -97,7 +105,7 @@ class NeuralNet(BaseEstimator):
         batch_iterator_test=BatchIterator(batch_size=128),
         regression=False,
         max_epochs=100,
-        eval_size=0.2,
+        train_test_splitter=None,
         custom_score=None,
         X_tensor_type=None,
         y_tensor_type=None,
@@ -133,7 +141,6 @@ class NeuralNet(BaseEstimator):
         self.batch_iterator_test = batch_iterator_test
         self.regression = regression
         self.max_epochs = max_epochs
-        self.eval_size = eval_size
         self.custom_score = custom_score
         self.y_tensor_type = y_tensor_type
         self.use_label_encoder = use_label_encoder
@@ -148,6 +155,10 @@ class NeuralNet(BaseEstimator):
             # line not to be printed
             self.on_epoch_finished.append(PrintLog())
             self.on_training_started.append(PrintLayerInfo())
+
+        if train_test_splitter is None:
+            train_test_splitter = NeuralNetTrainTestSplit(eval_size=kwargs.pop('eval_size', 0.2))
+        self.train_test_splitter = train_test_splitter
 
         for key in kwargs.keys():
             assert not hasattr(self, key)
@@ -337,8 +348,7 @@ class NeuralNet(BaseEstimator):
         return self
 
     def train_loop(self, X, y):
-        X_train, X_valid, y_train, y_valid = self.train_test_split(
-            X, y, self.eval_size)
+        X_train, X_valid, y_train, y_valid = self.train_test_splitter(self, X, y)
 
         on_epoch_finished = self.on_epoch_finished
         if not isinstance(on_epoch_finished, (list, tuple)):
