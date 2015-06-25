@@ -259,14 +259,15 @@ class NeuralNet(BaseEstimator):
             try:
                 layer_wrapper = layer_kw.pop('layer_wrapper', None)
                 layer = layer_factory(**layer_kw)
-                if layer_wrapper is not None:
-                    layer = layer_wrapper(layer)
             except TypeError as e:
                 msg = ("Failed to instantiate {} with args {}.\n"
                        "Maybe parameter names have changed?".format(
                            layer_factory, layer_kw))
                 chain_exception(TypeError(msg), e)
             self.layers_[layer_kw['name']] = layer
+            if layer_wrapper is not None:
+                layer = layer_wrapper(layer)
+                self.layers_["LW_%s" % layer_kw['name']] = layer
 
         return layer
 
