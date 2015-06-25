@@ -290,7 +290,7 @@ class NeuralNet(BaseEstimator):
         else:
             accuracy = loss_eval
 
-        all_params = self.get_all_params()
+        all_params = self.get_all_params(trainable=True)
         update_params = self._get_params_for('update')
         updates = update(loss_train, all_params, **update_params)
 
@@ -468,9 +468,9 @@ class NeuralNet(BaseEstimator):
     def get_all_layers(self):
         return self.layers_.values()
 
-    def get_all_params(self):
+    def get_all_params(self, **kwargs):
         layers = self.get_all_layers()
-        params = sum([l.get_params() for l in layers], [])
+        params = sum([l.get_params(**kwargs) for l in layers], [])
         return unique(params)
 
     def get_all_params_values(self):
