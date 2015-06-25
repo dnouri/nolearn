@@ -254,7 +254,7 @@ class NeuralNet(BaseEstimator):
             for attr in ('W', 'b'):
                 if isinstance(layer_kw.get(attr), str):
                     name = layer_kw[attr]
-                    layer_kw[attr] = getattr(self.layers_[name], attr)
+                    layer_kw[attr] = getattr(self.layers_[name], attr, None)
 
             try:
                 layer_wrapper = layer_kw.pop('layer_wrapper', None)
