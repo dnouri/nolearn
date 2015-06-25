@@ -257,7 +257,10 @@ class NeuralNet(BaseEstimator):
                     layer_kw[attr] = getattr(self.layers_[name], attr)
 
             try:
+                layer_wrapper = layer_kw.pop('layer_wrapper', None)
                 layer = layer_factory(**layer_kw)
+                if layer_wrapper is not None:
+                    layer = layer_wrapper(layer)
             except TypeError as e:
                 msg = ("Failed to instantiate {} with args {}.\n"
                        "Maybe parameter names have changed?".format(
