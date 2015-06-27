@@ -238,6 +238,10 @@ class NeuralNet(BaseEstimator):
             more_params = self._get_params_for(layer_kw['name'])
             layer_kw.update(more_params)
 
+            if layer_kw['name'] in self.layers_:
+                raise ValueError(
+                    "Two layers with name {}.".format(layer_kw['name']))
+
             # Any layers that aren't subclasses of InputLayer are
             # assumed to require an 'incoming' paramter.  By default,
             # we'll use the previous layer as input:
