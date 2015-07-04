@@ -12,6 +12,8 @@ def plot_loss(net):
     valid_loss = [row['valid_loss'] for row in net.train_history_]
     plt.plot(train_loss, label='train loss')
     plt.plot(valid_loss, label='valid loss')
+    plt.xlabel('epoch')
+    plt.ylabel('loss')
     plt.legend(loc='best')
 
 
