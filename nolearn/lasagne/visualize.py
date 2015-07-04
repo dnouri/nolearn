@@ -184,13 +184,15 @@ def plot_occlusion(net, X, target, square_length=7, figsize=(9, None)):
     net : NeuralNet instance
       The neural net to test.
 
-    X : np.array
-      The input data, should be of shape (b, c, x, y). Only makes
+    X : numpy.array
+      The input data, should be of shape (b, c, 0, 1). Only makes
       sense with image data.
 
-    target : int
-      The true value of the image. If the net makes several predictions,
-      say 10 classes, this indicates which one to look at.
+    target : list or numpy.array of ints
+      The true values of the image. If the net makes several
+      predictions, say 10 classes, this indicates which one to look
+      at. If more than one sample is passed to X, each of them needs
+      its own target.
 
     square_length : int (default=7)
       The length of the side of the square that occludes the image.
@@ -221,7 +223,7 @@ def plot_occlusion(net, X, target, square_length=7, figsize=(9, None)):
 
     for n in range(num_images):
         heat_img = occlusion_heatmap(
-            net, X[n:n + 1, :, :, :], target, square_length
+            net, X[n:n + 1, :, :, :], target[n], square_length
         )
 
         ax = axes if num_images == 1 else axes[n]

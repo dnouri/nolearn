@@ -25,8 +25,8 @@ class TestCNNVisualizeFunctions:
 
     def test_plot_occlusion(self, net_fitted, X_train, y_train):
         from nolearn.lasagne.visualize import plot_occlusion
-        plot_occlusion(net_fitted, X_train[3:4], 0)
-        plot_occlusion(net_fitted, X_train[2:5], 1,
+        plot_occlusion(net_fitted, X_train[3:4], [0])
+        plot_occlusion(net_fitted, X_train[2:5], [1, 2, 3],
                        square_length=3, figsize=(5, 5))
         plt.clf()
         plt.cla()
