@@ -19,6 +19,7 @@ import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.cross_validation import KFold
 from sklearn.cross_validation import StratifiedKFold
+from sklearn.cross_validation import PredefinedSplit
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
@@ -455,10 +456,13 @@ class NeuralNet(BaseEstimator):
 
     def train_test_split(self, X, y, eval_size):
         if eval_size:
-            if self.regression:
-                kf = KFold(y.shape[0], round(1. / eval_size))
+            if isinstance(eval_size, list):
+                kf = PredefinedSplit(test_fold=eval_size)
             else:
-                kf = StratifiedKFold(y, round(1. / eval_size))
+                if self.regression:
+                    kf = KFold(y.shape[0], round(1. / eval_size))
+                else:
+                    kf = StratifiedKFold(y, round(1. / eval_size))
 
             train_indices, valid_indices = next(iter(kf))
             X_train, y_train = _sldict(X, train_indices), y[train_indices]
