@@ -284,23 +284,23 @@ class NeuralNet(BaseEstimator):
         return layer
 
     def _create_iter_funcs(self, layers, objective_loss_function, 
-                           update, output_type, weights, mode):
+                           update, output_type, weights=None, mode='mean'):
         y_batch = output_type('y_batch')
-        weights = T.fmatrix('weights')
-        mode
+        weights_batch = T.fmatrix('weights_batch')
 
         output_layer = list(layers.values())[-1]
 
-        output_train = get_output(output_layer, None, y_batch)
-        output_eval  = get_output(output_layer, None, y_batch, deterministic=True)
+        output_train = get_output(output_layer, None)
+        output_eval  = get_output(output_layer, None, deterministic=True)
         
-        loss_train = objective_loss_function(output_train, y_batch)
-        loss_eval  = objective_loss_function(output_eval, y_batch, deterministic=True)
+        loss_train_fun = objective_loss_function(output_train, y_batch)
+        loss_eval_fun  = objective_loss_function(output_eval , y_batch)
         
-        loss_train = aggregate(loss_train, weights=weights, mode=mode)
-        loss_eval  = aggregate(loss_eval , weights=weights, mode=mode)
+        loss_train = aggregate(loss_train_fun, weights=weights_batch, mode=mode)
+        loss_eval  = aggregate(loss_eval_fun , weights=weights_batch, mode=mode)
         
         predict_proba = get_output(output_layer, None, deterministic=True)
+        
         if not self.regression:
             predict = predict_proba.argmax(axis=1)
             accuracy = T.mean(T.eq(predict, y_batch))
@@ -316,7 +316,7 @@ class NeuralNet(BaseEstimator):
 
         X_inputs = [theano.Param(input_layer.input_var, name=input_layer.name)
                     for input_layer in input_layers]
-        inputs = X_inputs + [theano.Param(y_batch, name="y")]
+        inputs = X_inputs + [theano.Param(y_batch, name="y")] + [theano.Param(weights_batch, name='weights')]
 
         train_iter = theano.function(
             inputs=inputs,
@@ -345,7 +345,7 @@ class NeuralNet(BaseEstimator):
         
         iter_funcs = self._create_iter_funcs(
             self.layers_, self.objective_loss_function, self.update,
-            self.y_tensor_type, weights, mode
+            self.y_tensor_type, weights=weights, mode=mode,
             )
         self.train_iter_, self.eval_iter_, self.predict_iter_ = iter_funcs
 
@@ -444,18 +444,23 @@ class NeuralNet(BaseEstimator):
             func(self, self.train_history_)
 
     @staticmethod
-    def apply_batch_func(func, Xb, yb=None):
+    def apply_batch_func(func, Xb, yb=None, weightsb=None):
         if isinstance(Xb, dict):
             kwargs = dict(Xb)
             if yb is not None:
                 kwargs['y'] = yb
             return func(**kwargs)
         else:
-            return func(Xb) if yb is None else func(Xb, yb)
+            if (yb is None) and (weightsb is None):
+                return func(Xb) 
+            elif weightsb is None:
+                return func(Xb, yb)
+            else:
+                return func(Xb, yb, weightsb)
 
     def predict_proba(self, X):
         probas = []
-        for Xb, yb in self.batch_iterator_test(X):
+        for Xb, yb, _ in self.batch_iterator_test(X):
             probas.append(self.apply_batch_func(self.predict_iter_, Xb))
         return np.vstack(probas)
 
@@ -486,14 +491,20 @@ class NeuralNet(BaseEstimator):
             X_train, y_train = _sldict(X, train_indices), y[train_indices]
             X_valid, y_valid = _sldict(X, valid_indices), y[valid_indices]
             if weights is not None:
-                weights_train = weights[valid_indices]
-                weights_valid = weights[valid_indices]
+                weights_train = weights[train_indices].reshape(-1, 1)
+                weights_valid = weights[valid_indices].reshape(-1, 1)
+            else:
+                weights_train = np.ones(len(train_indices), dtype=np.float32).reshape(-1, 1)
+                weights_valid = np.ones(len(valid_indices), dtype=np.float32).reshape(-1, 1)
         else:
             X_train, y_train = X, y
             X_valid, y_valid = _sldict(X, slice(len(X), None)), y[len(y):]
             if weights is not None:
-                weights_train = weights
+                weights_train = weights.reshape(-1, 1)
                 weights_valid = weights[len(weights):]
+            else:
+                weights_train = np.ones(len(weights), dtype=np.float32).reshape(-1, 1)
+                weights_valid = []
 
         return X_train, X_valid, y_train, y_valid, weights_train, weights_valid
 
