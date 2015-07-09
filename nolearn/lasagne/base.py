@@ -286,7 +286,10 @@ class NeuralNet(BaseEstimator):
     def _create_iter_funcs(self, layers, objective_loss_function, 
                            update, output_type, weights=None, mode='mean'):
         y_batch = output_type('y_batch')
-        weights_batch = T.fmatrix('weights_batch')
+        if self.regression:
+            weights_batch = T.fmatrix('weights_batch')
+        else:
+            weights_batch = T.fvector('weights_batch')
 
         output_layer = list(layers.values())[-1]
 
@@ -456,6 +459,10 @@ class NeuralNet(BaseEstimator):
             elif weightsb is None:
                 return func(Xb, yb)
             else:
+#                print 'debug...'
+#                print np.shape(Xb)
+#                print np.shape(yb)
+#                print np.shape(weightsb)
                 return func(Xb, yb, weightsb)
 
     def predict_proba(self, X):
@@ -491,20 +498,36 @@ class NeuralNet(BaseEstimator):
             X_train, y_train = _sldict(X, train_indices), y[train_indices]
             X_valid, y_valid = _sldict(X, valid_indices), y[valid_indices]
             if weights is not None:
-                weights_train = weights[train_indices].reshape(-1, 1)
-                weights_valid = weights[valid_indices].reshape(-1, 1)
+                if self.regression:
+                    weights_train = weights[train_indices].reshape(-1, 1)
+                    weights_valid = weights[valid_indices].reshape(-1, 1)
+                else:
+                    weights_train = weights[train_indices]
+                    weights_valid = weights[valid_indices]
             else:
-                weights_train = np.ones(len(train_indices), dtype=np.float32).reshape(-1, 1)
-                weights_valid = np.ones(len(valid_indices), dtype=np.float32).reshape(-1, 1)
+                if self.regression:
+                    weights_train = np.ones(len(train_indices), dtype=np.float32).reshape(-1, 1)
+                    weights_valid = np.ones(len(valid_indices), dtype=np.float32).reshape(-1, 1)
+                else:
+                    weights_train = np.ones(len(train_indices), dtype=np.float32)
+                    weights_valid = np.ones(len(valid_indices), dtype=np.float32)
         else:
             X_train, y_train = X, y
             X_valid, y_valid = _sldict(X, slice(len(X), None)), y[len(y):]
             if weights is not None:
-                weights_train = weights.reshape(-1, 1)
-                weights_valid = weights[len(weights):]
+                if self.regression:
+                    weights_train = weights.reshape(-1, 1)
+                    weights_valid = weights[len(weights):]
+                else:
+                    weights_train = weights
+                    weights_valid = weights[len(weights):]
             else:
-                weights_train = np.ones(len(weights), dtype=np.float32).reshape(-1, 1)
-                weights_valid = []
+                if self.regression:
+                    weights_train = np.ones(len(weights), dtype=np.float32).reshape(-1, 1)
+                    weights_valid = []
+                else:
+                    weights_train = np.ones(len(weights), dtype=np.float32)
+                    weights_valid = []
 
         return X_train, X_valid, y_train, y_valid, weights_train, weights_valid
 
