@@ -454,10 +454,6 @@ class NeuralNet(BaseEstimator):
             elif weightsb is None:
                 return func(Xb, yb)
             else:
-#                print 'debug...'
-#                print np.shape(Xb)
-#                print np.shape(yb)
-#                print np.shape(weightsb)
                 return func(Xb, yb, weightsb)
 
     def predict_proba(self, X):
