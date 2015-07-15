@@ -6,4 +6,5 @@ from .handlers import (
 from .base import (
     BatchIterator,
     NeuralNet,
+    TrainSplit,
     )

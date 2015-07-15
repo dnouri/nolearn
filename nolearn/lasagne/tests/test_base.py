@@ -163,7 +163,6 @@ def test_clone():
         'loss',
         'objective',
         'train_split',
-        'train_split_eval_size',
         'eval_size',
         'X_tensor_type',
         'on_epoch_finished',
@@ -205,32 +204,32 @@ def test_lasagne_functional_regression(boston):
 
 class TestTrainSplit:
     @pytest.fixture
-    def train_split(self):
-        from nolearn.lasagne.base import train_split
-        return train_split
+    def TrainSplit(self):
+        from nolearn.lasagne import TrainSplit
+        return TrainSplit
 
-    def test_reproducable(self, train_split, nn):
+    def test_reproducable(self, TrainSplit, nn):
         X, y = np.random.random((100, 10)), np.repeat([0, 1, 2, 3], 25)
-        X_train1, X_valid1, y_train1, y_valid1 = train_split(
-            X, y, nn, eval_size=0.2)
-        X_train2, X_valid2, y_train2, y_valid2 = train_split(
-            X, y, nn, eval_size=0.2)
+        X_train1, X_valid1, y_train1, y_valid1 = TrainSplit(0.2)(
+            X, y, nn)
+        X_train2, X_valid2, y_train2, y_valid2 = TrainSplit(0.2)(
+            X, y, nn)
         assert np.all(X_train1 == X_train2)
         assert np.all(y_valid1 == y_valid2)
 
-    def test_eval_size_zero(self, train_split, nn):
+    def test_eval_size_zero(self, TrainSplit, nn):
         X, y = np.random.random((100, 10)), np.repeat([0, 1, 2, 3], 25)
-        X_train, X_valid, y_train, y_valid = train_split(
-            X, y, nn, eval_size=0.0)
+        X_train, X_valid, y_train, y_valid = TrainSplit(0.0)(
+            X, y, nn)
         assert len(X_train) == len(X)
         assert len(y_train) == len(y)
         assert len(X_valid) == 0
         assert len(y_valid) == 0
 
-    def test_eval_size_half(self, train_split, nn):
+    def test_eval_size_half(self, TrainSplit, nn):
         X, y = np.random.random((100, 10)), np.repeat([0, 1, 2, 3], 25)
-        X_train, X_valid, y_train, y_valid = train_split(
-            X, y, nn, eval_size=0.51)
+        X_train, X_valid, y_train, y_valid = TrainSplit(0.51)(
+            X, y, nn)
         assert len(X_train) + len(X_valid) == 100
         assert len(y_train) + len(y_valid) == 100
         assert len(X_train) > 45
@@ -248,7 +247,7 @@ class TestTrainTestSplitBackwardCompatibility:
 
     def test_legacy_eval_size(self, NeuralNet):
         net = NeuralNet([], eval_size=0.3, max_epochs=0)
-        assert net.train_split_eval_size == 0.3
+        assert net.train_split.eval_size == 0.3
 
     def test_legacy_method_default_eval_size(self, LegacyNet):
         net = LegacyNet([], max_epochs=0)
