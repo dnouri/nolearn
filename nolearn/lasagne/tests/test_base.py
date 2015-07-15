@@ -19,6 +19,25 @@ from sklearn.metrics import mean_absolute_error
 import theano.tensor as T
 
 
+class TestLayers:
+    @pytest.fixture
+    def layers(self):
+        from nolearn.lasagne.base import Layers
+        return Layers([('one', 1), ('two', 2), ('three', 3)])
+
+    def test_getitem_with_key(self, layers):
+        assert layers['one'] == 1
+
+    def test_getitem_with_index(self, layers):
+        assert layers[0] == 1
+
+    def test_keys_returns_list(self, layers):
+        assert layers.keys() == ['one', 'two', 'three']
+
+    def test_values_returns_list(self, layers):
+        assert layers.values() == [1, 2, 3]
+
+
 class TestFunctionalMNIST:
     def test_accuracy(self, net_fitted, mnist, y_pred):
         X, y = mnist

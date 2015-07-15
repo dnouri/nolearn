@@ -106,7 +106,7 @@ class PrintLayerInfo:
         print("## Layer information")
         print("")
 
-        layers_contain_conv2d = is_conv2d(list(nn.layers_.values()))
+        layers_contain_conv2d = is_conv2d(nn.layers_.values())
         if not layers_contain_conv2d or (nn.verbose < 2):
             layer_info = self._get_layer_info_plain(nn)
             legend = None

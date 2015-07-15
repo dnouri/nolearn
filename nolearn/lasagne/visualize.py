@@ -146,7 +146,7 @@ def occlusion_heatmap(net, x, target, square_length=7):
         raise ValueError("Square length has to be an odd number, instead "
                          "got {}.".format(square_length))
 
-    num_classes = list(net.layers_.values())[-1].num_units
+    num_classes = net.layers_[-1].num_units
     img = x[0].copy()
     shape = x.shape
 

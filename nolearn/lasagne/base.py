@@ -45,6 +45,20 @@ def _sldict(arr, sl):
         return arr[sl]
 
 
+class Layers(OrderedDict):
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return list(self.values()).__getitem__(key)
+        else:
+            return super(Layers, self).__getitem__(key)
+
+    def keys(self):
+        return list(super(Layers, self).keys())
+
+    def values(self):
+        return list(super(Layers, self).values())
+
+
 class BatchIterator(object):
     def __init__(self, batch_size):
         self.batch_size = batch_size
@@ -117,7 +131,7 @@ def objective(layers,
               target,
               aggregate=aggregate,
               **kwargs):
-    output_layer = list(layers.values())[-1]
+    output_layer = layers[-1]
     network_output = get_output(output_layer, **kwargs)
     losses = loss_function(network_output, target)
     return aggregate(losses)
@@ -219,7 +233,7 @@ class NeuralNet(BaseEstimator):
                 )
 
     def _check_for_unused_kwargs(self):
-        names = list(self.layers_.keys()) + ['update', 'objective']
+        names = self.layers_.keys() + ['update', 'objective']
         for k in self._kwarg_keys:
             for n in names:
                 prefix = '{}_'.format(n)
@@ -273,7 +287,7 @@ class NeuralNet(BaseEstimator):
     def initialize_layers(self, layers=None):
         if layers is not None:
             self.layers = layers
-        self.layers_ = OrderedDict()
+        self.layers_ = Layers()
 
         layer = None
         for i, layer_def in enumerate(self.layers):
@@ -334,7 +348,7 @@ class NeuralNet(BaseEstimator):
     def _create_iter_funcs(self, layers, objective, update, output_type):
         y_batch = output_type('y_batch')
 
-        output_layer = list(layers.values())[-1]
+        output_layer = layers[-1]
         objective_kw = self._get_params_for('objective')
 
         loss_train = objective(
