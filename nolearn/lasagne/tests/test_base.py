@@ -156,6 +156,9 @@ def test_clone():
     params1 = nn.get_params()
     params2 = nn2.get_params()
 
+    assert (params1['train_test_splitter'].eval_size ==
+        params2['train_test_splitter'].eval_size)
+
     for ignore in (
         'batch_iterator_train',
         'batch_iterator_test',
@@ -167,6 +170,8 @@ def test_clone():
         'on_training_started',
         'on_training_finished',
         'custom_score',
+        'eval_size',
+        'train_test_splitter',
         ):
         for par in (params, params1, params2):
             par.pop(ignore, None)
