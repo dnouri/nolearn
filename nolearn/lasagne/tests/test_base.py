@@ -236,6 +236,33 @@ class TestTrainSplit:
         assert len(X_train) > 45
 
 
+class TestTrainTestSplitBackwardCompatibility:
+    @pytest.fixture
+    def LegacyNet(self, NeuralNet):
+        class LegacyNet(NeuralNet):
+            def train_test_split(self, X, y, eval_size):
+                self.__call_args__ = (X, y, eval_size)
+                split = int(X.shape[0] * eval_size)
+                return X[:split], X[split:], y[:split], y[split:]
+        return LegacyNet
+
+    def test_legacy_eval_size(self, NeuralNet):
+        net = NeuralNet([], eval_size=0.3, max_epochs=0)
+        assert net.train_split_eval_size == 0.3
+
+    def test_legacy_method_default_eval_size(self, LegacyNet):
+        net = LegacyNet([], max_epochs=0)
+        X, y = np.ones((10, 3)), np.zeros(10)
+        net.train_loop(X, y)
+        assert net.__call_args__ == (X, y, 0.2)
+
+    def test_legacy_method_given_eval_size(self, LegacyNet):
+        net = LegacyNet([], eval_size=0.3, max_epochs=0)
+        X, y = np.ones((10, 3)), np.zeros(10)
+        net.train_loop(X, y)
+        assert net.__call_args__ == (X, y, 0.3)
+
+
 class TestCheckForUnusedKwargs:
     def test_okay(self, NeuralNet):
         net = NeuralNet(

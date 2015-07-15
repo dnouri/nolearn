@@ -100,6 +100,14 @@ def train_split(X, y, net, eval_size=0.2):
     return X_train, X_valid, y_train, y_valid
 
 
+class LegacyTrainTestSplit:  # BBB
+    def __init__(self, nn):
+        self.nn = nn
+
+    def __call__(self, X, y, net, eval_size=0.2):
+        return net.train_test_split(X, y, eval_size)
+
+
 class NeuralNet(BaseEstimator):
     """A scikit-learn estimator based on Lasagne.
     """
@@ -138,6 +146,11 @@ class NeuralNet(BaseEstimator):
             warn("The 'eval_size' argument has been deprecated, please use "
                  "'train_split_eval_size' instead.")
             kwargs['train_split_eval_size'] = kwargs.pop('eval_size')
+
+        if hasattr(self, 'train_test_split'):  # BBB
+            warn("The 'train_test_split' method has been deprecated, please "
+                 "use the 'train_split' parameter instead.")
+            train_split = LegacyTrainTestSplit(self)
 
         if y_tensor_type is None:
             y_tensor_type = T.fmatrix if regression else T.ivector
