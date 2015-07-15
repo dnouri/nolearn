@@ -147,7 +147,7 @@ def test_clone():
         on_epoch_finished=None,
         on_training_finished=None,
         max_epochs=100,
-        eval_size=0.1,
+        eval_size=0.1,  # BBB
         verbose=0,
         )
     nn = NeuralNet(**params)
@@ -162,6 +162,9 @@ def test_clone():
         'output_nonlinearity',
         'loss',
         'objective',
+        'train_split',
+        'train_split_eval_size',
+        'eval_size',
         'X_tensor_type',
         'on_epoch_finished',
         'on_training_started',
@@ -200,29 +203,34 @@ def test_lasagne_functional_regression(boston):
     assert mean_absolute_error(nn.predict(X[300:]), y[300:]) < 3.0
 
 
-class TestTrainTestSplit:
-    def test_reproducable(self, nn):
+class TestTrainSplit:
+    @pytest.fixture
+    def train_split(self):
+        from nolearn.lasagne.base import train_split
+        return train_split
+
+    def test_reproducable(self, train_split, nn):
         X, y = np.random.random((100, 10)), np.repeat([0, 1, 2, 3], 25)
-        X_train1, X_valid1, y_train1, y_valid1 = nn.train_test_split(
-            X, y, eval_size=0.2)
-        X_train2, X_valid2, y_train2, y_valid2 = nn.train_test_split(
-            X, y, eval_size=0.2)
+        X_train1, X_valid1, y_train1, y_valid1 = train_split(
+            X, y, nn, eval_size=0.2)
+        X_train2, X_valid2, y_train2, y_valid2 = train_split(
+            X, y, nn, eval_size=0.2)
         assert np.all(X_train1 == X_train2)
         assert np.all(y_valid1 == y_valid2)
 
-    def test_eval_size_zero(self, nn):
+    def test_eval_size_zero(self, train_split, nn):
         X, y = np.random.random((100, 10)), np.repeat([0, 1, 2, 3], 25)
-        X_train, X_valid, y_train, y_valid = nn.train_test_split(
-            X, y, eval_size=0.0)
+        X_train, X_valid, y_train, y_valid = train_split(
+            X, y, nn, eval_size=0.0)
         assert len(X_train) == len(X)
         assert len(y_train) == len(y)
         assert len(X_valid) == 0
         assert len(y_valid) == 0
 
-    def test_eval_size_half(self, nn):
+    def test_eval_size_half(self, train_split, nn):
         X, y = np.random.random((100, 10)), np.repeat([0, 1, 2, 3], 25)
-        X_train, X_valid, y_train, y_valid = nn.train_test_split(
-            X, y, eval_size=0.51)
+        X_train, X_valid, y_train, y_valid = train_split(
+            X, y, nn, eval_size=0.51)
         assert len(X_train) + len(X_valid) == 100
         assert len(y_train) + len(y_valid) == 100
         assert len(X_train) > 45
