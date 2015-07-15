@@ -120,7 +120,7 @@ class NeuralNet(BaseEstimator):
                 "'objective_loss_function' instead.")  # BBB
         if objective is not None:
             raise ValueError(
-                "The 'objective' parameter was removed to leverage"
+                "The 'objective' parameter was removed to leverage "
                 "the refactored aggregate lasagne capability")
         if objective_loss_function is None:
             objective_loss_function = (
@@ -202,11 +202,6 @@ class NeuralNet(BaseEstimator):
             out = self._output_layer = self.initialize_layers()
         self._check_for_unused_kwargs()
 
-#        iter_funcs = self._create_iter_funcs(
-#            self.layers_, self.objective_loss_function, self.update,
-#            self.y_tensor_type,
-#            )
-#        self.train_iter_, self.eval_iter_, self.predict_iter_ = iter_funcs
         self._initialized = True
 
     def _get_params_for(self, name):
@@ -506,8 +501,8 @@ class NeuralNet(BaseEstimator):
                     weights_valid = weights[valid_indices]
             else:
                 if self.regression:
-                    weights_train = np.ones(len(train_indices), dtype=np.float32).reshape(-1, 1)
-                    weights_valid = np.ones(len(valid_indices), dtype=np.float32).reshape(-1, 1)
+                    weights_train = np.ones((len(train_indices), 1), dtype=np.float32)
+                    weights_valid = np.ones((len(valid_indices), 1), dtype=np.float32)
                 else:
                     weights_train = np.ones(len(train_indices), dtype=np.float32)
                     weights_valid = np.ones(len(valid_indices), dtype=np.float32)
@@ -523,7 +518,7 @@ class NeuralNet(BaseEstimator):
                     weights_valid = weights[len(weights):]
             else:
                 if self.regression:
-                    weights_train = np.ones(len(weights), dtype=np.float32).reshape(-1, 1)
+                    weights_train = np.ones((len(weights), 1), dtype=np.float32)
                     weights_valid = []
                 else:
                     weights_train = np.ones(len(weights), dtype=np.float32)
