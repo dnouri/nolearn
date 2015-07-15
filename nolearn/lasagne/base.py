@@ -12,13 +12,14 @@ from lasagne.layers import get_output
 from lasagne.layers import InputLayer
 from lasagne.objectives import categorical_crossentropy
 from lasagne.objectives import mse
-from lasagne.objectives import Objective
+from lasagne.objectives import aggregate
 from lasagne.updates import nesterov_momentum
 from lasagne.utils import unique
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.cross_validation import KFold
 from sklearn.cross_validation import StratifiedKFold
+from sklearn.cross_validation import PredefinedSplit
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
@@ -49,8 +50,8 @@ class BatchIterator(object):
     def __init__(self, batch_size):
         self.batch_size = batch_size
 
-    def __call__(self, X, y=None):
-        self.X, self.y = X, y
+    def __call__(self, X, y=None, weights=None):
+        self.X, self.y, self.weights = X, y, weights
         return self
 
     def __iter__(self):
@@ -62,7 +63,11 @@ class BatchIterator(object):
                 yb = self.y[sl]
             else:
                 yb = None
-            yield self.transform(Xb, yb)
+            if self.weights is not None:
+                weightsb = self.weights[sl]
+            else:
+                weightsb = None
+            yield self.transform(Xb, yb, weightsb)
 
     @property
     def n_samples(self):
@@ -72,8 +77,8 @@ class BatchIterator(object):
         else:
             return len(X)
 
-    def transform(self, Xb, yb):
-        return Xb, yb
+    def transform(self, Xb, yb, weightsb):
+        return Xb, yb, weightsb
 
     def __getstate__(self):
         state = dict(self.__dict__)
@@ -91,7 +96,7 @@ class NeuralNet(BaseEstimator):
         layers,
         update=nesterov_momentum,
         loss=None,
-        objective=Objective,
+        objective=None,
         objective_loss_function=None,
         batch_iterator_train=BatchIterator(batch_size=128),
         batch_iterator_test=BatchIterator(batch_size=128),
@@ -113,6 +118,10 @@ class NeuralNet(BaseEstimator):
             raise ValueError(
                 "The 'loss' parameter was removed, please use "
                 "'objective_loss_function' instead.")  # BBB
+        if objective is not None:
+            raise ValueError(
+                "The 'objective' parameter was removed to leverage "
+                "the refactored aggregate lasagne capability")
         if objective_loss_function is None:
             objective_loss_function = (
                 mse if regression else categorical_crossentropy)
@@ -127,7 +136,6 @@ class NeuralNet(BaseEstimator):
 
         self.layers = layers
         self.update = update
-        self.objective = objective
         self.objective_loss_function = objective_loss_function
         self.batch_iterator_train = batch_iterator_train
         self.batch_iterator_test = batch_iterator_test
@@ -163,7 +171,7 @@ class NeuralNet(BaseEstimator):
                 )
 
     def _check_for_unused_kwargs(self):
-        names = list(self.layers_.keys()) + ['update', 'objective']
+        names = list(self.layers_.keys()) + ['update']
         for k in self._kwarg_keys:
             for n in names:
                 prefix = '{}_'.format(n)
@@ -194,11 +202,6 @@ class NeuralNet(BaseEstimator):
             out = self._output_layer = self.initialize_layers()
         self._check_for_unused_kwargs()
 
-        iter_funcs = self._create_iter_funcs(
-            self.layers_, self.objective, self.update,
-            self.y_tensor_type,
-            )
-        self.train_iter_, self.eval_iter_, self.predict_iter_ = iter_funcs
         self._initialized = True
 
     def _get_params_for(self, name):
@@ -275,19 +278,27 @@ class NeuralNet(BaseEstimator):
 
         return layer
 
-    def _create_iter_funcs(self, layers, objective, update, output_type):
+    def _create_iter_funcs(self, layers, objective_loss_function, 
+                           update, output_type, weights=None, mode='mean'):
         y_batch = output_type('y_batch')
+        if self.regression:
+            weights_batch = T.fmatrix('weights_batch')
+        else:
+            weights_batch = T.fvector('weights_batch')
 
         output_layer = list(layers.values())[-1]
-        objective_params = self._get_params_for('objective')
-        obj = objective(output_layer, **objective_params)
-        if not hasattr(obj, 'layers'):
-            # XXX breaking the Lasagne interface a little:
-            obj.layers = layers
 
-        loss_train = obj.get_loss(None, y_batch)
-        loss_eval = obj.get_loss(None, y_batch, deterministic=True)
+        output_train = get_output(output_layer, None)
+        output_eval  = get_output(output_layer, None, deterministic=True)
+        
+        loss_train_fun = objective_loss_function(output_train, y_batch)
+        loss_eval_fun  = objective_loss_function(output_eval , y_batch)
+        
+        loss_train = aggregate(loss_train_fun, weights=weights_batch, mode=mode)
+        loss_eval  = aggregate(loss_eval_fun , weights=weights_batch, mode=mode)
+        
         predict_proba = get_output(output_layer, None, deterministic=True)
+        
         if not self.regression:
             predict = predict_proba.argmax(axis=1)
             accuracy = T.mean(T.eq(predict, y_batch))
@@ -303,7 +314,7 @@ class NeuralNet(BaseEstimator):
 
         X_inputs = [theano.Param(input_layer.input_var, name=input_layer.name)
                     for input_layer in input_layers]
-        inputs = X_inputs + [theano.Param(y_batch, name="y")]
+        inputs = X_inputs + [theano.Param(y_batch, name="y")] + [theano.Param(weights_batch, name='weights')]
 
         train_iter = theano.function(
             inputs=inputs,
@@ -321,7 +332,7 @@ class NeuralNet(BaseEstimator):
 
         return train_iter, eval_iter, predict_iter
 
-    def fit(self, X, y):
+    def fit(self, X, y, weights=None, mode='mean'):
         self._check_good_input(X, y)
 
         if self.use_label_encoder:
@@ -329,16 +340,22 @@ class NeuralNet(BaseEstimator):
             y = self.enc_.fit_transform(y).astype(np.int32)
             self.classes_ = self.enc_.classes_
         self.initialize()
+        
+        iter_funcs = self._create_iter_funcs(
+            self.layers_, self.objective_loss_function, self.update,
+            self.y_tensor_type, weights=weights, mode=mode,
+            )
+        self.train_iter_, self.eval_iter_, self.predict_iter_ = iter_funcs
 
         try:
-            self.train_loop(X, y)
+            self.train_loop(X, y, weights)
         except KeyboardInterrupt:
             pass
         return self
 
-    def train_loop(self, X, y):
-        X_train, X_valid, y_train, y_valid = self.train_test_split(
-            X, y, self.eval_size)
+    def train_loop(self, X, y, weights):
+        X_train, X_valid, y_train, y_valid, weights_train, weights_valid = self.train_test_split(
+            X, y, weights, self.eval_size)
 
         on_epoch_finished = self.on_epoch_finished
         if not isinstance(on_epoch_finished, (list, tuple)):
@@ -376,20 +393,20 @@ class NeuralNet(BaseEstimator):
 
             t0 = time()
 
-            for Xb, yb in self.batch_iterator_train(X_train, y_train):
+            for Xb, yb, weightsb in self.batch_iterator_train(X_train, y_train, weights_train):
                 batch_train_loss = self.apply_batch_func(
-                    self.train_iter_, Xb, yb)
+                    self.train_iter_, Xb, yb, weightsb)
                 train_losses.append(batch_train_loss)
 
-            for Xb, yb in self.batch_iterator_test(X_valid, y_valid):
+            for Xb, yb, weightsb in self.batch_iterator_test(X_valid, y_valid, weights_valid):
                 batch_valid_loss, accuracy = self.apply_batch_func(
-                    self.eval_iter_, Xb, yb)
+                    self.eval_iter_, Xb, yb, weightsb)
                 valid_losses.append(batch_valid_loss)
                 valid_accuracies.append(accuracy)
 
                 if self.custom_score:
                     y_prob = self.apply_batch_func(self.predict_iter_, Xb)
-                    custom_score.append(self.custom_score[1](yb, y_prob))
+                    custom_score.append(self.custom_score[1](yb, y_prob, weights))
 
             avg_train_loss = np.mean(train_losses)
             avg_valid_loss = np.mean(valid_losses)
@@ -425,18 +442,23 @@ class NeuralNet(BaseEstimator):
             func(self, self.train_history_)
 
     @staticmethod
-    def apply_batch_func(func, Xb, yb=None):
+    def apply_batch_func(func, Xb, yb=None, weightsb=None):
         if isinstance(Xb, dict):
             kwargs = dict(Xb)
             if yb is not None:
                 kwargs['y'] = yb
             return func(**kwargs)
         else:
-            return func(Xb) if yb is None else func(Xb, yb)
+            if (yb is None) and (weightsb is None):
+                return func(Xb) 
+            elif weightsb is None:
+                return func(Xb, yb)
+            else:
+                return func(Xb, yb, weightsb)
 
     def predict_proba(self, X):
         probas = []
-        for Xb, yb in self.batch_iterator_test(X):
+        for Xb, yb, _ in self.batch_iterator_test(X):
             probas.append(self.apply_batch_func(self.predict_iter_, Xb))
         return np.vstack(probas)
 
@@ -453,21 +475,52 @@ class NeuralNet(BaseEstimator):
         score = mean_squared_error if self.regression else accuracy_score
         return float(score(self.predict(X), y))
 
-    def train_test_split(self, X, y, eval_size):
+    def train_test_split(self, X, y, weights, eval_size):
         if eval_size:
-            if self.regression:
-                kf = KFold(y.shape[0], round(1. / eval_size))
+            if isinstance(eval_size, list):
+                kf = PredefinedSplit(test_fold=eval_size)
             else:
-                kf = StratifiedKFold(y, round(1. / eval_size))
+                if self.regression:
+                    kf = KFold(y.shape[0], round(1. / eval_size))
+                else:
+                    kf = StratifiedKFold(y, round(1. / eval_size))
 
             train_indices, valid_indices = next(iter(kf))
             X_train, y_train = _sldict(X, train_indices), y[train_indices]
             X_valid, y_valid = _sldict(X, valid_indices), y[valid_indices]
+            if weights is not None:
+                if self.regression:
+                    weights_train = weights[train_indices].reshape(-1, 1)
+                    weights_valid = weights[valid_indices].reshape(-1, 1)
+                else:
+                    weights_train = weights[train_indices]
+                    weights_valid = weights[valid_indices]
+            else:
+                if self.regression:
+                    weights_train = np.ones((len(train_indices), 1), dtype=np.float32)
+                    weights_valid = np.ones((len(valid_indices), 1), dtype=np.float32)
+                else:
+                    weights_train = np.ones(len(train_indices), dtype=np.float32)
+                    weights_valid = np.ones(len(valid_indices), dtype=np.float32)
         else:
             X_train, y_train = X, y
             X_valid, y_valid = _sldict(X, slice(len(X), None)), y[len(y):]
+            if weights is not None:
+                if self.regression:
+                    weights_train = weights.reshape(-1, 1)
+                    weights_valid = weights[len(weights):]
+                else:
+                    weights_train = weights
+                    weights_valid = weights[len(weights):]
+            else:
+                if self.regression:
+                    weights_train = np.ones((len(weights), 1), dtype=np.float32)
+                    weights_valid = []
+                else:
+                    weights_train = np.ones(len(weights), dtype=np.float32)
+                    weights_valid = []
 
-        return X_train, X_valid, y_train, y_valid
+        return X_train, X_valid, y_train, y_valid, weights_train, weights_valid
 
     def get_all_layers(self):
         return self.layers_.values()
