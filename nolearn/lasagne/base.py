@@ -130,9 +130,13 @@ def objective(layers,
               loss_function,
               target,
               aggregate=aggregate,
-              **kwargs):
+              deterministic=False,
+              get_output_kw=None):
+    if get_output_kw is None:
+        get_output_kw = {}
     output_layer = layers[-1]
-    network_output = get_output(output_layer, **kwargs)
+    network_output = get_output(
+        output_layer, deterministic=deterministic, **get_output_kw)
     losses = loss_function(network_output, target)
     return aggregate(losses)
 

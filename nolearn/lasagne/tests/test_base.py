@@ -221,6 +221,38 @@ def test_lasagne_functional_regression(boston):
     assert mean_absolute_error(nn.predict(X[300:]), y[300:]) < 3.0
 
 
+class TestDefaultObjective:
+    @pytest.fixture
+    def get_output(self, monkeypatch):
+        from nolearn.lasagne import base
+        get_output_mock = Mock()
+        monkeypatch.setattr(base, 'get_output', get_output_mock)
+        return get_output_mock
+
+    @pytest.fixture
+    def objective(self):
+        from nolearn.lasagne.base import objective
+        return objective
+
+    def test_with_defaults(self, objective, get_output):
+        loss_function, target = Mock(), Mock()
+        loss_function.return_value = np.array([1, 2, 3])
+        result = objective(
+            [1, 2, 3], loss_function=loss_function, target=target)
+        assert result == 2.0
+        get_output.assert_called_with(3, deterministic=False)
+        loss_function.assert_called_with(get_output.return_value, target)
+
+    def test_with_get_output_kw(self, objective, get_output):
+        loss_function, target = Mock(), Mock()
+        loss_function.return_value = np.array([1, 2, 3])
+        objective(
+            [1, 2, 3], loss_function=loss_function, target=target,
+            get_output_kw={'i_was': 'here'},
+            )
+        get_output.assert_called_with(3, deterministic=False, i_was='here')
+
+
 class TestTrainSplit:
     @pytest.fixture
     def TrainSplit(self):
