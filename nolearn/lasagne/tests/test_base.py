@@ -7,7 +7,6 @@ from lasagne.layers import Layer
 from lasagne.nonlinearities import identity
 from lasagne.nonlinearities import softmax
 from lasagne.objectives import categorical_crossentropy
-from lasagne.objectives import Objective
 from lasagne.updates import nesterov_momentum
 from mock import Mock
 from mock import patch
@@ -18,6 +17,28 @@ from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_absolute_error
 import theano.tensor as T
+
+
+class TestLayers:
+    @pytest.fixture
+    def layers(self):
+        from nolearn.lasagne.base import Layers
+        return Layers([('one', 1), ('two', 2), ('three', 3)])
+
+    def test_getitem_with_key(self, layers):
+        assert layers['one'] == 1
+
+    def test_getitem_with_index(self, layers):
+        assert layers[0] == 1
+
+    def test_getitem_with_slice(self, layers):
+        assert layers[:2] == [1, 2]
+
+    def test_keys_returns_list(self, layers):
+        assert layers.keys() == ['one', 'two', 'three']
+
+    def test_values_returns_list(self, layers):
+        assert layers.values() == [1, 2, 3]
 
 
 class TestFunctionalMNIST:
@@ -120,6 +141,7 @@ def test_lasagne_functional_grid_search(mnist, monkeypatch):
 def test_clone():
     from nolearn.lasagne import NeuralNet
     from nolearn.lasagne import BatchIterator
+    from nolearn.lasagne import objective
 
     params = dict(
         layers=[
@@ -139,7 +161,7 @@ def test_clone():
         update_momentum=0.9,
 
         regression=False,
-        objective=Objective,
+        objective=objective,
         objective_loss_function=categorical_crossentropy,
         batch_iterator_train=BatchIterator(batch_size=100),
         y_tensor_type=T.ivector,
@@ -200,6 +222,38 @@ def test_lasagne_functional_regression(boston):
 
     nn.fit(X[:300], y[:300])
     assert mean_absolute_error(nn.predict(X[300:]), y[300:]) < 3.0
+
+
+class TestDefaultObjective:
+    @pytest.fixture
+    def get_output(self, monkeypatch):
+        from nolearn.lasagne import base
+        get_output_mock = Mock()
+        monkeypatch.setattr(base, 'get_output', get_output_mock)
+        return get_output_mock
+
+    @pytest.fixture
+    def objective(self):
+        from nolearn.lasagne.base import objective
+        return objective
+
+    def test_with_defaults(self, objective, get_output):
+        loss_function, target = Mock(), Mock()
+        loss_function.return_value = np.array([1, 2, 3])
+        result = objective(
+            [1, 2, 3], loss_function=loss_function, target=target)
+        assert result == 2.0
+        get_output.assert_called_with(3, deterministic=False)
+        loss_function.assert_called_with(get_output.return_value, target)
+
+    def test_with_get_output_kw(self, objective, get_output):
+        loss_function, target = Mock(), Mock()
+        loss_function.return_value = np.array([1, 2, 3])
+        objective(
+            [1, 2, 3], loss_function=loss_function, target=target,
+            get_output_kw={'i_was': 'here'},
+            )
+        get_output.assert_called_with(3, deterministic=False, i_was='here')
 
 
 class TestTrainSplit:

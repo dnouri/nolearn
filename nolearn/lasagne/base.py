@@ -10,9 +10,9 @@ import pdb
 
 from lasagne.layers import get_output
 from lasagne.layers import InputLayer
+from lasagne.objectives import aggregate
 from lasagne.objectives import categorical_crossentropy
-from lasagne.objectives import mse
-from lasagne.objectives import Objective
+from lasagne.objectives import squared_error
 from lasagne.updates import nesterov_momentum
 from lasagne.utils import unique
 import numpy as np
@@ -43,6 +43,20 @@ def _sldict(arr, sl):
         return {k: v[sl] for k, v in arr.items()}
     else:
         return arr[sl]
+
+
+class Layers(OrderedDict):
+    def __getitem__(self, key):
+        if isinstance(key, (int, slice)):
+            return list(self.values()).__getitem__(key)
+        else:
+            return super(Layers, self).__getitem__(key)
+
+    def keys(self):
+        return list(super(Layers, self).keys())
+
+    def values(self):
+        return list(super(Layers, self).values())
 
 
 class BatchIterator(object):
@@ -112,6 +126,21 @@ class LegacyTrainTestSplit(object):  # BBB
         return net.train_test_split(X, y, self.eval_size)
 
 
+def objective(layers,
+              loss_function,
+              target,
+              aggregate=aggregate,
+              deterministic=False,
+              get_output_kw=None):
+    if get_output_kw is None:
+        get_output_kw = {}
+    output_layer = layers[-1]
+    network_output = get_output(
+        output_layer, deterministic=deterministic, **get_output_kw)
+    losses = loss_function(network_output, target)
+    return aggregate(losses)
+
+
 class NeuralNet(BaseEstimator):
     """A scikit-learn estimator based on Lasagne.
     """
@@ -119,8 +148,8 @@ class NeuralNet(BaseEstimator):
         self,
         layers,
         update=nesterov_momentum,
-        loss=None,
-        objective=Objective,
+        loss=None,  # BBB
+        objective=objective,
         objective_loss_function=None,
         batch_iterator_train=BatchIterator(batch_size=128),
         batch_iterator_test=BatchIterator(batch_size=128),
@@ -142,9 +171,13 @@ class NeuralNet(BaseEstimator):
             raise ValueError(
                 "The 'loss' parameter was removed, please use "
                 "'objective_loss_function' instead.")  # BBB
+        if hasattr(objective, 'get_loss'):
+            raise ValueError(
+                "The 'Objective' class is no longer supported, please "
+                "use 'nolearn.lasagne.objective' or similar.")  # BBB
         if objective_loss_function is None:
             objective_loss_function = (
-                mse if regression else categorical_crossentropy)
+                squared_error if regression else categorical_crossentropy)
 
         if hasattr(self, 'train_test_split'):  # BBB
             warn("The 'train_test_split' method has been deprecated, please "
@@ -204,7 +237,7 @@ class NeuralNet(BaseEstimator):
                 )
 
     def _check_for_unused_kwargs(self):
-        names = list(self.layers_.keys()) + ['update', 'objective']
+        names = self.layers_.keys() + ['update', 'objective']
         for k in self._kwarg_keys:
             for n in names:
                 prefix = '{}_'.format(n)
@@ -258,7 +291,7 @@ class NeuralNet(BaseEstimator):
     def initialize_layers(self, layers=None):
         if layers is not None:
             self.layers = layers
-        self.layers_ = OrderedDict()
+        self.layers_ = Layers()
 
         layer = None
         for i, layer_def in enumerate(self.layers):
@@ -319,15 +352,13 @@ class NeuralNet(BaseEstimator):
     def _create_iter_funcs(self, layers, objective, update, output_type):
         y_batch = output_type('y_batch')
 
-        output_layer = list(layers.values())[-1]
-        objective_params = self._get_params_for('objective')
-        obj = objective(output_layer, **objective_params)
-        if not hasattr(obj, 'layers'):
-            # XXX breaking the Lasagne interface a little:
-            obj.layers = layers
+        output_layer = layers[-1]
+        objective_kw = self._get_params_for('objective')
 
-        loss_train = obj.get_loss(None, y_batch)
-        loss_eval = obj.get_loss(None, y_batch, deterministic=True)
+        loss_train = objective(
+            layers, target=y_batch, **objective_kw)
+        loss_eval = objective(
+            layers, target=y_batch, deterministic=True, **objective_kw)
         predict_proba = get_output(output_layer, None, deterministic=True)
         if not self.regression:
             predict = predict_proba.argmax(axis=1)
