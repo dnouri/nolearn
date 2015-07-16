@@ -31,6 +31,9 @@ class TestLayers:
     def test_getitem_with_index(self, layers):
         assert layers[0] == 1
 
+    def test_getitem_with_slice(self, layers):
+        assert layers[:2] == [1, 2]
+
     def test_keys_returns_list(self, layers):
         assert layers.keys() == ['one', 'two', 'three']
 

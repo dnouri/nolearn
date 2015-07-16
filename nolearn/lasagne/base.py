@@ -47,7 +47,7 @@ def _sldict(arr, sl):
 
 class Layers(OrderedDict):
     def __getitem__(self, key):
-        if isinstance(key, int):
+        if isinstance(key, (int, slice)):
             return list(self.values()).__getitem__(key)
         else:
             return super(Layers, self).__getitem__(key)
