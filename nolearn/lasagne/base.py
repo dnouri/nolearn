@@ -83,6 +83,35 @@ class BatchIterator(object):
         return state
 
 
+class TrainSplit(object):
+    def __init__(self, eval_size):
+        self.eval_size = eval_size
+
+    def __call__(self, X, y, net):
+        if self.eval_size:
+            if net.regression:
+                kf = KFold(y.shape[0], round(1. / self.eval_size))
+            else:
+                kf = StratifiedKFold(y, round(1. / self.eval_size))
+
+            train_indices, valid_indices = next(iter(kf))
+            X_train, y_train = _sldict(X, train_indices), y[train_indices]
+            X_valid, y_valid = _sldict(X, valid_indices), y[valid_indices]
+        else:
+            X_train, y_train = X, y
+            X_valid, y_valid = _sldict(X, slice(len(X), None)), y[len(y):]
+
+        return X_train, X_valid, y_train, y_valid
+
+
+class LegacyTrainTestSplit(object):  # BBB
+    def __init__(self, eval_size=0.2):
+        self.eval_size = eval_size
+
+    def __call__(self, X, y, net):
+        return net.train_test_split(X, y, self.eval_size)
+
+
 class NeuralNet(BaseEstimator):
     """A scikit-learn estimator based on Lasagne.
     """
@@ -97,7 +126,7 @@ class NeuralNet(BaseEstimator):
         batch_iterator_test=BatchIterator(batch_size=128),
         regression=False,
         max_epochs=100,
-        eval_size=0.2,
+        train_split=TrainSplit(eval_size=0.2),
         custom_score=None,
         X_tensor_type=None,
         y_tensor_type=None,
@@ -117,6 +146,18 @@ class NeuralNet(BaseEstimator):
             objective_loss_function = (
                 mse if regression else categorical_crossentropy)
 
+        if hasattr(self, 'train_test_split'):  # BBB
+            warn("The 'train_test_split' method has been deprecated, please "
+                 "use the 'train_split' parameter instead.")
+            train_split = LegacyTrainTestSplit(
+                eval_size=kwargs.pop('eval_size', 0.2))
+
+        if 'eval_size' in kwargs:  # BBB
+            warn("The 'eval_size' argument has been deprecated, please use "
+                 "the 'train_split' parameter instead, e.g.\n"
+                 "train_split=TrainSplit(eval_size=0.4)")
+            train_split.eval_size = kwargs.pop('eval_size')
+
         if y_tensor_type is None:
             y_tensor_type = T.fmatrix if regression else T.ivector
 
@@ -133,7 +174,7 @@ class NeuralNet(BaseEstimator):
         self.batch_iterator_test = batch_iterator_test
         self.regression = regression
         self.max_epochs = max_epochs
-        self.eval_size = eval_size
+        self.train_split = train_split
         self.custom_score = custom_score
         self.y_tensor_type = y_tensor_type
         self.use_label_encoder = use_label_encoder
@@ -337,8 +378,7 @@ class NeuralNet(BaseEstimator):
         return self
 
     def train_loop(self, X, y):
-        X_train, X_valid, y_train, y_valid = self.train_test_split(
-            X, y, self.eval_size)
+        X_train, X_valid, y_train, y_valid = self.train_split(X, y, self)
 
         on_epoch_finished = self.on_epoch_finished
         if not isinstance(on_epoch_finished, (list, tuple)):
@@ -452,22 +492,6 @@ class NeuralNet(BaseEstimator):
     def score(self, X, y):
         score = mean_squared_error if self.regression else accuracy_score
         return float(score(self.predict(X), y))
-
-    def train_test_split(self, X, y, eval_size):
-        if eval_size:
-            if self.regression:
-                kf = KFold(y.shape[0], round(1. / eval_size))
-            else:
-                kf = StratifiedKFold(y, round(1. / eval_size))
-
-            train_indices, valid_indices = next(iter(kf))
-            X_train, y_train = _sldict(X, train_indices), y[train_indices]
-            X_valid, y_valid = _sldict(X, valid_indices), y[valid_indices]
-        else:
-            X_train, y_train = X, y
-            X_valid, y_valid = _sldict(X, slice(len(X), None)), y[len(y):]
-
-        return X_train, X_valid, y_train, y_valid
 
     def get_all_layers(self):
         return self.layers_.values()
