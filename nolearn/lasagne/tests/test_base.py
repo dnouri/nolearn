@@ -288,6 +288,31 @@ class TestTrainSplit:
         assert len(y_train) + len(y_valid) == 100
         assert len(X_train) > 45
 
+    def test_regression(self, TrainSplit, nn):
+        X = np.random.random((100, 10))
+        y = np.random.random((100))
+        nn.regression = True
+        X_train, X_valid, y_train, y_valid = TrainSplit(0.2)(
+            X, y, nn)
+        assert len(X_train) == len(y_train) == 80
+        assert len(X_valid) == len(y_valid) == 20
+
+    def test_stratified(self, TrainSplit, nn):
+        X = np.random.random((100, 10))
+        y = np.hstack([np.repeat([0, 0, 0], 25), np.repeat([1], 25)])
+        X_train, X_valid, y_train, y_valid = TrainSplit(0.2)(
+            X, y, nn)
+        assert y_train.sum() == 0.8 * 25
+        assert y_valid.sum() == 0.2 * 25
+
+    def test_not_stratified(self, TrainSplit, nn):
+        X = np.random.random((100, 10))
+        y = np.hstack([np.repeat([0, 0, 0], 25), np.repeat([1], 25)])
+        X_train, X_valid, y_train, y_valid = TrainSplit(0.2, stratify=False)(
+            X, y, nn)
+        assert y_train.sum() == 25
+        assert y_valid.sum() == 0
+
 
 class TestTrainTestSplitBackwardCompatibility:
     @pytest.fixture

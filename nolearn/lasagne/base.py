@@ -98,12 +98,13 @@ class BatchIterator(object):
 
 
 class TrainSplit(object):
-    def __init__(self, eval_size):
+    def __init__(self, eval_size, stratify=True):
         self.eval_size = eval_size
+        self.stratify = stratify
 
     def __call__(self, X, y, net):
         if self.eval_size:
-            if net.regression:
+            if net.regression or not self.stratify:
                 kf = KFold(y.shape[0], round(1. / self.eval_size))
             else:
                 kf = StratifiedKFold(y, round(1. / self.eval_size))
