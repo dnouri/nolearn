@@ -147,7 +147,7 @@ def get_conv_infos(net, min_capacity=100. / 6, detailed=False):
     real_filters = get_real_filter(layers, img_size)
     receptive_fields = get_receptive_field(layers, img_size)
     capacity = 100. * real_filters / receptive_fields
-    capacity[np.negative(np.isfinite(capacity))] = 1
+    capacity[np.logical_not(np.isfinite(capacity))] = 1
     img_coverage = 100. * receptive_fields / img_size
     layer_names = [layer.name if layer.name
                    else str(layer).rsplit('.')[-1].split(' ')[0]
