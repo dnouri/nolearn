@@ -387,14 +387,17 @@ class NeuralNet(BaseEstimator):
             inputs=inputs,
             outputs=[loss_train],
             updates=updates,
+            allow_input_downcast=True,
             )
         eval_iter = theano.function(
             inputs=inputs,
             outputs=[loss_eval, accuracy],
+            allow_input_downcast=True,
             )
         predict_iter = theano.function(
             inputs=X_inputs,
             outputs=predict_proba,
+            allow_input_downcast=True,
             )
 
         return train_iter, eval_iter, predict_iter
