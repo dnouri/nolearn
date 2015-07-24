@@ -16,7 +16,10 @@ from sklearn.base import clone
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_absolute_error
+import theano
 import theano.tensor as T
+
+floatX = theano.config.floatX
 
 
 class TestLayers:
@@ -467,42 +470,65 @@ class TestInitializeLayers:
 
 class TestCheckGoodInput:
     @pytest.fixture
-    def check_good_input(self, NeuralNet):
-        return NeuralNet._check_good_input
+    def check_good_input(self, nn):
+        return nn._check_good_input
 
-    def test_X_and_y_OK(self, check_good_input):
-        check_good_input(
-            np.arange(100).reshape(10, 10),
-            np.arange(10),
-            )
+    @pytest.fixture
+    def X(self):
+        return np.arange(100).reshape(10, 10).astype(floatX)
 
-    def test_X_and_y_length_mismatch(self, check_good_input):
+    @pytest.fixture
+    def y(self):
+        return np.arange(10).astype(np.int32)
+
+    @pytest.fixture
+    def y_regr(self):
+        return np.arange(10).reshape(-1, 1).astype(floatX)
+
+    def test_X_OK(self, check_good_input, X):
+        assert check_good_input(X) == (X, None)
+
+    def test_X_and_y_OK(self, check_good_input, X, y):
+        assert check_good_input(X, y) == (X, y)
+
+    def test_X_and_y_OK_regression(self, nn, check_good_input, X, y_regr):
+        nn.regression = True
+        assert check_good_input(X, y_regr) == (X, y_regr)
+
+    def test_X_and_y_length_mismatch(self, check_good_input, X, y):
         with pytest.raises(ValueError):
             check_good_input(
-                np.arange(90).reshape(9, 10),
-                np.arange(10),
+                X[:9],
+                y
                 )
 
-    def test_X_dict_and_y_length_mismatch(self, check_good_input):
+    def test_X_dict_and_y_length_mismatch(self, check_good_input, X, y):
         with pytest.raises(ValueError):
-            check_good_input({
-                'one': np.arange(100).reshape(10, 10),
-                'two': np.arange(90).reshape(9, 10),
-                },
-                np.arange(10),
+            check_good_input(
+                {'one': X, 'two': X},
+                y[:9],
                 )
 
-    def test_X_OK(self, check_good_input):
-        check_good_input(
-            np.arange(100).reshape(10, 10),
-            )
-
-    def test_X_dict_length_mismatch(self, check_good_input):
+    def test_X_dict_length_mismatch(self, check_good_input, X):
         with pytest.raises(ValueError):
             check_good_input({
-                'one': np.arange(100).reshape(10, 10),
-                'two': np.arange(90).reshape(9, 10),
+                'one': X,
+                'two': X[:9],
                 })
+
+    def test_y_regression_1dim(self, nn, check_good_input, X, y_regr):
+        y = y_regr.reshape(-1)
+        nn.regression = True
+        X1, y1 = check_good_input(X, y)
+        assert (X1 == X).all()
+        assert (y1 == y.reshape(-1, 1)).all()
+
+    def test_y_regression_2dim(self, nn, check_good_input, X, y_regr):
+        y = y_regr
+        nn.regression = True
+        X1, y1 = check_good_input(X, y)
+        assert (X1 == X).all()
+        assert (y1 == y).all()
 
 
 class TestMultiInputFunctional:
