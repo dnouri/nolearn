@@ -36,10 +36,10 @@ View the `nolearn documentation here
 <http://packages.python.org/nolearn/>`_.
 
 Documentation for *nolearn.lasagne* is unfortunately lacking at this
-point, but we'll hopefully improve this soon.  However, If you're
+point, but we'll hopefully improve this soon.  However, if you're
 looking for specifics around classes and functions out of the
 *lasagne* package, such as layers, updates, and nonlinearities, then
-you'll want to look at `Lasagne's documentation
+you'll want to look at `Lasagne project's documentation
 <http://lasagne.readthedocs.org/>`_.
 
 An extensive tutorial that introduces the basic concepts of
@@ -78,6 +78,11 @@ Lasange to run:
 - `An example convolutional autoencoder
   <https://github.com/mikesj-public/convolutional_autoencoder/blob/master/mnist_conv_autoencode.ipynb>`_
 
+- Winners of the saliency prediction task in the 2015 `LSUN Challenge
+  <http://lsun.cs.princeton.edu/>`_ have published their
+  `lasagne/nolearn-based code
+  <https://imatge.upc.edu/web/resources/end-end-convolutional-networks-saliency-prediction-software>`_.
+  
 Support
 =======
 
