@@ -62,6 +62,10 @@ Lasange to run:
   <https://home.zhaw.ch/~dueo/bbs/files/ConvNets_24_April.pdf>`_ with
   `code <https://github.com/oduerr/dl_tutorial/tree/master/lasagne>`_
 
+- Roelof Pieters' presentation `Python for Image Understanding
+  <http://www.slideshare.net/roelofp/python-for-image-understanding-deep-learning-with-convolutional-neural-nets>`_
+  comes with nolearn.lasagne code examples
+
 - Benjamin Bossan's `Otto Group Product Classification Challenge
   using nolearn/lasagne
   <https://github.com/ottogroup/kaggle/blob/master/Otto_Group_Competition.ipynb>`_
