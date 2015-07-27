@@ -109,3 +109,9 @@ users list <https://groups.google.com/d/forum/lasagne-users>`_, or use
 Stack Overflow.  Please refrain from contacting the authors for
 non-commercial support requests directly; public forums are the right
 place for these.
+
+License
+=======
+
+See the `LICENSE.txt <LICENSE.txt>`_ file for license rights and
+limitations (MIT).
