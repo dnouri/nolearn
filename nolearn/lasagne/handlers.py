@@ -97,7 +97,7 @@ class PrintLayerInfo:
     def __init__(self):
         pass
 
-    def __call__(self, nn, train_history):
+    def __call__(self, nn, train_history=None):
         if train_history:
             return
 
