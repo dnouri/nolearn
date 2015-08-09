@@ -39,8 +39,9 @@ class PrintLog:
         if not nn.regression:
             info_tabulate['valid acc'] = info['valid_accuracy']
 
-        if nn.custom_score:
-            info_tabulate[nn.custom_score[0]] = info[nn.custom_score[0]]
+        if nn.custom_scores:
+            for custom_score in nn.custom_scores:
+                info_tabulate[custom_score[0]] = info[custom_score[0]]
 
         info_tabulate['dur'] = "{:.2f}s".format(info['dur'])
 
