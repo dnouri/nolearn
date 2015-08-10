@@ -20,7 +20,7 @@ def test_print_log(mnist):
 
     nn = Mock(
         regression=False,
-        custom_score=('my_score', 0.99),
+        custom_scores=[('my_score', 0.99)],
         )
 
     train_history = [{

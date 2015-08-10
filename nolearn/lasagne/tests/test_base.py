@@ -246,7 +246,7 @@ def test_clone():
         'on_batch_finished',
         'on_training_started',
         'on_training_finished',
-        'custom_score',
+        'custom_scores'
         ):
         for par in (params, params1, params2):
             par.pop(ignore, None)
