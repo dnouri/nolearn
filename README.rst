@@ -35,27 +35,28 @@ Documentation
 View the `nolearn documentation here
 <http://packages.python.org/nolearn/>`_.
 
-Documentation for *nolearn.lasagne* is unfortunately lacking at this
-point, but we'll hopefully improve this soon.  However, if you're
-looking for specifics around classes and functions out of the
-*lasagne* package, such as layers, updates, and nonlinearities, then
-you'll want to look at `Lasagne project's documentation
-<http://lasagne.readthedocs.org/>`_.
+If you're looking for how to use *nolearn.lasagne*, then there's two
+introductory tutorials that you can choose from:
 
-An extensive tutorial that introduces the basic concepts of
-*nolearn.lasagne* and uses it to train a model that detects facial
-keypoints is `available here
-<http://danielnouri.org/notes/2014/12/17/using-convolutional-neural-nets-to-detect-facial-keypoints-tutorial/>`_.
-The code for the tutorial is `also available
-<https://github.com/dnouri/kfkd-tutorial>`_.
+- `Using convolutional neural nets to detect facial keypoints tutorial
+  <http://danielnouri.org/notes/2014/12/17/using-convolutional-neural-nets-to-detect-facial-keypoints-tutorial/>`_
+  with `code <https://github.com/dnouri/kfkd-tutorial>`_
+
+- `Training convolutional neural networks with nolearn
+  <http://nbviewer.ipython.org/github/dnouri/nolearn/blob/master/docs/notebooks/CNN_tutorial.ipynb>`_
+  
+For specifics around classes and functions out of the *lasagne*
+package, such as layers, updates, and nonlinearities, you'll want to
+look at the `Lasagne project's documentation
+<http://lasagne.readthedocs.org/>`_.
 
 *nolearn.lasagne* comes with a `number of tests
 <https://github.com/dnouri/nolearn/tree/master/nolearn/lasagne/tests>`_
 that demonstrate some of the more advanced features, such as networks
 with merge layers, and networks with multiple inputs.
 
-Finally, there's a few examples and docs from around the web.  Note
-that some of these might need a specific version of nolearn and
+Finally, there's a few presentations and examples from around the web.
+Note that some of these might need a specific version of nolearn and
 Lasange to run:
 
 - Oliver Dürr's `Convolutional Neural Nets II Hands On
