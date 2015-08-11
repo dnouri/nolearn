@@ -26,7 +26,8 @@ Modules
    decaf
    inischema
    metrics
-  
+   lasagne
+
 
 Installation
 ============
