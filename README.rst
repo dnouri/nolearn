@@ -10,24 +10,20 @@ utility modules.  All code is written to be compatible with
 Installation
 ============
 
-To use the latest version of *nolearn* from Git, use these commands to
-get a copy from Github and install all dependencies::
+We recommend using `virtualenv
+<http://www.dabapps.com/blog/introduction-to-pip-and-virtualenv-python/>`_
+to install nolearn.
 
-  git clone git@github.com:dnouri/nolearn.git
-  cd nolearn
-  pip install -r requirements.txt
-  python setup.py develop
+To install the latest version of nolearn from Git using `pip
+<http://www.pip-installer.org>`_, run the following commands::
 
-You probably want to use `virtualenv <https://virtualenv.pypa.io>`_
-when installing nolearn.
+  pip install -r https://raw.githubusercontent.com/dnouri/nolearn/master/requirements.txt
+  pip install https://github.com/dnouri/nolearn/archive/master.zip#egg=nolearn
 
-Should you ever update your Git checkout (i.e. with ``git pull``),
-make sure to re-run the ``pip install -r requirements.txt`` step
-again.
+To instead install the release from PyPI (which is somewhat old at
+this point), do::
 
-A somewhat old version of nolearn is available on `PyPI
-<https://pypi.python.org/pypi/nolearn>`_ and can be installed with
-*pip*.
+  pip install nolearn    
 
 Documentation
 =============

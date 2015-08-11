@@ -16,6 +16,24 @@ PyPI <http://pypi.python.org/pypi/nolearn>`_.
 .. _build status: http://travis-ci.org/dnouri/nolearn
 
 
+Installation
+============
+
+We recommend using `virtualenv
+<http://www.dabapps.com/blog/introduction-to-pip-and-virtualenv-python/>`_
+to install nolearn.
+
+To install the latest version of nolearn from Git using `pip
+<http://www.pip-installer.org>`_, run the following commands::
+
+  pip install -r https://raw.githubusercontent.com/dnouri/nolearn/master/requirements.txt
+  pip install https://github.com/dnouri/nolearn/archive/master.zip#egg=nolearn
+
+To install the release from PyPI (which is somewhat old at this
+point)::
+
+  pip install nolearn    
+
 Modules
 =======
 
@@ -25,26 +43,9 @@ Modules
    cache
    decaf
    inischema
+   lasagne
    metrics
   
-
-Installation
-============
-
-Install via `pip <http://www.pip-installer.org>`_:
-
-.. code-block:: bash
-
-  $ pip install nolearn
-
-nolearn does not declare ``numpy`` or ``scipy`` as dependencies.  So
-you may have to install these separately *before* installing nolearn:
-
-.. code-block:: bash
-
-  $ pip install numpy
-  $ pip install scipy
-
 
 Indices and tables
 ==================

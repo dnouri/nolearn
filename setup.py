@@ -16,6 +16,7 @@ install_requires = [
     'matplotlib',
     'scikit-learn',
     'tabulate',
+    'Lasagne',
     ]
 
 tests_require = [
