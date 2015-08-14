@@ -391,16 +391,16 @@ class TestInitializeLayers:
 
         input.assert_called_with(
             name='input', shape=(10, 10))
-        nn.layers_['input'] is input.return_value
+        assert nn.layers_['input'] is input.return_value
 
         hidden1.assert_called_with(
             incoming=input.return_value, name='mock1',
             some='iwin', another='param')
-        nn.layers_['mock1'] is hidden1.return_value
+        assert nn.layers_['mock1'] is hidden1.return_value
 
         hidden2.assert_called_with(
             incoming=hidden1.return_value, name='mock2')
-        nn.layers_['mock2'] is hidden2.return_value
+        assert nn.layers_['mock2'] is hidden2.return_value
 
         output.assert_called_with(
             incoming=hidden2.return_value, name='output')
@@ -425,15 +425,15 @@ class TestInitializeLayers:
 
         input.assert_called_with(
             name='input', shape=(10, 10))
-        nn.layers_['input'] is input.return_value
+        assert nn.layers_['input'] is input.return_value
 
         hidden1.assert_called_with(
             incoming=input.return_value, name='hidden1', some='param')
-        nn.layers_['hidden1'] is hidden1.return_value
+        assert nn.layers_['hidden1'] is hidden1.return_value
 
         hidden2.assert_called_with(
             incoming=hidden1.return_value, name='hidden2')
-        nn.layers_['hidden2'] is hidden2.return_value
+        assert nn.layers_['hidden2'] is hidden2.return_value
 
         output.assert_called_with(
             incoming=hidden2.return_value, name='output')
