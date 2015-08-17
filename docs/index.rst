@@ -27,7 +27,7 @@ To install the latest version of nolearn from Git using `pip
 <http://www.pip-installer.org>`_, run the following commands::
 
   pip install -r https://raw.githubusercontent.com/dnouri/nolearn/master/requirements.txt
-  pip install https://github.com/dnouri/nolearn/archive/master.zip#egg=nolearn
+  pip install git+https://github.com/dnouri/nolearn.git@master
 
 To install the release from PyPI (which is somewhat old at this
 point)::
