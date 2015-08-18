@@ -2,6 +2,7 @@ from collections import OrderedDict
 from datetime import datetime
 from functools import reduce
 import operator
+import sys
 
 from tabulate import tabulate
 
@@ -17,6 +18,7 @@ class PrintLog:
 
     def __call__(self, nn, train_history):
         print(self.table(nn, train_history))
+        sys.stdout.flush()
 
     def table(self, nn, train_history):
         info = train_history[-1]
@@ -116,6 +118,7 @@ class PrintLayerInfo:
         if legend is not None:
             print(legend)
         print("")
+        sys.stdout.flush()
 
     @staticmethod
     def _get_greeting(nn):
