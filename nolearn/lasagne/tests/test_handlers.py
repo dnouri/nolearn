@@ -161,10 +161,10 @@ class TestPrintLayerInfo():
             output_nonlinearity=softmax,
 
             more_params=dict(
-                conv1_filter_size=(5, 5), conv1_num_filters=16,
-                conv2_filter_size=(3, 3), conv2_num_filters=16,
-                pool2_pool_size=(8, 8),
-                conv3_filter_size=(3, 3), conv3_num_filters=16,
+                conv1_filter_size=5, conv1_num_filters=16,
+                conv2_filter_size=3, conv2_num_filters=16,
+                pool2_pool_size=8, pool2_ignore_border=False,
+                conv3_filter_size=3, conv3_num_filters=16,
                 hidden1_num_units=16,
                 ),
 
