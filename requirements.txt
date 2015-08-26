@@ -3,5 +3,5 @@ joblib==0.8.4
 matplotlib
 scikit-learn==0.15.2
 tabulate==0.7.5
-git+https://github.com/Theano/Theano.git@36d1eca8#egg=Theano==0.8.git
-git+https://github.com/Lasagne/Lasagne.git@30ea8e5#egg=Lasagne==0.1.git
+git+https://github.com/Theano/Theano.git@15c90dd3#egg=Theano==0.8.git
+git+https://github.com/Lasagne/Lasagne.git@b6f1250e#egg=Lasagne==0.2.git
