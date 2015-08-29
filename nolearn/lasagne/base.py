@@ -593,7 +593,7 @@ class NeuralNet(BaseEstimator):
             raise ValueError(
                 "Loading weights from a list of parameter values is no "
                 "longer supported.  Please send me something like the "
-                "return value of 'net.get_all_param_values()' instead.")
+                "return value of 'net.get_all_params_values()' instead.")
 
         return self.load_params_from(source)
 
