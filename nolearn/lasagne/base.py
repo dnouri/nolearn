@@ -48,8 +48,11 @@ def _sldict(arr, sl):
 
 class Layers(OrderedDict):
     def __getitem__(self, key):
-        if isinstance(key, (int, slice)):
+        if isinstance(key, int):
             return list(self.values()).__getitem__(key)
+        elif isinstance(key, slice):
+            keys = list(self.keys()).__getitem__(key)
+            return Layers([(k, self[k]) for k in keys])
         else:
             return super(Layers, self).__getitem__(key)
 
