@@ -403,7 +403,7 @@ class NeuralNet(BaseEstimator):
 
         return train_iter, eval_iter, predict_iter
 
-    def fit(self, X, y):
+    def fit(self, X, y, epochs=None):
         X, y = self._check_good_input(X, y)
 
         if self.use_label_encoder:
@@ -413,12 +413,16 @@ class NeuralNet(BaseEstimator):
         self.initialize()
 
         try:
-            self.train_loop(X, y)
+            self.train_loop(X, y, epochs=epochs)
         except KeyboardInterrupt:
             pass
         return self
 
-    def train_loop(self, X, y):
+    def partial_fit(self, X, y, classes=None):
+        return self.fit(X, y, epochs=1)
+
+    def train_loop(self, X, y, epochs=None):
+        epochs = epochs or self.max_epochs
         X_train, X_valid, y_train, y_valid = self.train_split(X, y, self)
 
         on_epoch_finished = self.on_epoch_finished
@@ -447,7 +451,7 @@ class NeuralNet(BaseEstimator):
 
         num_epochs_past = len(self.train_history_)
 
-        while epoch < self.max_epochs:
+        while epoch < epochs:
             epoch += 1
 
             train_losses = []
