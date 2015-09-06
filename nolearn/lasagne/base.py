@@ -51,8 +51,8 @@ class Layers(OrderedDict):
         if isinstance(key, int):
             return list(self.values()).__getitem__(key)
         elif isinstance(key, slice):
-            keys = list(self.keys()).__getitem__(key)
-            return Layers([(k, self[k]) for k in keys])
+            items = list(self.items()).__getitem__(key)
+            return Layers(items)
         else:
             return super(Layers, self).__getitem__(key)
 
