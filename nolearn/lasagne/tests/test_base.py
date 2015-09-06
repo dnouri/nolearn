@@ -206,17 +206,12 @@ def test_lasagne_functional_regression(boston):
 
     X, y = boston
 
-    nn = NeuralNet(
-        layers=[
-            ('input', InputLayer),
-            ('hidden1', DenseLayer),
-            ('output', DenseLayer),
-            ],
-        input_shape=(128, 13),
-        hidden1_num_units=100,
-        output_nonlinearity=identity,
-        output_num_units=1,
+    layer1 = InputLayer(shape=(128, 13))
+    layer2 = DenseLayer(layer1, num_units=100)
+    output = DenseLayer(layer2, num_units=1, nonlinearity=identity)
 
+    nn = NeuralNet(
+        layers=output,
         update_learning_rate=0.01,
         update_momentum=0.1,
         regression=True,
@@ -373,7 +368,21 @@ class TestCheckForUnusedKwargs:
 
 
 class TestInitializeLayers:
-    def test_initialization(self, NeuralNet):
+    def test_initialization_with_layer_instance(self, NeuralNet):
+        layer1 = InputLayer(shape=(128, 13))  # name will be assigned
+        layer2 = DenseLayer(layer1, name='output', num_units=2)  # has name
+        nn = NeuralNet(layers=layer2)
+        out = nn.initialize_layers()
+        assert nn.layers_['output'] == layer2 == out
+        assert nn.layers_['input0'] == layer1
+
+    def test_initialization_with_layer_instance_bad_params(self, NeuralNet):
+        layer = DenseLayer(InputLayer(shape=(128, 13)), num_units=2)
+        nn = NeuralNet(layers=layer, dense1_num_units=3)
+        with pytest.raises(ValueError):
+            nn.initialize_layers()
+
+    def test_initialization_with_tuples(self, NeuralNet):
         input = Mock(__name__='InputLayer', __bases__=(InputLayer,))
         hidden1, hidden2, output = [
             Mock(__name__='MockLayer', __bases__=(Layer,)) for i in range(3)]

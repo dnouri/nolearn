@@ -9,8 +9,10 @@ from warnings import warn
 from time import time
 import pdb
 
+from lasagne.layers import get_all_layers
 from lasagne.layers import get_output
 from lasagne.layers import InputLayer
+from lasagne.layers import Layer
 from lasagne.objectives import aggregate
 from lasagne.objectives import categorical_crossentropy
 from lasagne.objectives import squared_error
@@ -201,6 +203,9 @@ class NeuralNet(BaseEstimator):
                 "The 'X_tensor_type' parameter has been removed. "
                 "It's unnecessary.")  # BBB
 
+        if isinstance(layers, Layer):
+            layers = _list([layers])
+
         self.layers = layers
         self.update = update
         self.objective = objective
@@ -295,11 +300,33 @@ class NeuralNet(BaseEstimator):
 
         return collected
 
+    def _layer_name(self, layer_class, index):
+        return "{}{}".format(
+            layer_class.__name__.lower().replace("layer", ""), index)
+
     def initialize_layers(self, layers=None):
         if layers is not None:
             self.layers = layers
         self.layers_ = Layers()
 
+        if isinstance(self.layers[0], Layer):
+            # 'self.layers[0]' is already the output layer with type
+            # 'lasagne.layers.Layer', so we only have to fill
+            # 'self.layers_' and we're done:
+            for i, layer in enumerate(get_all_layers(self.layers[0])):
+                name = layer.name or self._layer_name(layer.__class__, i)
+                self.layers_[name] = layer
+                if self._get_params_for(name) != {}:
+                    raise ValueError(
+                        "You can't use keyword params when passing a Lasagne "
+                        "instance object as the 'layers' parameter of "
+                        "'NeuralNet'."
+                        )
+            return self.layers[0]
+
+        # 'self.layers' are a list of '(Layer class, kwargs)', so
+        # we'll have to actually instantiate the layers given the
+        # arguments:
         layer = None
         for i, layer_def in enumerate(self.layers):
 
@@ -313,8 +340,7 @@ class NeuralNet(BaseEstimator):
                 layer_kw = layer_kw.copy()
 
             if 'name' not in layer_kw:
-                layer_kw['name'] = "{}{}".format(
-                    layer_factory.__name__.lower().replace("layer", ""), i)
+                layer_kw['name'] = self._layer_name(layer_factory, i)
 
             more_params = self._get_params_for(layer_kw['name'])
             layer_kw.update(more_params)

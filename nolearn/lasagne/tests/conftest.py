@@ -75,22 +75,16 @@ def y_pred(net_fitted, X_test):
 
 @pytest.fixture(scope='session')
 def net(NeuralNet):
+    l = InputLayer(shape=(None, 1, 28, 28))
+    l = Conv2DLayer(l, name='conv1', filter_size=(5, 5), num_filters=8)
+    l = MaxPool2DLayer(l, name='pool1', pool_size=(2, 2))
+    l = Conv2DLayer(l, name='conv2', filter_size=(5, 5), num_filters=8)
+    l = MaxPool2DLayer(l, name='pool2', pool_size=(2, 2))
+    l = DenseLayer(l, name='hidden1', num_units=128)
+    l = DenseLayer(l, name='output', nonlinearity=softmax, num_units=10)
+
     return NeuralNet(
-        layers=[
-            (InputLayer, {'shape': (None, 1, 28, 28)}),
-            (Conv2DLayer,
-             {'name': 'conv1', 'filter_size': (5, 5), 'num_filters': 8}),
-            (MaxPool2DLayer,
-             {'name': 'pool1', 'pool_size': (2, 2)}),
-            (Conv2DLayer,
-             {'name': 'conv2', 'filter_size': (5, 5), 'num_filters': 8}),
-            (MaxPool2DLayer,
-             {'name': 'pool2', 'pool_size': (2, 2)}),
-            (DenseLayer,
-             {'name': 'hidden1', 'num_units': 128}),
-            (DenseLayer,
-             {'name': 'output', 'nonlinearity': softmax, 'num_units': 10}),
-            ],
+        layers=l,
 
         update=nesterov_momentum,
         update_learning_rate=0.01,
