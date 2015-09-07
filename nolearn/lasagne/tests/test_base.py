@@ -105,6 +105,14 @@ Loaded parameters to layer 'output' (shape 10).
 """
         assert out == message
 
+    def test_partial_fit(self, net, X_train, y_train):
+        net2 = clone(net)
+        assert net2.partial_fit(X_train, y_train) is net2
+        net2.partial_fit(X_train, y_train)
+        history = net2.train_history_
+        assert len(history) == 2
+        assert history[1]['valid_accuracy'] > 0.85
+
 
 def test_lasagne_functional_grid_search(mnist, monkeypatch):
     # Make sure that we can satisfy the grid search interface.
