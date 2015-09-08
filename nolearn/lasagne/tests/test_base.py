@@ -35,7 +35,11 @@ class TestLayers:
         assert layers[0] == 1
 
     def test_getitem_with_slice(self, layers):
-        assert layers[:2] == [1, 2]
+        from nolearn.lasagne.base import Layers
+        sliced = layers[:2]
+        assert isinstance(sliced, Layers)
+        assert sliced.keys() == ['one', 'two']
+        assert sliced.values() == [1, 2]
 
     def test_keys_returns_list(self, layers):
         assert layers.keys() == ['one', 'two', 'three']
