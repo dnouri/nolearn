@@ -30,3 +30,17 @@ class TestCNNVisualizeFunctions:
                        square_length=3, figsize=(5, 5))
         plt.clf()
         plt.cla()
+
+    def test_plot_occlusion_colored_non_square(
+            self, net_color_non_square, X_train, y_train):
+        import numpy as np
+        from nolearn.lasagne.visualize import plot_occlusion
+        X = np.hstack(
+            (X_train[:, :20 * 28], X_train[:, :20 * 28], X_train[:, :20 * 28]))
+        X = X.reshape(-1, 3, 20, 28)
+
+        net_color_non_square.fit(X[:100], y_train[:100])
+        plot_occlusion(net_color_non_square, X[:1], [0])
+        plot_occlusion(net_color_non_square, X[:3], [3, 2, 1])
+        plt.clf()
+        plt.cla()
