@@ -99,3 +99,25 @@ def net(NeuralNet):
 @pytest.fixture(scope='session')
 def net_fitted(net, X_train, y_train):
     return net.fit(X_train, y_train)
+
+
+@pytest.fixture(scope='session')
+def net_color_non_square(NeuralNet):
+    l = InputLayer(shape=(None, 3, 20, 28))
+    l = Conv2DLayer(l, name='conv1', filter_size=(5, 5), num_filters=8)
+    l = MaxPool2DLayer(l, name='pool1', pool_size=(2, 2))
+    l = Conv2DLayer(l, name='conv2', filter_size=(5, 5), num_filters=8)
+    l = MaxPool2DLayer(l, name='pool2', pool_size=(2, 2))
+    l = DenseLayer(l, name='hidden1', num_units=128)
+    l = DenseLayer(l, name='output', nonlinearity=softmax, num_units=10)
+
+    net = NeuralNet(
+        layers=l,
+
+        update=nesterov_momentum,
+        update_learning_rate=0.01,
+        update_momentum=0.9,
+
+        max_epochs=1,
+        )
+    return net
