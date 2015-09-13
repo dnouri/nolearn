@@ -152,20 +152,18 @@ def occlusion_heatmap(net, x, target, square_length=7):
 
     heat_array = np.zeros((s0, s1))
     pad = square_length // 2 + 1
-    x_occluded = np.zeros((s0, s1, col, s0, s1), dtype=img.dtype)
+    x_occluded = np.zeros((s1, col, s0, s1), dtype=img.dtype)
+    probs = np.zeros((s0, s1, num_classes))
 
     # generate occluded images
     for i in range(s0):
+        # batch s1 occluded images for faster prediction
         for j in range(s1):
             x_pad = np.pad(img, ((0, 0), (pad, pad), (pad, pad)), 'constant')
             x_pad[:, i:i + square_length, j:j + square_length] = 0.
-            x_occluded[i, j] = x_pad[:, pad:-pad, pad:-pad]
-
-    # make batch predictions for each occluded image
-    probs = np.zeros((s0, s1, num_classes))
-    for i in range(s0):
-        y_proba = net.predict_proba(np.squeeze(x_occluded[i:i + 1], 0))
-        probs[i:i + 1] = y_proba.reshape(1, s1, num_classes)
+            x_occluded[j] = x_pad[:, pad:-pad, pad:-pad]
+        y_proba = net.predict_proba(x_occluded)
+        probs[i] = y_proba.reshape(s1, num_classes)
 
     # from predicted probabilities, pick only those of target class
     for i in range(s0):
