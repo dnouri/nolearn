@@ -13,6 +13,8 @@ from mock import patch
 import numpy as np
 import pytest
 from sklearn.base import clone
+from sklearn.datasets import make_classification
+from sklearn.datasets import make_regression
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_absolute_error
@@ -46,6 +48,40 @@ class TestLayers:
 
     def test_values_returns_list(self, layers):
         assert layers.values() == [1, 2, 3]
+
+
+class TestFunctionalToy:
+    def classif(self, NeuralNet, X, y):
+        l = InputLayer(shape=(None, X.shape[1]))
+        l = DenseLayer(l, num_units=len(np.unique(y)), nonlinearity=softmax)
+        net = NeuralNet(l, update_learning_rate=0.01)
+        return net.fit(X, y)
+
+    def regr(self, NeuralNet, X, y):
+        l = InputLayer(shape=(None, X.shape[1]))
+        l = DenseLayer(l, num_units=y.shape[1], nonlinearity=None)
+        net = NeuralNet(l, regression=True, update_learning_rate=0.01)
+        return net.fit(X, y)
+
+    def test_classif_two_classes(self, NeuralNet):
+        X, y = make_classification()
+        y = y.astype(np.int32)
+        self.classif(NeuralNet, X, y)
+
+    def test_classif_ten_classes(self, NeuralNet):
+        X, y = make_classification(n_classes=10, n_informative=10)
+        y = y.astype(np.int32)
+        self.classif(NeuralNet, X, y)
+
+    def test_regr_one_target(self, NeuralNet):
+        X, y = make_regression()
+        y = y.reshape(-1, 1).astype(np.float32)
+        self.regr(NeuralNet, X, y)
+
+    def test_regr_ten_targets(self, NeuralNet):
+        X, y = make_regression(n_targets=10)
+        y = y.astype(np.float32)
+        self.regr(NeuralNet, X, y)
 
 
 class TestFunctionalMNIST:
