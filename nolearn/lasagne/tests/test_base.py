@@ -65,22 +65,26 @@ class TestFunctionalToy:
 
     def test_classif_two_classes(self, NeuralNet):
         X, y = make_classification()
+        X = X.astype(floatX)
         y = y.astype(np.int32)
         self.classif(NeuralNet, X, y)
 
     def test_classif_ten_classes(self, NeuralNet):
         X, y = make_classification(n_classes=10, n_informative=10)
+        X = X.astype(floatX)
         y = y.astype(np.int32)
         self.classif(NeuralNet, X, y)
 
     def test_regr_one_target(self, NeuralNet):
         X, y = make_regression()
+        X = X.astype(floatX)
         y = y.reshape(-1, 1).astype(np.float32)
         self.regr(NeuralNet, X, y)
 
     def test_regr_ten_targets(self, NeuralNet):
         X, y = make_regression(n_targets=10)
-        y = y.astype(np.float32)
+        X = X.astype(floatX)
+        y = y.astype(floatX)
         self.regr(NeuralNet, X, y)
 
 
