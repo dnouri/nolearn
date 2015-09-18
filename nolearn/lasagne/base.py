@@ -31,8 +31,6 @@ from theano import tensor as T
 from . import PrintLog
 from . import PrintLayerInfo
 
-floatX = theano.config.floatX
-
 
 class _list(list):
     pass
@@ -202,7 +200,8 @@ class NeuralNet(BaseEstimator):
 
         if y_tensor_type is None:
             if regression:
-                y_tensor_type = T.fmatrix if floatX.endswith('32') else T.dmatrix
+                y_tensor_type = T.TensorType(
+                    theano.config.floatX, (False, False))
             else:
                 y_tensor_type = T.ivector
 
