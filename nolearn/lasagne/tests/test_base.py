@@ -501,6 +501,24 @@ class TestInitializeLayers:
 
         assert out is nn.layers_['output']
 
+    def test_initialization_legacy_with_unicode_names(self, NeuralNet):
+        # Test whether legacy initialization is triggered; if not,
+        # raises error.
+        input = Mock(__name__='InputLayer', __bases__=(InputLayer,))
+        hidden1, hidden2, output = [
+            Mock(__name__='MockLayer', __bases__=(Layer,)) for i in range(3)]
+        nn = NeuralNet(
+            layers=[
+                (u'input', input),
+                (u'hidden1', hidden1),
+                (u'hidden2', hidden2),
+                (u'output', output),
+                ],
+            input_shape=(10, 10),
+            hidden1_some='param',
+            )
+        nn.initialize_layers()
+
     def test_diamond(self, NeuralNet):
         input = Mock(__name__='InputLayer', __bases__=(InputLayer,))
         hidden1, hidden2, concat, output = [
