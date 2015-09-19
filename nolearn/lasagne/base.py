@@ -337,7 +337,7 @@ class NeuralNet(BaseEstimator):
         layer = None
         for i, layer_def in enumerate(self.layers):
 
-            if isinstance(layer_def[0], str):
+            if isinstance(layer_def[0], (str, unicode)):
                 # The legacy format: ('name', Layer)
                 layer_name, layer_factory = layer_def
                 layer_kw = {'name': layer_name}
