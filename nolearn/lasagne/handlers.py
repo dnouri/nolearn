@@ -105,7 +105,8 @@ class _RestoreBestWeights:
             print("Loaded best weights from epoch {} where {} was {}".format(
                 self.remember.best_weights_epoch,
                 self.remember.score or self.remember.loss,
-                self.remember.best_weights_loss,
+                self.remember.best_weights_loss * (
+                    -1 if self.remember.score else 1),
                 ))
 
 
@@ -115,29 +116,21 @@ class RememberBestWeights:
         self.score = score
         self.verbose = 1
         self.best_weights = None
-        self.best_weights_loss = None
+        self.best_weights_loss = sys.maxsize
         self.best_weights_epoch = None
         self.restore = _RestoreBestWeights(self)
 
     def __call__(self, nn, train_history):
         key = self.score if self.score is not None else self.loss
 
-        if self.best_weights_loss is None:
-            self.best_weights = nn.get_all_params_values()
-            self.best_weights_loss = train_history[-1][key]
-            self.best_weights_epoch = train_history[-1]['epoch']
-            return
+        curr_loss = train_history[-1][key]
+        if self.score:
+            curr_loss *= -1
 
-        if self.score is not None:
-            if train_history[-1][key] > self.best_weights_loss:
-                self.best_weights = nn.get_all_params_values()
-                self.best_weights_loss = train_history[-1][key]
-                self.best_weights_epoch = train_history[-1]['epoch']
-        else:
-            if train_history[-1][key] < self.best_weights_loss:
-                self.best_weights = nn.get_all_params_values()
-                self.best_weights_loss = train_history[-1][key]
-                self.best_weights_epoch = train_history[-1]['epoch']
+        if curr_loss < self.best_weights_loss:
+            self.best_weights = nn.get_all_params_values()
+            self.best_weights_loss = curr_loss
+            self.best_weights_epoch = train_history[-1]['epoch']
 
 
 class PrintLayerInfo:
