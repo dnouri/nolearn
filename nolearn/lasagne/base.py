@@ -7,7 +7,6 @@ from collections import OrderedDict
 import itertools
 from warnings import warn
 from time import time
-import pdb
 
 from lasagne.layers import get_all_layers
 from lasagne.layers import get_output
