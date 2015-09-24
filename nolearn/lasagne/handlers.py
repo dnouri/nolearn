@@ -95,6 +95,44 @@ class SaveWeights:
             nn.save_params_to(path)
 
 
+class _RestoreBestWeights:
+    def __init__(self, remember):
+        self.remember = remember
+
+    def __call__(self, nn, train_history):
+        nn.load_params_from(self.remember.best_weights)
+        if self.remember.verbose:
+            print("Loaded best weights from epoch {} where {} was {}".format(
+                self.remember.best_weights_epoch,
+                self.remember.score or self.remember.loss,
+                self.remember.best_weights_loss * (
+                    -1 if self.remember.score else 1),
+                ))
+
+
+class RememberBestWeights:
+    def __init__(self, loss='valid_loss', score=None, verbose=1):
+        self.loss = loss
+        self.score = score
+        self.verbose = 1
+        self.best_weights = None
+        self.best_weights_loss = sys.maxsize
+        self.best_weights_epoch = None
+        self.restore = _RestoreBestWeights(self)
+
+    def __call__(self, nn, train_history):
+        key = self.score if self.score is not None else self.loss
+
+        curr_loss = train_history[-1][key]
+        if self.score:
+            curr_loss *= -1
+
+        if curr_loss < self.best_weights_loss:
+            self.best_weights = nn.get_all_params_values()
+            self.best_weights_loss = curr_loss
+            self.best_weights_epoch = train_history[-1]['epoch']
+
+
 class PrintLayerInfo:
     def __init__(self):
         pass
