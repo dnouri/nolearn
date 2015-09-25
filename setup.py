@@ -17,6 +17,7 @@ install_requires = [
     'scikit-learn',
     'tabulate',
     'Lasagne',
+    'numpy==1.9.3',
     ]
 
 tests_require = [
