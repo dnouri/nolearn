@@ -103,9 +103,10 @@ class BatchIterator(object):
 
 
 class TrainSplit(object):
-    def __init__(self, eval_size, stratify=True):
+    def __init__(self, eval_size=0.2, stratify=True):
         self.eval_size = eval_size
         self.stratify = stratify
+        self._initialized = True
 
     def __call__(self, X, y, net):
         if self.eval_size:
@@ -161,7 +162,7 @@ class NeuralNet(BaseEstimator):
         batch_iterator_test=BatchIterator(batch_size=128),
         regression=False,
         max_epochs=100,
-        train_split=TrainSplit(eval_size=0.2),
+        train_split=TrainSplit,
         custom_score=None,
         X_tensor_type=None,
         y_tensor_type=None,
@@ -250,7 +251,7 @@ class NeuralNet(BaseEstimator):
                 )
 
     def _check_for_unused_kwargs(self):
-        names = self.layers_.keys() + ['update', 'objective']
+        names = self.layers_.keys() + ['update', 'objective', 'train_split']
         for k in self._kwarg_keys:
             for n in names:
                 prefix = '{}_'.format(n)
@@ -285,6 +286,10 @@ class NeuralNet(BaseEstimator):
         if out is None:
             out = self._output_layer = self.initialize_layers()
         self._check_for_unused_kwargs()
+
+        if not hasattr(self.train_split, '_initialized'):
+            train_split_params = self._get_params_for('train_split')
+            self.train_split = self.train_split(**train_split_params)
 
         iter_funcs = self._create_iter_funcs(
             self.layers_, self.objective, self.update,

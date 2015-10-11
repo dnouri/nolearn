@@ -363,6 +363,29 @@ class TestTrainSplit:
         assert y_train.sum() == 25
         assert y_valid.sum() == 0
 
+    @pytest.fixture
+    def mock_net(self, NeuralNet):
+        nn = NeuralNet([])
+        nn.initialize_layers = Mock()
+        nn._check_for_unused_kwargs = Mock()
+        nn._create_iter_funcs = lambda *args: (1, 2, 3)
+        nn.layers_ = Mock()
+        return nn
+
+    def test_train_split_with_instance(self, TrainSplit, mock_net):
+        mock_net.train_split = TrainSplit(0.987)
+        mock_net.initialize()
+        assert mock_net.train_split.eval_size == 0.987
+
+    def test_train_split_default_eval_size_02(self, TrainSplit, mock_net):
+        mock_net.initialize()
+        assert mock_net.train_split.eval_size == 0.2
+
+    def test_train_split_eval_size_set_in_init(self, TrainSplit, mock_net):
+        mock_net.train_split_eval_size = 0.345
+        mock_net.initialize()
+        assert mock_net.train_split.eval_size == 0.345
+
 
 class TestTrainTestSplitBackwardCompatibility:
     @pytest.fixture
