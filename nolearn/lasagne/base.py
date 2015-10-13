@@ -149,6 +149,7 @@ def objective(layers,
 
 class NeuralNet(BaseEstimator):
     """A scikit-learn estimator based on Lasagne.
+
     """
     def __init__(
         self,
@@ -173,6 +174,32 @@ class NeuralNet(BaseEstimator):
         verbose=0,
         **kwargs
         ):
+        """:param layers: A list of lasagne layers to compose into the final
+                          neural net
+
+        :param on_epoch_finished: A list of functions which are called
+                                 after every epoch.  The functions
+                                 will be passed the NeuralNet as the
+                                 first parameter and its
+                                 train_history_ attribute as the
+                                 second parameter.
+
+        :param on_training_started: A list of functions which are
+                                    called after training has started.
+                                    The functions will be passed the
+                                    NeuralNet as the first parameter
+                                    and its train_history_ attribute
+                                    as the second parameter.
+
+        :param on_training_finished: A list of functions which are
+                                     called after training is
+                                     finished.  The functions will be
+                                     passed the NeuralNet as the first
+                                     parameter and its train_history_
+                                     attribute as the second
+                                     parameter.
+
+        """
         if loss is not None:
             raise ValueError(
                 "The 'loss' parameter was removed, please use "
