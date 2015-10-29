@@ -243,6 +243,7 @@ def test_clone():
         'eval_size',
         'X_tensor_type',
         'on_epoch_finished',
+        'on_batch_finished',
         'on_training_started',
         'on_training_finished',
         'custom_score',

@@ -3,6 +3,7 @@ from .handlers import (
     PrintLog,
     RememberBestWeights,
     SaveWeights,
+    WeightLog,
     )
 from .base import (
     BatchIterator,
