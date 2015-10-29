@@ -12,6 +12,7 @@ from lasagne.layers import get_all_layers
 from lasagne.layers import get_output
 from lasagne.layers import InputLayer
 from lasagne.layers import Layer
+from lasagne import regularization
 from lasagne.objectives import aggregate
 from lasagne.objectives import categorical_crossentropy
 from lasagne.objectives import squared_error
@@ -137,14 +138,23 @@ def objective(layers,
               target,
               aggregate=aggregate,
               deterministic=False,
+              l1=0,
+              l2=0,
               get_output_kw=None):
     if get_output_kw is None:
         get_output_kw = {}
     output_layer = layers[-1]
     network_output = get_output(
         output_layer, deterministic=deterministic, **get_output_kw)
-    losses = loss_function(network_output, target)
-    return aggregate(losses)
+    loss = aggregate(loss_function(network_output, target))
+
+    if l1:
+        loss += regularization.regularize_layer_params(
+            layers.values(), regularization.l1) * l1
+    if l2:
+        loss += regularization.regularize_layer_params(
+            layers.values(), regularization.l2) * l2
+    return loss
 
 
 class NeuralNet(BaseEstimator):
