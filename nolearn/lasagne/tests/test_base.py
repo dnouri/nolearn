@@ -363,6 +363,30 @@ class TestTrainSplit:
         assert y_train.sum() == 25
         assert y_valid.sum() == 0
 
+    def test_X_is_dict(self, TrainSplit, nn):
+        X = {
+            '1': np.random.random((100, 10)),
+            '2': np.random.random((100, 10)),
+            }
+        y = np.repeat([0, 1, 2, 3], 25)
+
+        X_train, X_valid, y_train, y_valid = TrainSplit(0.2)(
+            X, y, nn)
+        assert len(X_train['1']) == len(X_train['2']) == len(y_train) == 80
+        assert len(X_valid['1']) == len(X_valid['2']) == len(y_valid) == 20
+
+    def test_X_is_dict_eval_size_0(self, TrainSplit, nn):
+        X = {
+            '1': np.random.random((100, 10)),
+            '2': np.random.random((100, 10)),
+            }
+        y = np.repeat([0, 1, 2, 3], 25)
+
+        X_train, X_valid, y_train, y_valid = TrainSplit(0)(
+            X, y, nn)
+        assert len(X_train['1']) == len(X_train['2']) == len(y_train) == 100
+        assert len(X_valid['1']) == len(X_valid['2']) == len(y_valid) == 0
+
 
 class TestTrainTestSplitBackwardCompatibility:
     @pytest.fixture

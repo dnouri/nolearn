@@ -119,7 +119,7 @@ class TrainSplit(object):
             X_valid, y_valid = _sldict(X, valid_indices), y[valid_indices]
         else:
             X_train, y_train = X, y
-            X_valid, y_valid = _sldict(X, slice(len(X), None)), y[len(y):]
+            X_valid, y_valid = _sldict(X, slice(len(y), None)), y[len(y):]
 
         return X_train, X_valid, y_train, y_valid
 
