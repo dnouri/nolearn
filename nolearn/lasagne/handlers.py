@@ -217,7 +217,7 @@ class WeightLog:
     Pass instances of :class:`WeightLog` as an `on_batch_finished`
     handler into your network.
     """
-    def __init__(self, save_to=None, flush=False):
+    def __init__(self, save_to=None, write_every=8):
         """
         :param save_to: If given, `save_to` must be a path into which
                         I will write weight statistics in CSV format.
@@ -225,7 +225,7 @@ class WeightLog:
         self.last_weights = None
         self.history = []
         self.save_to = save_to
-        self.flush = flush
+        self.write_every = write_every
         self._dictwriter = None
         self._save_to_file = None
 
@@ -266,8 +266,8 @@ class WeightLog:
         self.history.append(entry)
 
         if self.save_to:
-            self._dictwriter.writerow(entry)
-            if self.flush:
+            if len(self.history) % self.write_every == 0:
+                self._dictwriter.writerows(self.history[-self.write_every:])
                 self._save_to_file.flush()
 
         self.last_weights = weights

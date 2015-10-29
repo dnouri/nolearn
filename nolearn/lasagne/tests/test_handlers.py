@@ -368,7 +368,7 @@ class TestWeightLog:
 
     def test_save_to(self, WeightLog, nn, tmpdir):
         save_to = tmpdir.join("hello.csv")
-        wl = WeightLog(save_to=save_to.strpath, flush=True)
+        wl = WeightLog(save_to=save_to.strpath, write_every=1)
         wl(nn, None)
         wl(nn, None)
 
@@ -381,7 +381,7 @@ class TestWeightLog:
     def test_pickle(self, WeightLog, nn, tmpdir):
         save_to = tmpdir.join("hello.csv")
         pkl = tmpdir.join("hello.pkl")
-        wl = WeightLog(save_to=save_to.strpath, flush=True)
+        wl = WeightLog(save_to=save_to.strpath, write_every=1)
         wl(nn, None)
 
         with open(pkl.strpath, 'wb') as f:
