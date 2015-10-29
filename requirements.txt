@@ -13,7 +13,7 @@ mock==1.3.0               # via matplotlib
 nose==1.3.7               # via matplotlib
 numpy==1.10.1             # via matplotlib, scipy
 pbr==1.8.1                # via mock
-pyparsing==2.0.4          # via matplotlib
+pyparsing==2.0.5          # via matplotlib
 python-dateutil==2.4.2    # via matplotlib
 pytz==2015.7              # via matplotlib
 scikit-learn==0.16.1
