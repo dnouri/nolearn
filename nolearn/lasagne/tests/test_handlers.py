@@ -1,11 +1,14 @@
-from mock import patch
-from mock import Mock
+from collections import OrderedDict
+
 from lasagne.layers import Conv2DLayer
 from lasagne.layers import DenseLayer
 from lasagne.layers import MaxPool2DLayer
 from lasagne.layers import InputLayer
 from lasagne.nonlinearities import softmax
 from lasagne.updates import nesterov_momentum
+from mock import patch
+from mock import Mock
+import numpy
 import pytest
 
 from nolearn._compat import builtins
@@ -321,3 +324,55 @@ Explanation
     \x1b[31mred\x1b[0m:     capacity too low and coverage too high
 """
         assert legend == expected
+
+
+class TestWeightLog:
+    @pytest.fixture
+    def WeightLog(self):
+        from nolearn.lasagne import WeightLog
+        return WeightLog
+
+    @pytest.fixture
+    def nn(self):
+        nn = Mock()
+        nn.get_all_params_values.side_effect = [
+            OrderedDict([
+                ('layer1', numpy.array([[-1, -2]])),
+                ('layer2', numpy.array([[3, 4]])),
+                ]),
+            OrderedDict([
+                ('layer1', numpy.array([[-2, -3]])),
+                ('layer2', numpy.array([[5, 7]])),
+                ]),
+            ]
+        return nn
+
+    def test_history(self, WeightLog, nn):
+        wl = WeightLog()
+        wl(nn, None)
+        wl(nn, None)
+
+        assert wl.history[0] == {
+            'layer1_0 wdiff': 0,
+            'layer1_0 wabsmean': 1.5,
+            'layer1_0 wmean': -1.5,
+
+            'layer2_0 wdiff': 0,
+            'layer2_0 wabsmean': 3.5,
+            'layer2_0 wmean': 3.5,
+            }
+
+        assert wl.history[1]['layer1_0 wdiff'] == 1.0
+        assert wl.history[1]['layer2_0 wdiff'] == 2.5
+
+    def test_save_to(self, WeightLog, nn, tmpdir):
+        path = tmpdir.join("hello.csv")
+        wl = WeightLog(save_to=path.strpath)
+        wl(nn, None)
+        wl(nn, None)
+
+        assert path.readlines() == [
+            'layer1_0 wdiff,layer1_0 wabsmean,layer1_0 wmean,layer2_0 wdiff,layer2_0 wabsmean,layer2_0 wmean\n',
+            '0.0,1.5,-1.5,0.0,3.5,3.5\n',
+            '1.0,2.5,-2.5,2.5,6.0,6.0\n',
+            ]

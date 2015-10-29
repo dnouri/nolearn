@@ -1,9 +1,11 @@
 from collections import OrderedDict
+from csv import DictWriter
 from datetime import datetime
 from functools import reduce
 import operator
 import sys
 
+import numpy
 from tabulate import tabulate
 
 from .._compat import pickle
@@ -207,3 +209,55 @@ class PrintLayerInfo:
             )
 
         return layer_infos, legend
+
+
+class WeightLog:
+    """Keep a log of your network's weights and weight changes.
+
+    Pass instances of :class:`WeightLog` as an `on_batch_finished`
+    handler into your network.
+    """
+    def __init__(self, save_to=None):
+        """
+        :param save_to: If given, `save_to` must be a path into which
+                        I will write weight statistics in CSV format.
+        """
+        self.last_weights = None
+        self.history = []
+        self.save_to = save_to
+        self._fieldnames = None
+
+    def __call__(self, nn, train_history):
+        weights = nn.get_all_params_values()
+
+        if self.save_to and self._fieldnames is None:
+            self._fieldnames = fieldnames = []
+            for key in weights.keys():
+                for i, p in enumerate(weights[key]):
+                    fieldnames.extend([
+                        '{}_{} wdiff'.format(key, i),
+                        '{}_{} wabsmean'.format(key, i),
+                        '{}_{} wmean'.format(key, i),
+                        ])
+            with open(self.save_to, 'w') as f:
+                DictWriter(f, fieldnames).writeheader()
+
+        entry = {}
+        lw = self.last_weights if self.last_weights is not None else weights
+        for key in weights.keys():
+            for i, (p1, p2) in enumerate(zip(lw[key], weights[key])):
+                wdiff = numpy.abs(p1 - p2).mean()
+                wabsmean = numpy.abs(p2).mean()
+                wmean = p2.mean()
+                entry.update({
+                    '{}_{} wdiff'.format(key, i): wdiff,
+                    '{}_{} wabsmean'.format(key, i): wabsmean,
+                    '{}_{} wmean'.format(key, i): wmean,
+                    })
+        self.history.append(entry)
+
+        if self.save_to:
+            with open(self.save_to, 'a') as f:
+                DictWriter(f, self._fieldnames).writerow(entry)
+
+        self.last_weights = weights

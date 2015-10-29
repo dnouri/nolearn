@@ -166,6 +166,7 @@ class NeuralNet(BaseEstimator):
         X_tensor_type=None,
         y_tensor_type=None,
         use_label_encoder=False,
+        on_batch_finished=None,
         on_epoch_finished=None,
         on_training_started=None,
         on_training_finished=None,
@@ -224,6 +225,7 @@ class NeuralNet(BaseEstimator):
         self.custom_score = custom_score
         self.y_tensor_type = y_tensor_type
         self.use_label_encoder = use_label_encoder
+        self.on_batch_finished = on_batch_finished or []
         self.on_epoch_finished = on_epoch_finished or []
         self.on_training_started = on_training_started or []
         self.on_training_finished = on_training_finished or []
@@ -457,6 +459,10 @@ class NeuralNet(BaseEstimator):
         epochs = epochs or self.max_epochs
         X_train, X_valid, y_train, y_valid = self.train_split(X, y, self)
 
+        on_batch_finished = self.on_batch_finished
+        if not isinstance(on_batch_finished, (list, tuple)):
+            on_batch_finished = [on_batch_finished]
+
         on_epoch_finished = self.on_epoch_finished
         if not isinstance(on_epoch_finished, (list, tuple)):
             on_epoch_finished = [on_epoch_finished]
@@ -497,6 +503,9 @@ class NeuralNet(BaseEstimator):
                 batch_train_loss = self.apply_batch_func(
                     self.train_iter_, Xb, yb)
                 train_losses.append(batch_train_loss)
+
+                for func in on_batch_finished:
+                    func(self, self.train_history_)
 
             for Xb, yb in self.batch_iterator_test(X_valid, y_valid):
                 batch_valid_loss, accuracy = self.apply_batch_func(
