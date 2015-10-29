@@ -217,7 +217,7 @@ class WeightLog:
     Pass instances of :class:`WeightLog` as an `on_batch_finished`
     handler into your network.
     """
-    def __init__(self, save_to=None):
+    def __init__(self, save_to=None, flush=False):
         """
         :param save_to: If given, `save_to` must be a path into which
                         I will write weight statistics in CSV format.
@@ -225,13 +225,15 @@ class WeightLog:
         self.last_weights = None
         self.history = []
         self.save_to = save_to
-        self._fieldnames = None
+        self.flush = flush
+        self._dictwriter = None
+        self._save_to_file = None
 
     def __call__(self, nn, train_history):
         weights = nn.get_all_params_values()
 
-        if self.save_to and self._fieldnames is None:
-            self._fieldnames = fieldnames = []
+        if self.save_to and self._dictwriter is None:
+            fieldnames = []
             for key in weights.keys():
                 for i, p in enumerate(weights[key]):
                     fieldnames.extend([
@@ -239,8 +241,15 @@ class WeightLog:
                         '{}_{} wabsmean'.format(key, i),
                         '{}_{} wmean'.format(key, i),
                         ])
-            with open(self.save_to, 'w') as f:
-                DictWriter(f, fieldnames).writeheader()
+
+            newfile = self.last_weights is None
+            if newfile:
+                self._save_to_file = open(self.save_to, 'w')
+            else:
+                self._save_to_file = open(self.save_to, 'a')
+            self._dictwriter = DictWriter(self._save_to_file, fieldnames)
+            if newfile:
+                self._dictwriter.writeheader()
 
         entry = {}
         lw = self.last_weights if self.last_weights is not None else weights
@@ -257,7 +266,14 @@ class WeightLog:
         self.history.append(entry)
 
         if self.save_to:
-            with open(self.save_to, 'a') as f:
-                DictWriter(f, self._fieldnames).writerow(entry)
+            self._dictwriter.writerow(entry)
+            if self.flush:
+                self._save_to_file.flush()
 
         self.last_weights = weights
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        state['_save_to_file'] = None
+        state['_dictwriter'] = None
+        return state

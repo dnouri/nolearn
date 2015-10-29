@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import pickle
 
 from lasagne.layers import Conv2DLayer
 from lasagne.layers import DenseLayer
@@ -366,12 +367,31 @@ class TestWeightLog:
         assert wl.history[1]['layer2_0 wdiff'] == 2.5
 
     def test_save_to(self, WeightLog, nn, tmpdir):
-        path = tmpdir.join("hello.csv")
-        wl = WeightLog(save_to=path.strpath)
+        save_to = tmpdir.join("hello.csv")
+        wl = WeightLog(save_to=save_to.strpath, flush=True)
         wl(nn, None)
         wl(nn, None)
 
-        assert path.readlines() == [
+        assert save_to.readlines() == [
+            'layer1_0 wdiff,layer1_0 wabsmean,layer1_0 wmean,layer2_0 wdiff,layer2_0 wabsmean,layer2_0 wmean\n',
+            '0.0,1.5,-1.5,0.0,3.5,3.5\n',
+            '1.0,2.5,-2.5,2.5,6.0,6.0\n',
+            ]
+
+    def test_pickle(self, WeightLog, nn, tmpdir):
+        save_to = tmpdir.join("hello.csv")
+        pkl = tmpdir.join("hello.pkl")
+        wl = WeightLog(save_to=save_to.strpath, flush=True)
+        wl(nn, None)
+
+        with open(pkl.strpath, 'wb') as f:
+            pickle.dump(wl, f)
+
+        with open(pkl.strpath, 'rb') as f:
+            wl = pickle.load(f)
+
+        wl(nn, None)
+        assert save_to.readlines() == [
             'layer1_0 wdiff,layer1_0 wabsmean,layer1_0 wmean,layer2_0 wdiff,layer2_0 wabsmean,layer2_0 wmean\n',
             '0.0,1.5,-1.5,0.0,3.5,3.5\n',
             '1.0,2.5,-2.5,2.5,6.0,6.0\n',
