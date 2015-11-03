@@ -148,28 +148,27 @@ def occlusion_heatmap(net, x, target, square_length=7):
 
     num_classes = net.layers_[-1].num_units
     img = x[0].copy()
-    shape = x.shape
+    bs, col, s0, s1 = x.shape
 
-    heat_array = np.zeros(shape[2:])
+    heat_array = np.zeros((s0, s1))
     pad = square_length // 2 + 1
-    x_occluded = np.zeros((shape[2], shape[3], shape[2], shape[3]),
-                          dtype=img.dtype)
+    x_occluded = np.zeros((s1, col, s0, s1), dtype=img.dtype)
+    probs = np.zeros((s0, s1, num_classes))
 
     # generate occluded images
-    for i, j in product(*map(range, shape[2:])):
-        x_padded = np.pad(img, ((0, 0), (pad, pad), (pad, pad)), 'constant')
-        x_padded[:, i:i + square_length, j:j + square_length] = 0.
-        x_occluded[i, j, :, :] = x_padded[:, pad:-pad, pad:-pad]
-
-    # make batch predictions for each occluded image
-    probs = np.zeros((shape[2], shape[3], num_classes))
-    for i in range(shape[3]):
-        y_proba = net.predict_proba(x_occluded[:, i:i + 1, :, :])
-        probs[:, i:i + 1, :] = y_proba.reshape(shape[2], 1, num_classes)
+    for i in range(s0):
+        # batch s1 occluded images for faster prediction
+        for j in range(s1):
+            x_pad = np.pad(img, ((0, 0), (pad, pad), (pad, pad)), 'constant')
+            x_pad[:, i:i + square_length, j:j + square_length] = 0.
+            x_occluded[j] = x_pad[:, pad:-pad, pad:-pad]
+        y_proba = net.predict_proba(x_occluded)
+        probs[i] = y_proba.reshape(s1, num_classes)
 
     # from predicted probabilities, pick only those of target class
-    for i, j in product(*map(range, shape[2:])):
-        heat_array[i, j] = probs[i, j, target]
+    for i in range(s0):
+        for j in range(s1):
+            heat_array[i, j] = probs[i, j, target]
     return heat_array
 
 
@@ -203,7 +202,7 @@ def plot_occlusion(net, X, target, square_length=7, figsize=(9, None)):
 
     Plots
     -----
-    Figre with 3 subplots: the original image, the occlusion heatmap,
+    Figure with 3 subplots: the original image, the occlusion heatmap,
     and both images super-imposed.
 
     """

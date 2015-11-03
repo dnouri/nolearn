@@ -1,11 +1,15 @@
-from mock import patch
-from mock import Mock
+from collections import OrderedDict
+import pickle
+
 from lasagne.layers import Conv2DLayer
 from lasagne.layers import DenseLayer
 from lasagne.layers import MaxPool2DLayer
 from lasagne.layers import InputLayer
 from lasagne.nonlinearities import softmax
 from lasagne.updates import nesterov_momentum
+from mock import patch
+from mock import Mock
+import numpy
 import pytest
 
 from nolearn._compat import builtins
@@ -106,6 +110,58 @@ class TestSaveWeights():
         pickle.dump.assert_called_with(nn, mock_open().__enter__(), -1)
 
 
+class TestRememberBestWeights:
+    @pytest.fixture
+    def RememberBestWeights(self):
+        from nolearn.lasagne.handlers import RememberBestWeights
+        return RememberBestWeights
+
+    @pytest.mark.parametrize('loss_name', ['valid_loss', 'my_loss'])
+    def test_simple(self, RememberBestWeights, loss_name):
+        nn1, nn2, nn3 = Mock(), Mock(), Mock()
+        rbw = RememberBestWeights(loss=loss_name)
+        train_history = []
+
+        train_history.append({'epoch': 1, loss_name: 1.0})
+        rbw(nn1, train_history)
+        assert rbw.best_weights is nn1.get_all_params_values()
+
+        train_history.append({'epoch': 2, loss_name: 1.1})
+        rbw(nn2, train_history)
+        assert rbw.best_weights is nn1.get_all_params_values()
+
+        train_history.append({'epoch': 3, loss_name: 0.9})
+        rbw(nn3, train_history)
+        assert rbw.best_weights is nn3.get_all_params_values()
+
+    def test_custom_score(self, RememberBestWeights):
+        nn1, nn2, nn3 = Mock(), Mock(), Mock()
+        rbw = RememberBestWeights(score='my_score')
+        train_history = []
+
+        train_history.append({'epoch': 1, 'my_score': 1.0})
+        rbw(nn1, train_history)
+        assert rbw.best_weights is nn1.get_all_params_values()
+
+        train_history.append({'epoch': 2, 'my_score': 1.1})
+        rbw(nn2, train_history)
+        assert rbw.best_weights is nn2.get_all_params_values()
+
+        train_history.append({'epoch': 3, 'my_score': 0.9})
+        rbw(nn3, train_history)
+        assert rbw.best_weights is nn2.get_all_params_values()
+
+    def test_restore(self, RememberBestWeights):
+        nn = Mock()
+        rbw = RememberBestWeights()
+        train_history = []
+        train_history.append({'epoch': 1, 'valid_loss': 1.0})
+        rbw(nn, train_history)
+        rbw.restore(nn, train_history)
+        nn.load_params_from.assert_called_with(nn.get_all_params_values())
+        nn.load_params_from.assert_called_with(rbw.best_weights)
+
+
 class TestPrintLayerInfo():
     @pytest.fixture(scope='session')
     def X_train(self, mnist):
@@ -161,10 +217,10 @@ class TestPrintLayerInfo():
             output_nonlinearity=softmax,
 
             more_params=dict(
-                conv1_filter_size=(5, 5), conv1_num_filters=16,
-                conv2_filter_size=(3, 3), conv2_num_filters=16,
-                pool2_pool_size=(8, 8),
-                conv3_filter_size=(3, 3), conv3_num_filters=16,
+                conv1_filter_size=5, conv1_num_filters=16,
+                conv2_filter_size=3, conv2_num_filters=16,
+                pool2_pool_size=8, pool2_ignore_border=False,
+                conv3_filter_size=3, conv3_num_filters=16,
                 hidden1_num_units=16,
                 ),
 
@@ -269,3 +325,74 @@ Explanation
     \x1b[31mred\x1b[0m:     capacity too low and coverage too high
 """
         assert legend == expected
+
+
+class TestWeightLog:
+    @pytest.fixture
+    def WeightLog(self):
+        from nolearn.lasagne import WeightLog
+        return WeightLog
+
+    @pytest.fixture
+    def nn(self):
+        nn = Mock()
+        nn.get_all_params_values.side_effect = [
+            OrderedDict([
+                ('layer1', numpy.array([[-1, -2]])),
+                ('layer2', numpy.array([[3, 4]])),
+                ]),
+            OrderedDict([
+                ('layer1', numpy.array([[-2, -3]])),
+                ('layer2', numpy.array([[5, 7]])),
+                ]),
+            ]
+        return nn
+
+    def test_history(self, WeightLog, nn):
+        wl = WeightLog()
+        wl(nn, None)
+        wl(nn, None)
+
+        assert wl.history[0] == {
+            'layer1_0 wdiff': 0,
+            'layer1_0 wabsmean': 1.5,
+            'layer1_0 wmean': -1.5,
+
+            'layer2_0 wdiff': 0,
+            'layer2_0 wabsmean': 3.5,
+            'layer2_0 wmean': 3.5,
+            }
+
+        assert wl.history[1]['layer1_0 wdiff'] == 1.0
+        assert wl.history[1]['layer2_0 wdiff'] == 2.5
+
+    def test_save_to(self, WeightLog, nn, tmpdir):
+        save_to = tmpdir.join("hello.csv")
+        wl = WeightLog(save_to=save_to.strpath, write_every=1)
+        wl(nn, None)
+        wl(nn, None)
+
+        assert save_to.readlines() == [
+            'layer1_0 wdiff,layer1_0 wabsmean,layer1_0 wmean,layer2_0 wdiff,layer2_0 wabsmean,layer2_0 wmean\n',
+            '0.0,1.5,-1.5,0.0,3.5,3.5\n',
+            '1.0,2.5,-2.5,2.5,6.0,6.0\n',
+            ]
+
+    def test_pickle(self, WeightLog, nn, tmpdir):
+        save_to = tmpdir.join("hello.csv")
+        pkl = tmpdir.join("hello.pkl")
+        wl = WeightLog(save_to=save_to.strpath, write_every=1)
+        wl(nn, None)
+
+        with open(pkl.strpath, 'wb') as f:
+            pickle.dump(wl, f)
+
+        with open(pkl.strpath, 'rb') as f:
+            wl = pickle.load(f)
+
+        wl(nn, None)
+        assert save_to.readlines() == [
+            'layer1_0 wdiff,layer1_0 wabsmean,layer1_0 wmean,layer2_0 wdiff,layer2_0 wabsmean,layer2_0 wmean\n',
+            '0.0,1.5,-1.5,0.0,3.5,3.5\n',
+            '1.0,2.5,-2.5,2.5,6.0,6.0\n',
+            ]

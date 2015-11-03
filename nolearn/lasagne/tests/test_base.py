@@ -13,6 +13,8 @@ from mock import patch
 import numpy as np
 import pytest
 from sklearn.base import clone
+from sklearn.datasets import make_classification
+from sklearn.datasets import make_regression
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_absolute_error
@@ -35,13 +37,55 @@ class TestLayers:
         assert layers[0] == 1
 
     def test_getitem_with_slice(self, layers):
-        assert layers[:2] == [1, 2]
+        from nolearn.lasagne.base import Layers
+        sliced = layers[:2]
+        assert isinstance(sliced, Layers)
+        assert sliced.keys() == ['one', 'two']
+        assert sliced.values() == [1, 2]
 
     def test_keys_returns_list(self, layers):
         assert layers.keys() == ['one', 'two', 'three']
 
     def test_values_returns_list(self, layers):
         assert layers.values() == [1, 2, 3]
+
+
+class TestFunctionalToy:
+    def classif(self, NeuralNet, X, y):
+        l = InputLayer(shape=(None, X.shape[1]))
+        l = DenseLayer(l, num_units=len(np.unique(y)), nonlinearity=softmax)
+        net = NeuralNet(l, update_learning_rate=0.01)
+        return net.fit(X, y)
+
+    def regr(self, NeuralNet, X, y):
+        l = InputLayer(shape=(None, X.shape[1]))
+        l = DenseLayer(l, num_units=y.shape[1], nonlinearity=None)
+        net = NeuralNet(l, regression=True, update_learning_rate=0.01)
+        return net.fit(X, y)
+
+    def test_classif_two_classes(self, NeuralNet):
+        X, y = make_classification()
+        X = X.astype(floatX)
+        y = y.astype(np.int32)
+        self.classif(NeuralNet, X, y)
+
+    def test_classif_ten_classes(self, NeuralNet):
+        X, y = make_classification(n_classes=10, n_informative=10)
+        X = X.astype(floatX)
+        y = y.astype(np.int32)
+        self.classif(NeuralNet, X, y)
+
+    def test_regr_one_target(self, NeuralNet):
+        X, y = make_regression()
+        X = X.astype(floatX)
+        y = y.reshape(-1, 1).astype(np.float32)
+        self.regr(NeuralNet, X, y)
+
+    def test_regr_ten_targets(self, NeuralNet):
+        X, y = make_regression(n_targets=10)
+        X = X.astype(floatX)
+        y = y.astype(floatX)
+        self.regr(NeuralNet, X, y)
 
 
 class TestFunctionalMNIST:
@@ -104,6 +148,14 @@ Loaded parameters to layer 'output' (shape 128x10).
 Loaded parameters to layer 'output' (shape 10).
 """
         assert out == message
+
+    def test_partial_fit(self, net, X_train, y_train):
+        net2 = clone(net)
+        assert net2.partial_fit(X_train, y_train) is net2
+        net2.partial_fit(X_train, y_train)
+        history = net2.train_history_
+        assert len(history) == 2
+        assert history[1]['valid_accuracy'] > 0.85
 
 
 def test_lasagne_functional_grid_search(mnist, monkeypatch):
@@ -191,6 +243,7 @@ def test_clone():
         'eval_size',
         'X_tensor_type',
         'on_epoch_finished',
+        'on_batch_finished',
         'on_training_started',
         'on_training_finished',
         'custom_scores'
@@ -206,17 +259,12 @@ def test_lasagne_functional_regression(boston):
 
     X, y = boston
 
-    nn = NeuralNet(
-        layers=[
-            ('input', InputLayer),
-            ('hidden1', DenseLayer),
-            ('output', DenseLayer),
-            ],
-        input_shape=(128, 13),
-        hidden1_num_units=100,
-        output_nonlinearity=identity,
-        output_num_units=1,
+    layer1 = InputLayer(shape=(128, 13))
+    layer2 = DenseLayer(layer1, num_units=100)
+    output = DenseLayer(layer2, num_units=1, nonlinearity=identity)
 
+    nn = NeuralNet(
+        layers=output,
         update_learning_rate=0.01,
         update_momentum=0.1,
         regression=True,
@@ -316,6 +364,30 @@ class TestTrainSplit:
         assert y_train.sum() == 25
         assert y_valid.sum() == 0
 
+    def test_X_is_dict(self, TrainSplit, nn):
+        X = {
+            '1': np.random.random((100, 10)),
+            '2': np.random.random((100, 10)),
+            }
+        y = np.repeat([0, 1, 2, 3], 25)
+
+        X_train, X_valid, y_train, y_valid = TrainSplit(0.2)(
+            X, y, nn)
+        assert len(X_train['1']) == len(X_train['2']) == len(y_train) == 80
+        assert len(X_valid['1']) == len(X_valid['2']) == len(y_valid) == 20
+
+    def test_X_is_dict_eval_size_0(self, TrainSplit, nn):
+        X = {
+            '1': np.random.random((100, 10)),
+            '2': np.random.random((100, 10)),
+            }
+        y = np.repeat([0, 1, 2, 3], 25)
+
+        X_train, X_valid, y_train, y_valid = TrainSplit(0)(
+            X, y, nn)
+        assert len(X_train['1']) == len(X_train['2']) == len(y_train) == 100
+        assert len(X_valid['1']) == len(X_valid['2']) == len(y_valid) == 0
+
 
 class TestTrainTestSplitBackwardCompatibility:
     @pytest.fixture
@@ -373,7 +445,21 @@ class TestCheckForUnusedKwargs:
 
 
 class TestInitializeLayers:
-    def test_initialization(self, NeuralNet):
+    def test_initialization_with_layer_instance(self, NeuralNet):
+        layer1 = InputLayer(shape=(128, 13))  # name will be assigned
+        layer2 = DenseLayer(layer1, name='output', num_units=2)  # has name
+        nn = NeuralNet(layers=layer2)
+        out = nn.initialize_layers()
+        assert nn.layers_['output'] == layer2 == out
+        assert nn.layers_['input0'] == layer1
+
+    def test_initialization_with_layer_instance_bad_params(self, NeuralNet):
+        layer = DenseLayer(InputLayer(shape=(128, 13)), num_units=2)
+        nn = NeuralNet(layers=layer, dense1_num_units=3)
+        with pytest.raises(ValueError):
+            nn.initialize_layers()
+
+    def test_initialization_with_tuples(self, NeuralNet):
         input = Mock(__name__='InputLayer', __bases__=(InputLayer,))
         hidden1, hidden2, output = [
             Mock(__name__='MockLayer', __bases__=(Layer,)) for i in range(3)]
@@ -391,16 +477,16 @@ class TestInitializeLayers:
 
         input.assert_called_with(
             name='input', shape=(10, 10))
-        nn.layers_['input'] is input.return_value
+        assert nn.layers_['input'] is input.return_value
 
         hidden1.assert_called_with(
             incoming=input.return_value, name='mock1',
             some='iwin', another='param')
-        nn.layers_['mock1'] is hidden1.return_value
+        assert nn.layers_['mock1'] is hidden1.return_value
 
         hidden2.assert_called_with(
             incoming=hidden1.return_value, name='mock2')
-        nn.layers_['mock2'] is hidden2.return_value
+        assert nn.layers_['mock2'] is hidden2.return_value
 
         output.assert_called_with(
             incoming=hidden2.return_value, name='output')
@@ -425,20 +511,38 @@ class TestInitializeLayers:
 
         input.assert_called_with(
             name='input', shape=(10, 10))
-        nn.layers_['input'] is input.return_value
+        assert nn.layers_['input'] is input.return_value
 
         hidden1.assert_called_with(
             incoming=input.return_value, name='hidden1', some='param')
-        nn.layers_['hidden1'] is hidden1.return_value
+        assert nn.layers_['hidden1'] is hidden1.return_value
 
         hidden2.assert_called_with(
             incoming=hidden1.return_value, name='hidden2')
-        nn.layers_['hidden2'] is hidden2.return_value
+        assert nn.layers_['hidden2'] is hidden2.return_value
 
         output.assert_called_with(
             incoming=hidden2.return_value, name='output')
 
         assert out is nn.layers_['output']
+
+    def test_initialization_legacy_with_unicode_names(self, NeuralNet):
+        # Test whether legacy initialization is triggered; if not,
+        # raises error.
+        input = Mock(__name__='InputLayer', __bases__=(InputLayer,))
+        hidden1, hidden2, output = [
+            Mock(__name__='MockLayer', __bases__=(Layer,)) for i in range(3)]
+        nn = NeuralNet(
+            layers=[
+                (u'input', input),
+                (u'hidden1', hidden1),
+                (u'hidden2', hidden2),
+                (u'output', output),
+                ],
+            input_shape=(10, 10),
+            hidden1_some='param',
+            )
+        nn.initialize_layers()
 
     def test_diamond(self, NeuralNet):
         input = Mock(__name__='InputLayer', __bases__=(InputLayer,))

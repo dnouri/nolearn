@@ -1,15 +1,18 @@
 from __future__ import absolute_import
 
+from .._compat import basestring
 from .._compat import chain_exception
 from .._compat import pickle
 from collections import OrderedDict
 import itertools
 from warnings import warn
 from time import time
-import pdb
 
+from lasagne.layers import get_all_layers
 from lasagne.layers import get_output
 from lasagne.layers import InputLayer
+from lasagne.layers import Layer
+from lasagne import regularization
 from lasagne.objectives import aggregate
 from lasagne.objectives import categorical_crossentropy
 from lasagne.objectives import squared_error
@@ -47,8 +50,11 @@ def _sldict(arr, sl):
 
 class Layers(OrderedDict):
     def __getitem__(self, key):
-        if isinstance(key, (int, slice)):
+        if isinstance(key, int):
             return list(self.values()).__getitem__(key)
+        elif isinstance(key, slice):
+            items = list(self.items()).__getitem__(key)
+            return Layers(items)
         else:
             return super(Layers, self).__getitem__(key)
 
@@ -114,7 +120,7 @@ class TrainSplit(object):
             X_valid, y_valid = _sldict(X, valid_indices), y[valid_indices]
         else:
             X_train, y_train = X, y
-            X_valid, y_valid = _sldict(X, slice(len(X), None)), y[len(y):]
+            X_valid, y_valid = _sldict(X, slice(len(y), None)), y[len(y):]
 
         return X_train, X_valid, y_train, y_valid
 
@@ -132,14 +138,23 @@ def objective(layers,
               target,
               aggregate=aggregate,
               deterministic=False,
+              l1=0,
+              l2=0,
               get_output_kw=None):
     if get_output_kw is None:
         get_output_kw = {}
     output_layer = layers[-1]
     network_output = get_output(
         output_layer, deterministic=deterministic, **get_output_kw)
-    losses = loss_function(network_output, target)
-    return aggregate(losses)
+    loss = aggregate(loss_function(network_output, target))
+
+    if l1:
+        loss += regularization.regularize_layer_params(
+            layers.values(), regularization.l1) * l1
+    if l2:
+        loss += regularization.regularize_layer_params(
+            layers.values(), regularization.l2) * l2
+    return loss
 
 
 class NeuralNet(BaseEstimator):
@@ -161,6 +176,7 @@ class NeuralNet(BaseEstimator):
         X_tensor_type=None,
         y_tensor_type=None,
         use_label_encoder=False,
+        on_batch_finished=None,
         on_epoch_finished=None,
         on_training_started=None,
         on_training_finished=None,
@@ -193,7 +209,11 @@ class NeuralNet(BaseEstimator):
             train_split.eval_size = kwargs.pop('eval_size')
 
         if y_tensor_type is None:
-            y_tensor_type = T.fmatrix if regression else T.ivector
+            if regression:
+                y_tensor_type = T.TensorType(
+                    theano.config.floatX, (False, False))
+            else:
+                y_tensor_type = T.ivector
 
         if X_tensor_type is not None:
             raise ValueError(
@@ -207,6 +227,9 @@ class NeuralNet(BaseEstimator):
             else:
                 custom_scores.append(kwargs.pop('custom_score'))
 
+        if isinstance(layers, Layer):
+            layers = _list([layers])
+
         self.layers = layers
         self.update = update
         self.objective = objective
@@ -219,6 +242,7 @@ class NeuralNet(BaseEstimator):
         self.custom_scores = custom_scores
         self.y_tensor_type = y_tensor_type
         self.use_label_encoder = use_label_encoder
+        self.on_batch_finished = on_batch_finished or []
         self.on_epoch_finished = on_epoch_finished or []
         self.on_training_started = on_training_started or []
         self.on_training_finished = on_training_finished or []
@@ -301,15 +325,37 @@ class NeuralNet(BaseEstimator):
 
         return collected
 
+    def _layer_name(self, layer_class, index):
+        return "{}{}".format(
+            layer_class.__name__.lower().replace("layer", ""), index)
+
     def initialize_layers(self, layers=None):
         if layers is not None:
             self.layers = layers
         self.layers_ = Layers()
 
+        if isinstance(self.layers[0], Layer):
+            # 'self.layers[0]' is already the output layer with type
+            # 'lasagne.layers.Layer', so we only have to fill
+            # 'self.layers_' and we're done:
+            for i, layer in enumerate(get_all_layers(self.layers[0])):
+                name = layer.name or self._layer_name(layer.__class__, i)
+                self.layers_[name] = layer
+                if self._get_params_for(name) != {}:
+                    raise ValueError(
+                        "You can't use keyword params when passing a Lasagne "
+                        "instance object as the 'layers' parameter of "
+                        "'NeuralNet'."
+                        )
+            return self.layers[0]
+
+        # 'self.layers' are a list of '(Layer class, kwargs)', so
+        # we'll have to actually instantiate the layers given the
+        # arguments:
         layer = None
         for i, layer_def in enumerate(self.layers):
 
-            if isinstance(layer_def[0], str):
+            if isinstance(layer_def[0], basestring):
                 # The legacy format: ('name', Layer)
                 layer_name, layer_factory = layer_def
                 layer_kw = {'name': layer_name}
@@ -319,8 +365,7 @@ class NeuralNet(BaseEstimator):
                 layer_kw = layer_kw.copy()
 
             if 'name' not in layer_kw:
-                layer_kw['name'] = "{}{}".format(
-                    layer_factory.__name__.lower().replace("layer", ""), i)
+                layer_kw['name'] = self._layer_name(layer_factory, i)
 
             more_params = self._get_params_for(layer_kw['name'])
             layer_kw.update(more_params)
@@ -409,7 +454,7 @@ class NeuralNet(BaseEstimator):
 
         return train_iter, eval_iter, predict_iter
 
-    def fit(self, X, y):
+    def fit(self, X, y, epochs=None):
         X, y = self._check_good_input(X, y)
 
         if self.use_label_encoder:
@@ -419,13 +464,21 @@ class NeuralNet(BaseEstimator):
         self.initialize()
 
         try:
-            self.train_loop(X, y)
+            self.train_loop(X, y, epochs=epochs)
         except KeyboardInterrupt:
             pass
         return self
 
-    def train_loop(self, X, y):
+    def partial_fit(self, X, y, classes=None):
+        return self.fit(X, y, epochs=1)
+
+    def train_loop(self, X, y, epochs=None):
+        epochs = epochs or self.max_epochs
         X_train, X_valid, y_train, y_valid = self.train_split(X, y, self)
+
+        on_batch_finished = self.on_batch_finished
+        if not isinstance(on_batch_finished, (list, tuple)):
+            on_batch_finished = [on_batch_finished]
 
         on_epoch_finished = self.on_epoch_finished
         if not isinstance(on_epoch_finished, (list, tuple)):
@@ -453,7 +506,7 @@ class NeuralNet(BaseEstimator):
 
         num_epochs_past = len(self.train_history_)
 
-        while epoch < self.max_epochs:
+        while epoch < epochs:
             epoch += 1
 
             train_losses = []
@@ -470,6 +523,9 @@ class NeuralNet(BaseEstimator):
                 batch_train_loss = self.apply_batch_func(
                     self.train_iter_, Xb, yb)
                 train_losses.append(batch_train_loss)
+
+                for func in on_batch_finished:
+                    func(self, self.train_history_)
 
             for Xb, yb in self.batch_iterator_test(X_valid, y_valid):
                 batch_valid_loss, accuracy = self.apply_batch_func(
@@ -562,7 +618,7 @@ class NeuralNet(BaseEstimator):
     def load_params_from(self, source):
         self.initialize()
 
-        if isinstance(source, str):
+        if isinstance(source, basestring):
             with open(source, 'rb') as f:
                 source = pickle.load(f)
 
@@ -604,7 +660,7 @@ class NeuralNet(BaseEstimator):
             raise ValueError(
                 "Loading weights from a list of parameter values is no "
                 "longer supported.  Please send me something like the "
-                "return value of 'net.get_all_param_values()' instead.")
+                "return value of 'net.get_all_params_values()' instead.")
 
         return self.load_params_from(source)
 

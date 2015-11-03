@@ -10,24 +10,20 @@ utility modules.  All code is written to be compatible with
 Installation
 ============
 
-To use the latest version of *nolearn* from Git, use these commands to
-get a copy from Github and install all dependencies::
+We recommend using `virtualenv
+<http://www.dabapps.com/blog/introduction-to-pip-and-virtualenv-python/>`_
+to install nolearn.
 
-  git clone git@github.com:dnouri/nolearn.git
-  cd nolearn
-  pip install -r requirements.txt
-  python setup.py develop
+To install the latest version of nolearn from Git using `pip
+<http://www.pip-installer.org>`_, run the following commands::
 
-You probably want to use `virtualenv <https://virtualenv.pypa.io>`_
-when installing nolearn.
+  pip install -r https://raw.githubusercontent.com/dnouri/nolearn/master/requirements.txt
+  pip install git+https://github.com/dnouri/nolearn.git@master#egg=nolearn==0.7.git
 
-Should you ever update your Git checkout (i.e. with ``git pull``),
-make sure to re-run the ``pip install -r requirements.txt`` step
-again.
+To instead install the release from PyPI (which is somewhat old at
+this point), do::
 
-A somewhat old version of nolearn is available on `PyPI
-<https://pypi.python.org/pypi/nolearn>`_ and can be installed with
-*pip*.
+  pip install nolearn    
 
 Documentation
 =============
@@ -35,27 +31,28 @@ Documentation
 View the `nolearn documentation here
 <http://packages.python.org/nolearn/>`_.
 
-Documentation for *nolearn.lasagne* is unfortunately lacking at this
-point, but we'll hopefully improve this soon.  However, if you're
-looking for specifics around classes and functions out of the
-*lasagne* package, such as layers, updates, and nonlinearities, then
-you'll want to look at `Lasagne project's documentation
-<http://lasagne.readthedocs.org/>`_.
+If you're looking for how to use *nolearn.lasagne*, then there's two
+introductory tutorials that you can choose from:
 
-An extensive tutorial that introduces the basic concepts of
-*nolearn.lasagne* and uses it to train a model that detects facial
-keypoints is `available here
-<http://danielnouri.org/notes/2014/12/17/using-convolutional-neural-nets-to-detect-facial-keypoints-tutorial/>`_.
-The code for the tutorial is `also available
-<https://github.com/dnouri/kfkd-tutorial>`_.
+- `Using convolutional neural nets to detect facial keypoints tutorial
+  <http://danielnouri.org/notes/2014/12/17/using-convolutional-neural-nets-to-detect-facial-keypoints-tutorial/>`_
+  with `code <https://github.com/dnouri/kfkd-tutorial>`_
+
+- `Training convolutional neural networks with nolearn
+  <http://nbviewer.ipython.org/github/dnouri/nolearn/blob/master/docs/notebooks/CNN_tutorial.ipynb>`_
+  
+For specifics around classes and functions out of the *lasagne*
+package, such as layers, updates, and nonlinearities, you'll want to
+look at the `Lasagne project's documentation
+<http://lasagne.readthedocs.org/>`_.
 
 *nolearn.lasagne* comes with a `number of tests
 <https://github.com/dnouri/nolearn/tree/master/nolearn/lasagne/tests>`_
 that demonstrate some of the more advanced features, such as networks
 with merge layers, and networks with multiple inputs.
 
-Finally, there's a few examples and docs from around the web.  Note
-that some of these might need a specific version of nolearn and
+Finally, there's a few presentations and examples from around the web.
+Note that some of these might need a specific version of nolearn and
 Lasange to run:
 
 - Oliver Dürr's `Convolutional Neural Nets II Hands On

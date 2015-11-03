@@ -1,8 +1,11 @@
 from collections import OrderedDict
+from csv import DictWriter
 from datetime import datetime
 from functools import reduce
 import operator
+import sys
 
+import numpy
 from tabulate import tabulate
 
 from .._compat import pickle
@@ -17,6 +20,7 @@ class PrintLog:
 
     def __call__(self, nn, train_history):
         print(self.table(nn, train_history))
+        sys.stdout.flush()
 
     def table(self, nn, train_history):
         info = train_history[-1]
@@ -94,6 +98,44 @@ class SaveWeights:
             nn.save_params_to(path)
 
 
+class _RestoreBestWeights:
+    def __init__(self, remember):
+        self.remember = remember
+
+    def __call__(self, nn, train_history):
+        nn.load_params_from(self.remember.best_weights)
+        if self.remember.verbose:
+            print("Loaded best weights from epoch {} where {} was {}".format(
+                self.remember.best_weights_epoch,
+                self.remember.score or self.remember.loss,
+                self.remember.best_weights_loss * (
+                    -1 if self.remember.score else 1),
+                ))
+
+
+class RememberBestWeights:
+    def __init__(self, loss='valid_loss', score=None, verbose=1):
+        self.loss = loss
+        self.score = score
+        self.verbose = 1
+        self.best_weights = None
+        self.best_weights_loss = sys.maxsize
+        self.best_weights_epoch = None
+        self.restore = _RestoreBestWeights(self)
+
+    def __call__(self, nn, train_history):
+        key = self.score if self.score is not None else self.loss
+
+        curr_loss = train_history[-1][key]
+        if self.score:
+            curr_loss *= -1
+
+        if curr_loss < self.best_weights_loss:
+            self.best_weights = nn.get_all_params_values()
+            self.best_weights_loss = curr_loss
+            self.best_weights_epoch = train_history[-1]['epoch']
+
+
 class PrintLayerInfo:
     def __init__(self):
         pass
@@ -117,6 +159,7 @@ class PrintLayerInfo:
         if legend is not None:
             print(legend)
         print("")
+        sys.stdout.flush()
 
     @staticmethod
     def _get_greeting(nn):
@@ -167,3 +210,71 @@ class PrintLayerInfo:
             )
 
         return layer_infos, legend
+
+
+class WeightLog:
+    """Keep a log of your network's weights and weight changes.
+
+    Pass instances of :class:`WeightLog` as an `on_batch_finished`
+    handler into your network.
+    """
+    def __init__(self, save_to=None, write_every=8):
+        """
+        :param save_to: If given, `save_to` must be a path into which
+                        I will write weight statistics in CSV format.
+        """
+        self.last_weights = None
+        self.history = []
+        self.save_to = save_to
+        self.write_every = write_every
+        self._dictwriter = None
+        self._save_to_file = None
+
+    def __call__(self, nn, train_history):
+        weights = nn.get_all_params_values()
+
+        if self.save_to and self._dictwriter is None:
+            fieldnames = []
+            for key in weights.keys():
+                for i, p in enumerate(weights[key]):
+                    fieldnames.extend([
+                        '{}_{} wdiff'.format(key, i),
+                        '{}_{} wabsmean'.format(key, i),
+                        '{}_{} wmean'.format(key, i),
+                        ])
+
+            newfile = self.last_weights is None
+            if newfile:
+                self._save_to_file = open(self.save_to, 'w')
+            else:
+                self._save_to_file = open(self.save_to, 'a')
+            self._dictwriter = DictWriter(self._save_to_file, fieldnames)
+            if newfile:
+                self._dictwriter.writeheader()
+
+        entry = {}
+        lw = self.last_weights if self.last_weights is not None else weights
+        for key in weights.keys():
+            for i, (p1, p2) in enumerate(zip(lw[key], weights[key])):
+                wdiff = numpy.abs(p1 - p2).mean()
+                wabsmean = numpy.abs(p2).mean()
+                wmean = p2.mean()
+                entry.update({
+                    '{}_{} wdiff'.format(key, i): wdiff,
+                    '{}_{} wabsmean'.format(key, i): wabsmean,
+                    '{}_{} wmean'.format(key, i): wmean,
+                    })
+        self.history.append(entry)
+
+        if self.save_to:
+            if len(self.history) % self.write_every == 0:
+                self._dictwriter.writerows(self.history[-self.write_every:])
+                self._save_to_file.flush()
+
+        self.last_weights = weights
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        state['_save_to_file'] = None
+        state['_dictwriter'] = None
+        return state
