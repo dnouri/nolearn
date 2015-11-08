@@ -1,6 +1,7 @@
 from itertools import product
 
 from lasagne.layers import get_output
+from lasagne.layers import get_output_shape
 import matplotlib.pyplot as plt
 import numpy as np
 import theano
@@ -146,7 +147,7 @@ def occlusion_heatmap(net, x, target, square_length=7):
         raise ValueError("Square length has to be an odd number, instead "
                          "got {}.".format(square_length))
 
-    num_classes = net.layers_[-1].num_units
+    num_classes = get_output_shape(net.layers_[-1])[1]
     img = x[0].copy()
     bs, col, s0, s1 = x.shape
 
