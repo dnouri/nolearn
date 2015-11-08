@@ -31,6 +31,17 @@ class TestCNNVisualizeFunctions:
         plt.clf()
         plt.cla()
 
+    def test_plot_occlusion_last_layer_has_no_num_units(
+            self, net_with_nonlinearity_layer, X_train, y_train):
+        from nolearn.lasagne.visualize import plot_occlusion
+        net = net_with_nonlinearity_layer
+        net.initialize()
+        plot_occlusion(net, X_train[3:4], [0])
+        plot_occlusion(net, X_train[2:5], [1, 2, 3],
+                       square_length=3, figsize=(5, 5))
+        plt.clf()
+        plt.cla()
+
     def test_plot_occlusion_colored_non_square(
             self, net_color_non_square, X_train, y_train):
         import numpy as np

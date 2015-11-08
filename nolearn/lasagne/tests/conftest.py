@@ -7,8 +7,9 @@ from sklearn.utils import shuffle
 
 from lasagne.layers import Conv2DLayer
 from lasagne.layers import DenseLayer
-from lasagne.layers import MaxPool2DLayer
 from lasagne.layers import InputLayer
+from lasagne.layers import MaxPool2DLayer
+from lasagne.layers import NonlinearityLayer
 from lasagne.nonlinearities import softmax
 from lasagne.updates import nesterov_momentum
 
@@ -121,3 +122,27 @@ def net_color_non_square(NeuralNet):
         max_epochs=1,
         )
     return net
+
+
+@pytest.fixture(scope='session')
+def net_with_nonlinearity_layer(NeuralNet):
+    l = InputLayer(shape=(None, 1, 28, 28))
+    l = Conv2DLayer(l, name='conv1', filter_size=(5, 5), num_filters=8)
+    l = MaxPool2DLayer(l, name='pool1', pool_size=(2, 2))
+    l = Conv2DLayer(l, name='conv2', filter_size=(5, 5), num_filters=8)
+    l = MaxPool2DLayer(l, name='pool2', pool_size=(2, 2))
+    l = DenseLayer(l, name='hidden1', num_units=128)
+    l = DenseLayer(l, name='output', nonlinearity=softmax, num_units=10)
+    l = NonlinearityLayer(l)
+
+    return NeuralNet(
+        layers=l,
+
+        update=nesterov_momentum,
+        update_learning_rate=0.01,
+        update_momentum=0.9,
+
+        max_epochs=5,
+        on_epoch_finished=[_OnEpochFinished()],
+        verbose=99,
+        )
