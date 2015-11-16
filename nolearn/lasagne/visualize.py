@@ -16,6 +16,7 @@ def plot_loss(net):
     plt.xlabel('epoch')
     plt.ylabel('loss')
     plt.legend(loc='best')
+    return plt
 
 
 def plot_conv_weights(layer, figsize=(6, 6)):
@@ -46,6 +47,7 @@ def plot_conv_weights(layer, figsize=(6, 6)):
                 break
             axes[r, c].imshow(W[i, feature_map], cmap='gray',
                               interpolation='nearest')
+    return plt
 
 
 def plot_conv_activity(layer, x, figsize=(6, 8)):
@@ -93,6 +95,7 @@ def plot_conv_activity(layer, x, figsize=(6, 8)):
                              "have 2, instead got {}".format(ndim))
         axes[r + 1, c].imshow(-activity[0][i], cmap='gray',
                               interpolation='nearest')
+    return plt
 
 
 def occlusion_heatmap(net, x, target, square_length=7):
@@ -236,3 +239,4 @@ def plot_occlusion(net, X, target, square_length=7, figsize=(9, None)):
         ax[2].imshow(-heat_img, interpolation='nearest', cmap='Reds',
                      alpha=0.6)
         ax[2].set_title('super-imposed')
+    return plt
