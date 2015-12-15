@@ -24,6 +24,12 @@ try:
 except ImportError:
     pass
 
+try:
+    from lasagne.layers.corrmm import Conv2DMMLayer
+    convlayers.append(Conv2DMMLayer)
+except ImportError:
+    pass
+
 
 class ansi:
     BLUE = '\033[94m'
