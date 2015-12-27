@@ -1,4 +1,8 @@
-from collections import OrderedDict
+try:
+    from collections import OrderedDict
+except:
+    from ordereddict import OrderedDict
+    
 from csv import DictWriter
 from datetime import datetime
 from functools import reduce
