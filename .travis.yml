@@ -1,5 +1,8 @@
 language: python
 sudo: false
+branches:
+  only:
+    - master
 python:
   - "2.7"
   - "3.4"

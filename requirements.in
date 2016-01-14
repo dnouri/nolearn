@@ -2,5 +2,5 @@ joblib
 matplotlib
 scikit-learn
 tabulate
--e git+https://github.com/Lasagne/Lasagne.git@b6f1250e#egg=Lasagne==0.2.git
--e git+https://github.com/Theano/Theano.git@15c90dd3#egg=Theano==0.8.git
+-e git+https://github.com/Lasagne/Lasagne.git@8f4f9b2#egg=Lasagne==0.2.git
+-e git+https://github.com/Theano/Theano.git@54186290#egg=Theano==0.8.git
