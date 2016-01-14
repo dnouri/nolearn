@@ -66,10 +66,20 @@ class Layers(OrderedDict):
 
 
 class BatchIterator(object):
-    def __init__(self, batch_size):
+    def __init__(self, batch_size, shuffle=False, seed=42):
         self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.random = np.random.RandomState(seed)
 
     def __call__(self, X, y=None):
+        if self.shuffle:
+            X0 = X
+            if isinstance(X, dict):
+                X0 = list(X.values())[0]
+            indices = self.random.permutation(np.arange(X0.shape[0]))
+            X = _sldict(X, indices)
+            if y is not None:
+                y = y[indices]
         self.X, self.y = X, y
         return self
 

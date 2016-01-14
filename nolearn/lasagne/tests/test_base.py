@@ -416,6 +416,64 @@ class TestTrainTestSplitBackwardCompatibility:
         assert net.__call_args__ == (X, y, 0.3)
 
 
+class TestBatchIterator:
+    @pytest.fixture
+    def BatchIterator(self):
+        from nolearn.lasagne import BatchIterator
+        return BatchIterator
+
+    @pytest.fixture
+    def X(self):
+        return np.arange(200).reshape((10, 20)).T.astype('float')
+
+    @pytest.fixture
+    def X_dict(self):
+        return {
+            'one': np.arange(200).reshape((10, 20)).T.astype('float'),
+            'two': np.arange(200).reshape((20, 10)).astype('float'),
+            }
+
+    @pytest.fixture
+    def y(self):
+        return np.arange(20)
+
+    @pytest.mark.parametrize("shuffle", [True, False])
+    def test_simple_x_and_y(self, BatchIterator, X, y, shuffle):
+        bi = BatchIterator(2, shuffle=shuffle)(X, y)
+        batches = list(bi)
+        assert len(batches) == 10
+        X0, y0 = batches[0]
+        assert X0.shape == (2, 10)
+        assert y0.shape == (2,)
+        if shuffle is False:
+            np.testing.assert_equal(X[:2], X0)
+            np.testing.assert_equal(y[:2], y0)
+
+    @pytest.mark.parametrize("shuffle", [True, False])
+    def test_simple_x_no_y(self, BatchIterator, X, shuffle):
+        bi = BatchIterator(2, shuffle=shuffle)(X)
+        batches = list(bi)
+        assert len(batches) == 10
+        X0, y0 = batches[0]
+        assert X0.shape == (2, 10)
+        assert y0 is None
+        if shuffle is False:
+            np.testing.assert_equal(X[:2], X0)
+
+    @pytest.mark.parametrize("shuffle", [True, False])
+    def test_X_is_dict(self, BatchIterator, X_dict, shuffle):
+        bi = BatchIterator(2, shuffle=shuffle)(X_dict)
+        batches = list(bi)
+        assert len(batches) == 10
+        X0, y0 = batches[0]
+        assert X0['one'].shape == (2, 10)
+        assert X0['two'].shape == (2, 10)
+        assert y0 is None
+        if shuffle is False:
+            np.testing.assert_equal(X_dict['one'][:2], X0['one'])
+            np.testing.assert_equal(X_dict['two'][:2], X0['two'])
+
+
 class TestCheckForUnusedKwargs:
     def test_okay(self, NeuralNet):
         net = NeuralNet(
