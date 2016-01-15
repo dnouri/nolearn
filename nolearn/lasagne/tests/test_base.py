@@ -693,6 +693,22 @@ class TestCheckGoodInput:
         assert (y1 == y).all()
 
 
+class TestGetOutput:
+    def test_layer_object(self, net_fitted, X_train):
+        layer = net_fitted.layers_['conv2']
+        output = net_fitted.get_output(layer, X_train[:3])
+        assert output.shape == (3, 8, 8, 8)
+
+    def test_layer_name(self, net_fitted, X_train):
+        output = net_fitted.get_output('conv2', X_train[:3])
+        assert output.shape == (3, 8, 8, 8)
+
+    def test_get_output_last_layer(self, net_fitted, X_train):
+        result = net_fitted.get_output(net_fitted.layers_[-1], X_train[:129])
+        expected = net_fitted.predict_proba(X_train[:129])
+        np.testing.assert_equal(result, expected)
+
+
 class TestMultiInputFunctional:
     @pytest.fixture(scope='session')
     def net(self, NeuralNet):

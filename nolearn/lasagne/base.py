@@ -622,6 +622,17 @@ class NeuralNet(BaseEstimator):
                 y_pred = self.enc_.inverse_transform(y_pred)
             return y_pred
 
+    def get_output(self, layer, X):
+        if isinstance(layer, basestring):
+            layer = self.layers_[layer]
+        xs = T.tensor4('xs').astype(theano.config.floatX)
+        get_activity = theano.function([xs], get_output(layer, xs))
+
+        outputs = []
+        for Xb, yb in self.batch_iterator_test(X):
+            outputs.append(get_activity(Xb))
+        return np.vstack(outputs)
+
     def score(self, X, y):
         score = mean_squared_error if self.regression else accuracy_score
         return float(score(self.predict(X), y))
