@@ -17,6 +17,7 @@ from lasagne.objectives import aggregate
 from lasagne.objectives import categorical_crossentropy
 from lasagne.objectives import squared_error
 from lasagne.updates import nesterov_momentum
+from lasagne.utils import floatX
 from lasagne.utils import unique
 import numpy as np
 from sklearn.base import BaseEstimator
@@ -115,7 +116,7 @@ class BatchIterator(object):
 
 def grad_scale(layer, scale):
     for param in layer.get_params(trainable=True):
-        param.tag.grad_scale = scale
+        param.tag.grad_scale = floatX(scale)
     return layer
 
 
