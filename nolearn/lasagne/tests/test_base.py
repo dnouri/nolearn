@@ -1,6 +1,8 @@
 import pickle
 
+from lasagne.layers import BatchNormLayer
 from lasagne.layers import ConcatLayer
+from lasagne.layers import Conv2DLayer
 from lasagne.layers import DenseLayer
 from lasagne.layers import InputLayer
 from lasagne.layers import Layer
@@ -740,3 +742,23 @@ class TestMultiInputFunctional:
         X, y = mnist
         y_test = y[60000:]
         assert accuracy_score(y_pred, y_test) > 0.85
+
+
+class TestGradScale:
+    @pytest.fixture
+    def grad_scale(self):
+        from nolearn.lasagne import grad_scale
+        return grad_scale
+
+    @pytest.mark.parametrize("layer", [
+        BatchNormLayer(InputLayer((None, 16))),
+        Conv2DLayer(InputLayer((None, 1, 28, 28)), 2, 3),
+        DenseLayer(InputLayer((None, 16)), 16),
+        ])
+    def test_it(self, grad_scale, layer):
+        layer2 = grad_scale(layer, 0.33)
+        assert layer2 is layer
+        for param in layer.get_params(trainable=True):
+            assert param.tag.grad_scale == 0.33
+        for param in layer.get_params(trainable=False):
+            assert hasattr(param.tag, 'grad_scale') is False

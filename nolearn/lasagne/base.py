@@ -113,6 +113,12 @@ class BatchIterator(object):
         return state
 
 
+def grad_scale(layer, scale):
+    for param in layer.get_params(trainable=True):
+        param.tag.grad_scale = scale
+    return layer
+
+
 class TrainSplit(object):
     def __init__(self, eval_size, stratify=True):
         self.eval_size = eval_size
@@ -455,8 +461,13 @@ class NeuralNet(BaseEstimator):
             accuracy = loss_eval
 
         all_params = self.get_all_params(trainable=True)
+        grads = theano.grad(loss_train, all_params)
+        for idx, param in enumerate(all_params):
+            grad_scale = getattr(param.tag, 'grad_scale', 1)
+            if grad_scale != 1:
+                grads[idx] *= grad_scale
         update_params = self._get_params_for('update')
-        updates = update(loss_train, all_params, **update_params)
+        updates = update(grads, all_params, **update_params)
 
         input_layers = [layer for layer in layers.values()
                         if isinstance(layer, InputLayer)]

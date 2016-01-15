@@ -7,6 +7,7 @@ from .handlers import (
     )
 from .base import (
     BatchIterator,
+    grad_scale,
     objective,
     NeuralNet,
     TrainSplit,
