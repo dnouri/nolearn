@@ -146,3 +146,20 @@ def net_with_nonlinearity_layer(NeuralNet):
         on_epoch_finished=[_OnEpochFinished()],
         verbose=99,
         )
+
+
+@pytest.fixture
+def net_no_conv(NeuralNet):
+    l = InputLayer(shape=(None, 100))
+    l = DenseLayer(l, name='output', nonlinearity=softmax, num_units=10)
+
+    return NeuralNet(
+        layers=l,
+
+        update=nesterov_momentum,
+        update_learning_rate=0.01,
+        update_momentum=0.9,
+
+        max_epochs=1,
+        verbose=99,
+        )

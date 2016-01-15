@@ -625,8 +625,18 @@ class NeuralNet(BaseEstimator):
     def get_output(self, layer, X):
         if isinstance(layer, basestring):
             layer = self.layers_[layer]
-        xs = T.tensor4('xs').astype(theano.config.floatX)
-        get_activity = theano.function([xs], get_output(layer, xs))
+
+        fn_cache = getattr(self, '_get_output_fn_cache', None)
+        if fn_cache is None:
+            fn_cache = {}
+            self._get_output_fn_cache = fn_cache
+
+        if layer not in fn_cache:
+            xs = self.layers_[0].input_var.type()
+            get_activity = theano.function([xs], get_output(layer, xs))
+            fn_cache[layer] = get_activity
+        else:
+            get_activity = fn_cache[layer]
 
         outputs = []
         for Xb, yb in self.batch_iterator_test(X):
@@ -712,6 +722,7 @@ class NeuralNet(BaseEstimator):
             'eval_iter_',
             'predict_iter_',
             '_initialized',
+            '_get_output_fn_cache',
             ):
             if attr in state:
                 del state[attr]

@@ -708,6 +708,13 @@ class TestGetOutput:
         expected = net_fitted.predict_proba(X_train[:129])
         np.testing.assert_equal(result, expected)
 
+    def test_no_conv(self, net_no_conv):
+        net_no_conv.initialize()
+        X = np.random.random((10, 100)).astype(floatX)
+        result = net_no_conv.get_output('output', X)
+        expected = net_no_conv.predict_proba(X)
+        np.testing.assert_equal(result, expected)
+
 
 class TestMultiInputFunctional:
     @pytest.fixture(scope='session')
