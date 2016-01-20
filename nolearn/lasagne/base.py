@@ -221,6 +221,11 @@ class NeuralNet(BaseEstimator):
                 "It's unnecessary.")  # BBB
 
         if 'custom_score' in kwargs:
+            warn("The 'custom_score' argument has been deprecated, please use "
+                 "the 'custom_scores' parameter instead, which is just "
+                 "a list of custom scores e.g.\n"
+                 "custom_scores=[('abs', lambda y1, y2: abs(y1-y2)), ('over/under', lambda y1,y2: 'over' if y2 >= y1 else 'under')]")
+
             # add it to custom_scores
             if custom_scores is None:
                 custom_scores = [kwargs.pop('custom_score')]
