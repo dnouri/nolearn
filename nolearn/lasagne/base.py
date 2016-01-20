@@ -707,21 +707,3 @@ class NeuralNet(BaseEstimator):
         else:
             raise AttributeError("No custom_score here")
 
-    @custom_score.setter
-    def custom_score(self, scorer):
-        if self.custom_scores:
-            if len(self.custom_scores) == 1:
-                self.custom_scores[0] = scorer
-            else:
-                raise AttributeError("No custom_score here")
-        else:
-            self.custom_scores = [scorer]
-
-    @custom_score.deleter
-    def custom_score(self):
-        if self.custom_scores and len(self.custom_scores) == 1:
-            self.custom_scores = []
-        else:
-            raise AttributeError("No custom_score here")
-
-    
