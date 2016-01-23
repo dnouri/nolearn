@@ -224,7 +224,7 @@ class NeuralNet(BaseEstimator):
             warn("The 'custom_score' argument has been deprecated, please use "
                  "the 'custom_scores' parameter instead, which is just "
                  "a list of custom scores e.g.\n"
-                 "custom_scores=[('abs', lambda y1, y2: abs(y1-y2)), ('over/under', lambda y1,y2: 'over' if y2 >= y1 else 'under')]")
+                 "custom_scores=[('first output', lambda y1, y2: abs(y1[0,0]-y2[0,0])), ('second output', lambda y1,y2: abs(y1[0,1]-y2[0,1]))]")
 
             # add it to custom_scores
             if custom_scores is None:
@@ -704,11 +704,3 @@ class NeuralNet(BaseEstimator):
         # This allows us to have **kwargs in __init__ (woot!):
         param_names = super(NeuralNet, self)._get_param_names()
         return param_names + self._kwarg_keys
-
-    @property
-    def custom_score(self):
-        if self.custom_scores and len(self.custom_scores) == 1:
-            return self.custom_scores[0]
-        else:
-            raise AttributeError("No custom_score here")
-
