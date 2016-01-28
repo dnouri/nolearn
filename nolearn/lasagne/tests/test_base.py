@@ -782,6 +782,6 @@ class TestGradScale:
         layer2 = grad_scale(layer, 0.33)
         assert layer2 is layer
         for param in layer.get_params(trainable=True):
-            assert param.tag.grad_scale == 0.33
+            np.testing.assert_almost_equal(param.tag.grad_scale, 0.33)
         for param in layer.get_params(trainable=False):
             assert hasattr(param.tag, 'grad_scale') is False
