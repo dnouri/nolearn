@@ -485,9 +485,9 @@ class NeuralNet(BaseEstimator):
         input_layers = [layer for layer in layers.values()
                         if isinstance(layer, InputLayer)]
 
-        X_inputs = [theano.Param(input_layer.input_var, name=input_layer.name)
+        X_inputs = [theano.In(input_layer.input_var, name=input_layer.name)
                     for input_layer in input_layers]
-        inputs = X_inputs + [theano.Param(y_batch, name="y")]
+        inputs = X_inputs + [theano.In(y_batch, name="y")]
 
         train_iter = theano.function(
             inputs=inputs,
