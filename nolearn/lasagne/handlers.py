@@ -164,7 +164,7 @@ class PrintLayerInfo:
     @staticmethod
     def _get_greeting(nn):
         shapes = [param.get_value().shape for param in
-                  nn.get_all_params() if param]
+                  nn.get_all_params(trainable=True) if param]
         nparams = reduce(operator.add, [reduce(operator.mul, shape) for
                                         shape in shapes])
         message = ("# Neural Network with {} learnable parameters"
