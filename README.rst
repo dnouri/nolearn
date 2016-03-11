@@ -79,7 +79,12 @@ Lasange to run:
   <http://lsun.cs.princeton.edu/>`_ have published their
   `lasagne/nolearn-based code
   <https://imatge.upc.edu/web/resources/end-end-convolutional-networks-saliency-prediction-software>`_.
-  
+
+- The winner of the 2nd place in the `Kaggle Right Whale Recognition
+  challenge <https://www.kaggle.com/c/noaa-right-whale-recognition>`_ has
+  published his `lasagne/nolearn-based code
+  <https://github.com/felixlaumon/kaggle-right-whale>`_.
+
 Support
 =======
 
