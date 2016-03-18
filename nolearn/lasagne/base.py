@@ -744,20 +744,7 @@ class NeuralNet(BaseEstimator):
              "Please use 'save_params_to' instead.")
         return self.save_params_to(fname)
 
-    def __getstate__(self):
-        state = dict(self.__dict__)
-        for attr in (
-            'train_iter_',
-            'eval_iter_',
-            'predict_iter_',
-            '_initialized',
-            '_get_output_fn_cache',
-            ):
-            if attr in state:
-                del state[attr]
-        return state
-
-    def __setstate__(self, state):
+    def __setstate__(self, state):  # BBB for pickles that don't have the graph
         self.__dict__.update(state)
         self.initialize()
 
