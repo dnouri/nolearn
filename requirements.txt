@@ -5,6 +5,7 @@
 #    pip-compile requirements.in
 #
 -e git+https://github.com/Lasagne/Lasagne.git@8f4f9b2#egg=Lasagne==0.2.git
+Theano==0.8.0
 cycler==0.9.0             # via matplotlib
 joblib==0.9.3
 matplotlib==1.5.1
@@ -16,4 +17,3 @@ scikit-learn==0.17
 scipy==0.16.1             # via theano
 six==1.10.0               # via cycler, python-dateutil, theano
 tabulate==0.7.5
-Theano==0.8.0
