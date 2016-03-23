@@ -673,6 +673,13 @@ class TestCheckGoodInput:
                 y[:9],
                 )
 
+    def test_X_and_y_dict_length_mismatch(self, check_good_input, X, y):
+        with pytest.raises(ValueError):
+            check_good_input(
+                X,
+                {'one': y[:9]},
+                )                
+
     def test_X_dict_length_mismatch(self, check_good_input, X):
         with pytest.raises(ValueError):
             check_good_input({
@@ -680,12 +687,26 @@ class TestCheckGoodInput:
                 'two': X[:9],
                 })
 
+    def test_y_dict_length_mismatch(self, check_good_input, X, y):
+        with pytest.raises(ValueError):
+            check_good_input(X, {
+                'one': y,
+                'two': y[:9],
+                })                
+
     def test_y_regression_1dim(self, nn, check_good_input, X, y_regr):
         y = y_regr.reshape(-1)
         nn.regression = True
         X1, y1 = check_good_input(X, y)
         assert (X1 == X).all()
         assert (y1 == y.reshape(-1, 1)).all()
+
+    def test_y_regression_1dim_dict(self, nn, check_good_input, X, y_regr):
+        y = y_regr.reshape(-1)
+        nn.regression = True
+        X1, y1 = check_good_input(X, {'y': y})
+        assert (X1 == X).all()
+        assert (y1['y']== y.reshape(-1, 1)).all()        
 
     def test_y_regression_2dim(self, nn, check_good_input, X, y_regr):
         y = y_regr
