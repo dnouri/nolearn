@@ -227,6 +227,7 @@ def test_clone():
         on_training_finished=None,
         max_epochs=100,
         eval_size=0.1,  # BBB
+        check_input=True,
         verbose=0,
         )
     nn = NeuralNet(**params)
@@ -248,7 +249,7 @@ def test_clone():
         'on_batch_finished',
         'on_training_started',
         'on_training_finished',
-        'custom_scores'
+        'custom_scores',
         ):
         for par in (params, params1, params2):
             par.pop(ignore, None)
