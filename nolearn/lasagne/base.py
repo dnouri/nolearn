@@ -199,6 +199,7 @@ class NeuralNet(BaseEstimator):
         on_training_started=None,
         on_training_finished=None,
         more_params=None,
+        check_input=True,
         verbose=0,
         **kwargs
         ):
@@ -296,6 +297,7 @@ class NeuralNet(BaseEstimator):
         self.on_training_started = on_training_started or []
         self.on_training_finished = on_training_finished or []
         self.more_params = more_params or {}
+        self.check_input = check_input
         self.verbose = verbose
         if self.verbose:
             # XXX: PrintLog should come before any other handlers,
@@ -509,7 +511,8 @@ class NeuralNet(BaseEstimator):
         return train_iter, eval_iter, predict_iter
 
     def fit(self, X, y, epochs=None):
-        X, y = self._check_good_input(X, y)
+        if self.check_input:
+            X, y = self._check_good_input(X, y)
 
         if self.use_label_encoder:
             self.enc_ = LabelEncoder()
