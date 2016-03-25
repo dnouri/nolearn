@@ -74,13 +74,7 @@ class BatchIterator(object):
 
     def __call__(self, X, y=None):
         if self.shuffle:
-            X0 = X
-            if isinstance(X, dict):
-                X0 = list(X.values())[0]
-            indices = self.random.permutation(np.arange(X0.shape[0]))
-            X = _sldict(X, indices)
-            if y is not None:
-                y = y[indices]
+            self._shuffle_arrays([X, y] if y is not None else [X], self.random)
         self.X, self.y = X, y
         return self
 
@@ -94,6 +88,18 @@ class BatchIterator(object):
             else:
                 yb = None
             yield self.transform(Xb, yb)
+
+    @classmethod
+    def _shuffle_arrays(cls, arrays, random):
+        rstate = random.get_state()
+        for array in arrays:
+            if isinstance(array, dict):
+                for v in list(array.values()):
+                    random.set_state(rstate)
+                    random.shuffle(v)
+            else:
+                random.set_state(rstate)
+                random.shuffle(array)
 
     @property
     def n_samples(self):
