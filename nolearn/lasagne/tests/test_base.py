@@ -1,4 +1,5 @@
 import pickle
+import sys
 
 from lasagne.layers import BatchNormLayer
 from lasagne.layers import ConcatLayer
@@ -111,9 +112,12 @@ class TestFunctionalMNIST:
         assert early_stopping.train_history == net_fitted.train_history_
 
     def test_pickle(self, net_fitted, X_test, y_pred):
+        recursionlimit = sys.getrecursionlimit()
+        sys.setrecursionlimit(10000)
         pickled = pickle.dumps(net_fitted, -1)
         net_loaded = pickle.loads(pickled)
         assert np.array_equal(net_loaded.predict(X_test), y_pred)
+        sys.setrecursionlimit(recursionlimit)
 
     def test_load_params_from_net(self, net, net_fitted, X_test, y_pred):
         net_loaded = clone(net)
