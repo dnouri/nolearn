@@ -18,6 +18,7 @@ install_requires = [
     'scikit-learn',
     'tabulate',
     'Lasagne',
+    'pydot'
     ]
 
 tests_require = [

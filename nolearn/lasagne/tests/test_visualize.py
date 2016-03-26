@@ -55,3 +55,7 @@ class TestCNNVisualizeFunctions:
         plot_occlusion(net_color_non_square, X[:3], [3, 2, 1])
         plt.clf()
         plt.cla()
+        
+    def test_get_hex_color(self, net_fitted):
+        from nolearn.lasagne.visualize import get_hex_color
+        assert '#7C9ABB' == get_hex_color(net_fitted.layers_['conv1'])
