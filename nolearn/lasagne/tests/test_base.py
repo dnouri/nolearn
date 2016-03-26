@@ -1,4 +1,5 @@
 import pickle
+import sys
 
 from lasagne.layers import BatchNormLayer
 from lasagne.layers import ConcatLayer
@@ -111,9 +112,12 @@ class TestFunctionalMNIST:
         assert early_stopping.train_history == net_fitted.train_history_
 
     def test_pickle(self, net_fitted, X_test, y_pred):
+        recursionlimit = sys.getrecursionlimit()
+        sys.setrecursionlimit(10000)
         pickled = pickle.dumps(net_fitted, -1)
         net_loaded = pickle.loads(pickled)
         assert np.array_equal(net_loaded.predict(X_test), y_pred)
+        sys.setrecursionlimit(recursionlimit)
 
     def test_load_params_from_net(self, net, net_fitted, X_test, y_pred):
         net_loaded = clone(net)
@@ -227,6 +231,7 @@ def test_clone():
         on_training_finished=None,
         max_epochs=100,
         eval_size=0.1,  # BBB
+        check_input=True,
         verbose=0,
         )
     nn = NeuralNet(**params)
@@ -248,7 +253,7 @@ def test_clone():
         'on_batch_finished',
         'on_training_started',
         'on_training_finished',
-        'custom_scores'
+        'custom_scores',
         ):
         for par in (params, params1, params2):
             par.pop(ignore, None)
@@ -444,9 +449,17 @@ class TestBatchIterator:
         bi = BatchIterator(2, shuffle=shuffle)(X, y)
         batches = list(bi)
         assert len(batches) == 10
+
         X0, y0 = batches[0]
         assert X0.shape == (2, 10)
         assert y0.shape == (2,)
+
+        Xt = np.vstack(b[0] for b in batches)
+        yt = np.hstack(b[1] for b in batches)
+        assert Xt.shape == X.shape
+        assert yt.shape == y.shape
+        np.testing.assert_equal(Xt[:, 0], yt)
+
         if shuffle is False:
             np.testing.assert_equal(X[:2], X0)
             np.testing.assert_equal(y[:2], y0)
@@ -456,9 +469,11 @@ class TestBatchIterator:
         bi = BatchIterator(2, shuffle=shuffle)(X)
         batches = list(bi)
         assert len(batches) == 10
+
         X0, y0 = batches[0]
         assert X0.shape == (2, 10)
         assert y0 is None
+
         if shuffle is False:
             np.testing.assert_equal(X[:2], X0)
 
@@ -467,13 +482,26 @@ class TestBatchIterator:
         bi = BatchIterator(2, shuffle=shuffle)(X_dict)
         batches = list(bi)
         assert len(batches) == 10
+
         X0, y0 = batches[0]
         assert X0['one'].shape == (2, 10)
         assert X0['two'].shape == (2, 10)
         assert y0 is None
+
+        Xt1 = np.vstack(b[0]['one'] for b in batches)
+        Xt2 = np.vstack(b[0]['two'] for b in batches)
+        assert Xt1.shape == X_dict['one'].shape
+        assert Xt2.shape == X_dict['two'].shape
+        np.testing.assert_equal(Xt1[:, 0], Xt2[:, 0] / 10)
+
         if shuffle is False:
             np.testing.assert_equal(X_dict['one'][:2], X0['one'])
             np.testing.assert_equal(X_dict['two'][:2], X0['two'])
+
+    def test_shuffle_no_copy(self, BatchIterator, X, y):
+        bi = BatchIterator(2, shuffle=True)(X, y)
+        X0, y0 = list(bi)[0]
+        assert X0.base is X  # make sure X0 is a view
 
 
 class TestCheckForUnusedKwargs:

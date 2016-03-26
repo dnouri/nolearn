@@ -74,13 +74,7 @@ class BatchIterator(object):
 
     def __call__(self, X, y=None):
         if self.shuffle:
-            X0 = X
-            if isinstance(X, dict):
-                X0 = list(X.values())[0]
-            indices = self.random.permutation(np.arange(X0.shape[0]))
-            X = _sldict(X, indices)
-            if y is not None:
-                y = y[indices]
+            self._shuffle_arrays([X, y] if y is not None else [X], self.random)
         self.X, self.y = X, y
         return self
 
@@ -94,6 +88,18 @@ class BatchIterator(object):
             else:
                 yb = None
             yield self.transform(Xb, yb)
+
+    @classmethod
+    def _shuffle_arrays(cls, arrays, random):
+        rstate = random.get_state()
+        for array in arrays:
+            if isinstance(array, dict):
+                for v in list(array.values()):
+                    random.set_state(rstate)
+                    random.shuffle(v)
+            else:
+                random.set_state(rstate)
+                random.shuffle(array)
 
     @property
     def n_samples(self):
@@ -199,6 +205,7 @@ class NeuralNet(BaseEstimator):
         on_training_started=None,
         on_training_finished=None,
         more_params=None,
+        check_input=True,
         verbose=0,
         **kwargs
         ):
@@ -296,6 +303,7 @@ class NeuralNet(BaseEstimator):
         self.on_training_started = on_training_started or []
         self.on_training_finished = on_training_finished or []
         self.more_params = more_params or {}
+        self.check_input = check_input
         self.verbose = verbose
         if self.verbose:
             # XXX: PrintLog should come before any other handlers,
@@ -509,7 +517,8 @@ class NeuralNet(BaseEstimator):
         return train_iter, eval_iter, predict_iter
 
     def fit(self, X, y, epochs=None):
-        X, y = self._check_good_input(X, y)
+        if self.check_input:
+            X, y = self._check_good_input(X, y)
 
         if self.use_label_encoder:
             self.enc_ = LabelEncoder()
@@ -744,20 +753,7 @@ class NeuralNet(BaseEstimator):
              "Please use 'save_params_to' instead.")
         return self.save_params_to(fname)
 
-    def __getstate__(self):
-        state = dict(self.__dict__)
-        for attr in (
-            'train_iter_',
-            'eval_iter_',
-            'predict_iter_',
-            '_initialized',
-            '_get_output_fn_cache',
-            ):
-            if attr in state:
-                del state[attr]
-        return state
-
-    def __setstate__(self, state):
+    def __setstate__(self, state):  # BBB for pickles that don't have the graph
         self.__dict__.update(state)
         self.initialize()
 
