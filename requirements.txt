@@ -12,3 +12,4 @@ scikit-learn==0.17
 six==1.10.0               # via cycler, python-dateutil
 tabulate==0.7.5
 pydot
+graphviz
