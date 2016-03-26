@@ -261,6 +261,23 @@ def saliency_map_net(net, X):
 def plot_saliency(net, X, figsize=(9, None)):
     return _plot_heat_map(net, X, figsize, lambda net, X, n: -saliency_map_net(net, X))
     
+"""
+Functions to create network diagrams from a list of Layers.
+
+Examples:
+
+    Draw a minimal diagram to a pdf file:
+        layers = lasagne.layers.get_all_layers(output_layer)
+        draw_to_file(layers, 'network.pdf', output_shape=False)
+
+    Draw a verbose diagram in an IPython notebook:
+        from IPython.display import Image #needed to render in notebook
+
+        layers = lasagne.layers.get_all_layers(output_layer)
+        dot = get_pydot_graph(layers, verbose=True)
+        return Image(dot.create_png())
+"""
+    
 def get_hex_color(layer_type):
     """
     Determines the hex color for a layer. Some classes are given
@@ -286,23 +303,6 @@ def get_hex_color(layer_type):
         return '#9D9DD2'
     else:
         return '#{0:x}'.format(hash(layer_type) % 2**24)
-
-"""
-Functions to create network diagrams from a list of Layers.
-
-Examples:
-
-    Draw a minimal diagram to a pdf file:
-        layers = lasagne.layers.get_all_layers(output_layer)
-        draw_to_file(layers, 'network.pdf', output_shape=False)
-
-    Draw a verbose diagram in an IPython notebook:
-        from IPython.display import Image #needed to render in notebook
-
-        layers = lasagne.layers.get_all_layers(output_layer)
-        dot = get_pydot_graph(layers, verbose=True)
-        return Image(dot.create_png())
-"""
 
 def get_pydot_graph(layers, output_shape=True, verbose=False):
     """
