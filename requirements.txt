@@ -11,4 +11,4 @@ pytz==2015.7              # via matplotlib
 scikit-learn==0.17
 six==1.10.0               # via cycler, python-dateutil
 tabulate==0.7.5
-pydot==1.0.28
+pydot
