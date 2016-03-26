@@ -58,4 +58,4 @@ class TestCNNVisualizeFunctions:
         
     def test_get_hex_color(self, net_fitted):
         from nolearn.lasagne.visualize import get_hex_color
-        assert '#7C9ABB' == get_hex_color(net_fitted.layers_['conv1'])
+        assert '#7C9ABB' == get_hex_color(net_fitted.layers_['conv1'].__class__.__name__)
