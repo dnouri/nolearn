@@ -56,16 +56,12 @@ class TestCNNVisualizeFunctions:
         plt.clf()
         plt.cla()
         
-    def test_get_hex_color(self, net_fitted):
-        from nolearn.lasagne.visualize import get_hex_color
-        
-        assert '#7C9ABB' == get_hex_color(
-            net_fitted.layers_['conv1'].__class__.__name__)
-        
     def test_draw_to_file(self, net_fitted):
+        import os
         from nolearn.lasagne.visualize import draw_to_file
         
         draw_to_file(net_fitted.get_all_layers(), 'network.pdf', output_shape=False)
+        os.remove('network.pdf')
         
     def test_draw_to_notebook(self, net_fitted):
         from nolearn.lasagne.visualize import draw_to_notebook
