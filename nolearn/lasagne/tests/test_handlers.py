@@ -1,4 +1,8 @@
-from collections import OrderedDict
+try:
+    from collections import OrderedDict
+except:
+    from ordereddict import OrderedDict
+    
 import pickle
 
 from lasagne.layers import Conv2DLayer
