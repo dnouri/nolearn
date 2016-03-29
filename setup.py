@@ -27,6 +27,7 @@ tests_require = [
     'mock',
     'pytest',
     'pytest-cov',
+    'pytest-flakes',
     ]
 
 docs_require = [
