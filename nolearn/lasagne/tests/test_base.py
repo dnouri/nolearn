@@ -254,7 +254,7 @@ def test_clone():
         'on_training_started',
         'on_training_finished',
         'custom_scores',
-        ):
+            ):
         for par in (params, params1, params2):
             par.pop(ignore, None)
 
