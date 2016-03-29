@@ -20,7 +20,7 @@ def test_print_log(mnist):
 
     nn = Mock(
         regression=False,
-        custom_scores=[('my_score', 0.99)],
+        custom_scores=[('myscr', 0.99)],
         )
 
     train_history = [{
@@ -30,14 +30,14 @@ def test_print_log(mnist):
         'train_loss_best': False,
         'valid_loss_best': False,
         'valid_accuracy': 0.9,
-        'my_score': 0.99,
+        'myscr': 0.99,
         'dur': 1.0,
         }]
     output = PrintLog().table(nn, train_history)
     assert output == """\
-  epoch    train loss    valid loss    train/val    valid acc    my_score  dur
--------  ------------  ------------  -----------  -----------  ----------  -----
-      1       0.80000       0.70000      1.14286      0.90000     0.99000  1.00s\
+  epoch    train loss    valid loss    train/val    valid acc    myscr  dur
+-------  ------------  ------------  -----------  -----------  -------  -----
+      1       0.80000       0.70000      1.14286      0.90000  0.99000  1.00s\
 """
 
 
@@ -136,18 +136,18 @@ class TestRememberBestWeights:
 
     def test_custom_score(self, RememberBestWeights):
         nn1, nn2, nn3 = Mock(), Mock(), Mock()
-        rbw = RememberBestWeights(score='my_score')
+        rbw = RememberBestWeights(score='myscr')
         train_history = []
 
-        train_history.append({'epoch': 1, 'my_score': 1.0})
+        train_history.append({'epoch': 1, 'myscr': 1.0})
         rbw(nn1, train_history)
         assert rbw.best_weights is nn1.get_all_params_values()
 
-        train_history.append({'epoch': 2, 'my_score': 1.1})
+        train_history.append({'epoch': 2, 'myscr': 1.1})
         rbw(nn2, train_history)
         assert rbw.best_weights is nn2.get_all_params_values()
 
-        train_history.append({'epoch': 3, 'my_score': 0.9})
+        train_history.append({'epoch': 3, 'myscr': 0.9})
         rbw(nn3, train_history)
         assert rbw.best_weights is nn2.get_all_params_values()
 
@@ -373,7 +373,8 @@ class TestWeightLog:
         wl(nn, None)
 
         assert save_to.readlines() == [
-            'layer1_0 wdiff,layer1_0 wabsmean,layer1_0 wmean,layer2_0 wdiff,layer2_0 wabsmean,layer2_0 wmean\n',
+            'layer1_0 wdiff,layer1_0 wabsmean,layer1_0 wmean,'
+            'layer2_0 wdiff,layer2_0 wabsmean,layer2_0 wmean\n',
             '0.0,1.5,-1.5,0.0,3.5,3.5\n',
             '1.0,2.5,-2.5,2.5,6.0,6.0\n',
             ]
@@ -392,7 +393,8 @@ class TestWeightLog:
 
         wl(nn, None)
         assert save_to.readlines() == [
-            'layer1_0 wdiff,layer1_0 wabsmean,layer1_0 wmean,layer2_0 wdiff,layer2_0 wabsmean,layer2_0 wmean\n',
+            'layer1_0 wdiff,layer1_0 wabsmean,layer1_0 wmean,'
+            'layer2_0 wdiff,layer2_0 wabsmean,layer2_0 wmean\n',
             '0.0,1.5,-1.5,0.0,3.5,3.5\n',
             '1.0,2.5,-2.5,2.5,6.0,6.0\n',
             ]

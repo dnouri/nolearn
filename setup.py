@@ -28,6 +28,7 @@ tests_require = [
     'pytest',
     'pytest-cov',
     'pytest-flakes',
+    'pytest-pep8',
     ]
 
 docs_require = [
