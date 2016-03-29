@@ -14,10 +14,13 @@ except IOError:
 install_requires = [
     'gdbn',
     'joblib',
-    'matplotlib',
     'scikit-learn',
     'tabulate',
     'Lasagne',
+    ]
+
+visualization_require = [
+    'matplotlib',
     ]
 
 tests_require = [
@@ -29,6 +32,8 @@ tests_require = [
 docs_require = [
     'Sphinx',
     ]
+
+all_require = (visualization_require + tests_require + docs_require)
 
 setup(name='nolearn',
       version=version,
@@ -52,8 +57,9 @@ setup(name='nolearn',
       zip_safe=False,
       install_requires=install_requires,
       extras_require={
+          'visualization': visualization_require,
           'testing': tests_require,
           'docs': docs_require,
+          'all': all_require,
           },
       )
-
