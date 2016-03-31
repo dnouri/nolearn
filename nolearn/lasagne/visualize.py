@@ -7,8 +7,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import theano
 import theano.tensor as T
-import pydot
-
+#import pydot
+import pydotplus as pydot
+from matplotlib import colors
 
 def plot_loss(net):
     train_loss = [row['train_loss'] for row in net.train_history_]
@@ -270,7 +271,10 @@ def get_hex_color(layer_type):
     :returns:
         - color : string containing a hex color.
     """
-    return '#{0:x}'.format(hash(layer_type) % 2**24)
+    if 'Conv' in layer_type:
+        return '#ff0000', 'cyan'
+    else:
+        return '#ffff00', 'blue'
     
 def make_pydot_graph(layers, output_shape = True, verbose = False):
     """
@@ -293,7 +297,7 @@ def make_pydot_graph(layers, output_shape = True, verbose = False):
         layer_type = '{0}'.format(layer.__class__.__name__)
         key = repr(layer)
         label = layer_type
-        color = get_hex_color(layer_type)
+        layer_color, font_color = get_hex_color(layer_type)
         if verbose:
             for attr in ['num_filters', 'num_units', 'ds'
                             'filter_shape', 'stride', 'strides', 'p']:
@@ -314,8 +318,9 @@ def make_pydot_graph(layers, output_shape = True, verbose = False):
         pydot_nodes[key] = pydot.Node(key,
                                             label = label,
                                             shape = 'record',
-                                            fillcolor = color,
+                                            fillcolor = layer_color,
                                             style = 'filled',
+                                            fontcolor = font_color,
                                             )
         
         if hasattr(layer, 'input_layers'):
