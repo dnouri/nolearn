@@ -64,4 +64,4 @@ class TestCNNVisualizeFunctions:
 
     def test_draw_to_notebook(self, net_fitted):
         from nolearn.lasagne.visualize import draw_to_notebook
-        draw_to_notebook(net_fitted.get_all_layers())
+        draw_to_notebook(net_fitted.get_all_layers(), output_shape=False)
