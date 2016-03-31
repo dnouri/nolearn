@@ -35,7 +35,6 @@ def _learning_curve(learning_curve):
     dataset.target = y
 
     return learning_curve(dataset, LogisticRegression(), steps=5, verbose=1)
-    #return scores_train, scores_test, sizes
 
 
 def test_learning_curve():
