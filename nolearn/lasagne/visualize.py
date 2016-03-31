@@ -7,9 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import theano
 import theano.tensor as T
-#import pydot
+import io
 import pydotplus as pydot
-from matplotlib import colors
 
 def plot_loss(net):
     train_loss = [row['train_loss'] for row in net.train_history_]
@@ -352,7 +351,7 @@ def draw_to_file(layers, filename, **kwargs):
     dot = make_pydot_graph(layers, **kwargs)
     
     ext = filename[filename.rfind('.') + 1:]
-    with open(filename, 'w') as fid:
+    with io.open(filename, 'wb') as fid:
         fid.write(dot.create(format = ext))
         
 def draw_to_notebook(layers, **kwargs):
