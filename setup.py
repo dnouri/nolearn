@@ -17,11 +17,13 @@ install_requires = [
     'scikit-learn',
     'tabulate',
     'Lasagne',
-    'pydot'
     ]
 
 visualization_require = [
     'matplotlib',
+    'pygraphviz',
+    'pydot',
+    'ipython'
     ]
 
 tests_require = [
