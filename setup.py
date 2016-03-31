@@ -21,7 +21,6 @@ install_requires = [
 
 visualization_require = [
     'matplotlib',
-    'pygraphviz',
     'pydot',
     'ipython'
     ]

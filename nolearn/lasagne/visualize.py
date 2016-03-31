@@ -272,7 +272,7 @@ def get_hex_color(layer_type):
     """
     return '#{0:x}'.format(hash(layer_type) % 2**24)
     
-def get_pydot_graph(layers, output_shape = True, verbose = False):
+def make_pydot_graph(layers, output_shape = True, verbose = False):
     """
     :parameters:
         - layers : list
@@ -342,9 +342,9 @@ def draw_to_file(layers, filename, **kwargs):
             List of the layers
         - filename : string
             The filename to save output to
-        - **kwargs: see docstring of get_pydot_graph for other options
+        - **kwargs: see docstring of make_pydot_graph for other options
     """
-    dot = get_pydot_graph(layers, **kwargs)
+    dot = make_pydot_graph(layers, **kwargs)
     
     ext = filename[filename.rfind('.') + 1:]
     with open(filename, 'w') as fid:
@@ -356,10 +356,10 @@ def draw_to_notebook(layers, **kwargs):
     :parameters:
         - layers : list
             List of layers
-        - **kwargs : see the docstring of get_pydot_graph for other options
+        - **kwargs : see the docstring of make_pydot_graph for other options
     """
     from IPython.display import Image 
     
-    dot = get_pydot_graph(layers, **kwargs)
+    dot = make_pydot_graph(layers, **kwargs)
     
     return Image(dot.create_png())

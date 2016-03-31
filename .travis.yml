@@ -12,6 +12,7 @@ addons:
     - libblas-dev
     - liblapack-dev
     - gfortran
+    - python-pygraphviz
 before_install:
   - pip install -U pip setuptools wheel
 install:
