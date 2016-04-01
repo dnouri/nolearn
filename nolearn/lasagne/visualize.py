@@ -9,6 +9,7 @@ import theano
 import theano.tensor as T
 import io
 import pydotplus as pydot
+from IPython.display import Image
 
 def plot_loss(net):
     train_loss = [row['train_loss'] for row in net.train_history_]
@@ -260,7 +261,8 @@ def saliency_map_net(net, X):
 
 def plot_saliency(net, X, figsize=(9, None)):
     return _plot_heat_map(net, X, figsize, lambda net, X, n: -saliency_map_net(net, X))
-    
+
+
 def get_hex_color(layer_type):
     """
     Determines the hex color for a layer.
@@ -268,14 +270,16 @@ def get_hex_color(layer_type):
         - layer_type : string
             Class name of the layer
     :returns:
-        - color : string containing a hex color.
+        - layer_color : string containing a hex color for filling block.
+        - font_color : string containing a hex color for font color.
     """
     if 'Conv' in layer_type:
         return '#ff0000', 'cyan'
     else:
         return '#ffff00', 'blue'
-    
-def make_pydot_graph(layers, output_shape = True, verbose = False):
+
+
+def make_pydot_graph(layers, output_shape=True, verbose=False):
     """
     :parameters:
         - layers : list
@@ -288,8 +292,8 @@ def make_pydot_graph(layers, output_shape = True, verbose = False):
     :returns:
         - pydot_graph : PyDot object containing the graph
     """
-    
-    pydot_graph = pydot.Dot('Network', graph_type = 'digraph')
+
+    pydot_graph = pydot.Dot('Network', graph_type='digraph')
     pydot_nodes = {}
     pydot_edges = []
     for i, layer in enumerate(layers):
@@ -298,7 +302,7 @@ def make_pydot_graph(layers, output_shape = True, verbose = False):
         label = layer_type
         layer_color, font_color = get_hex_color(layer_type)
         if verbose:
-            for attr in ['num_filters', 'num_units', 'ds'
+            for attr in ['num_filters', 'num_units', 'ds', \
                             'filter_shape', 'stride', 'strides', 'p']:
                 if hasattr(layer, attr):
                     label += '\n' + \
@@ -309,35 +313,31 @@ def make_pydot_graph(layers, output_shape = True, verbose = False):
                 except AttributeError:
                     nonlinearity = layer.nonlinearity.__class__.__name__
                 label += '\n' + 'nonlinearity: {0}'.format(nonlinearity)
-                
+
         if output_shape:
             label += '\n' + \
                 'Output shape: {0}'.format(layer.output_shape)
-        
-        pydot_nodes[key] = pydot.Node(key,
-                                            label = label,
-                                            shape = 'record',
-                                            fillcolor = layer_color,
-                                            style = 'filled',
-                                            fontcolor = font_color,
-                                            )
-        
+
+        pydot_nodes[key] = pydot.Node(
+            key, label=label, shape='record', fillcolor=layer_color, \
+            style='filled', fontcolor=font_color)
+
         if hasattr(layer, 'input_layers'):
             for input_layer in layer.input_layers:
                 pydot_edges.append([repr(input_layer), key])
-                
+
         if hasattr(layer, 'input_layer'):
             pydot_edges.append([repr(layer.input_layer), key])
-            
+
     for node in pydot_nodes.values():
         pydot_graph.add_node(node)
-        
+
     for edges in pydot_edges:
         pydot_graph.add_edge(
             pydot.Edge(pydot_nodes[edges[0]], pydot_nodes[edges[1]]))
-            
     return pydot_graph
-    
+
+
 def draw_to_file(layers, filename, **kwargs):
     """
     Draws a network diagram to a file
@@ -349,11 +349,11 @@ def draw_to_file(layers, filename, **kwargs):
         - **kwargs: see docstring of make_pydot_graph for other options
     """
     dot = make_pydot_graph(layers, **kwargs)
-    
     ext = filename[filename.rfind('.') + 1:]
     with io.open(filename, 'wb') as fid:
-        fid.write(dot.create(format = ext))
-        
+        fid.write(dot.create(format=ext))
+
+
 def draw_to_notebook(layers, **kwargs):
     """
     Draws a network diagram in an IPython notebook
@@ -362,8 +362,5 @@ def draw_to_notebook(layers, **kwargs):
             List of layers
         - **kwargs : see the docstring of make_pydot_graph for other options
     """
-    from IPython.display import Image 
-    
     dot = make_pydot_graph(layers, **kwargs)
-    
     return Image(dot.create_png())
