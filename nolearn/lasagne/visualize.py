@@ -8,6 +8,7 @@ import numpy as np
 import theano
 import theano.tensor as T
 import io
+import lasagne
 import pydotplus as pydot
 from IPython.display import Image
 
@@ -270,14 +271,23 @@ def get_hex_color(layer_type):
         - layer_type : string
             Class name of the layer
     :returns:
-        - layer_color : string containing a hex color for filling block.
-        - font_color : string containing a hex color for font color.
+        - color : string containing a hex color for filling block.
     """
-    if 'Conv' in layer_type:
-        return '#ff0000', 'cyan'
-    else:
-        return '#ffff00', 'blue'
+    COLORS = ['#4A88B3', '#98C1DE', '#6CA2C8', '#3173A2', '#17649B', \
+          '#FFBB60', '#FFDAA9', '#FFC981', '#FCAC41', '#F29416', \
+          '#C54AAA', '#E698D4', '#D56CBE', '#B72F99', '#B0108D', \
+          '#75DF54', '#B3F1A0', '#91E875', '#5DD637', '#3FCD12']
 
+    hashed = int(hash(layer_type)) % 5
+
+    if "conv" in layer_type.lower():
+        return COLORS[:5][hashed]
+    if layer_type in lasagne.layers.pool.__all__:
+        return COLORS[5:10][hashed]
+    if layer_type in lasagne.layers.recurrent.__all__:
+        return COLORS[10:15][hashed]
+    else:
+        return COLORS[15:20][hashed]
 
 def make_pydot_graph(layers, output_shape=True, verbose=False):
     """
@@ -300,7 +310,7 @@ def make_pydot_graph(layers, output_shape=True, verbose=False):
         layer_type = '{0}'.format(layer.__class__.__name__)
         key = repr(layer)
         label = layer_type
-        layer_color, font_color = get_hex_color(layer_type)
+        color = get_hex_color(layer_type)
         if verbose:
             for attr in ['num_filters', 'num_units', 'ds', \
                             'filter_shape', 'stride', 'strides', 'p']:
@@ -319,8 +329,7 @@ def make_pydot_graph(layers, output_shape=True, verbose=False):
                 'Output shape: {0}'.format(layer.output_shape)
 
         pydot_nodes[key] = pydot.Node(
-            key, label=label, shape='record', fillcolor=layer_color, \
-            style='filled', fontcolor=font_color)
+            key, label=label, shape='record', fillcolor=color, style='filled')
 
         if hasattr(layer, 'input_layers'):
             for input_layer in layer.input_layers:
@@ -338,29 +347,31 @@ def make_pydot_graph(layers, output_shape=True, verbose=False):
     return pydot_graph
 
 
-def draw_to_file(layers, filename, **kwargs):
+def draw_to_file(net, filename, **kwargs):
     """
     Draws a network diagram to a file
     :parameters:
-        - layers : list
-            List of the layers
+        - net : NeuralNet instance
+            The neural net to draw.
         - filename : string
             The filename to save output to
         - **kwargs: see docstring of make_pydot_graph for other options
     """
+    layers = net.get_all_layers()
     dot = make_pydot_graph(layers, **kwargs)
     ext = filename[filename.rfind('.') + 1:]
     with io.open(filename, 'wb') as fid:
         fid.write(dot.create(format=ext))
 
 
-def draw_to_notebook(layers, **kwargs):
+def draw_to_notebook(net, **kwargs):
     """
     Draws a network diagram in an IPython notebook
     :parameters:
-        - layers : list
-            List of layers
+        - net : NeuralNet instance
+            The neural net to draw.
         - **kwargs : see the docstring of make_pydot_graph for other options
     """
+    layers = net.get_all_layers()
     dot = make_pydot_graph(layers, **kwargs)
     return Image(dot.create_png())
