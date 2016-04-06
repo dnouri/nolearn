@@ -273,10 +273,10 @@ def get_hex_color(layer_type):
     :returns:
         - color : string containing a hex color for filling block.
     """
-    COLORS = ['#4A88B3', '#98C1DE', '#6CA2C8', '#3173A2', '#17649B', \
-          '#FFBB60', '#FFDAA9', '#FFC981', '#FCAC41', '#F29416', \
-          '#C54AAA', '#E698D4', '#D56CBE', '#B72F99', '#B0108D', \
-          '#75DF54', '#B3F1A0', '#91E875', '#5DD637', '#3FCD12']
+    COLORS = ['#4A88B3', '#98C1DE', '#6CA2C8', '#3173A2', '#17649B',
+        '#FFBB60', '#FFDAA9', '#FFC981', '#FCAC41', '#F29416',
+        '#C54AAA', '#E698D4', '#D56CBE', '#B72F99', '#B0108D',
+        '#75DF54', '#B3F1A0', '#91E875', '#5DD637', '#3FCD12']
 
     hashed = int(hash(layer_type)) % 5
 
@@ -347,31 +347,31 @@ def make_pydot_graph(layers, output_shape=True, verbose=False):
     return pydot_graph
 
 
-def draw_to_file(net, filename, **kwargs):
+def draw_to_file(layers, filename, **kwargs):
     """
     Draws a network diagram to a file
     :parameters:
-        - net : NeuralNet instance
-            The neural net to draw.
+        - layers : list or NeuralNet instance
+            List of layers or the neural net to draw.
         - filename : string
             The filename to save output to
         - **kwargs: see docstring of make_pydot_graph for other options
     """
-    layers = net.get_all_layers()
+    layers = layers.get_all_layers() if hasattr(layers, 'get_all_layers') else layers
     dot = make_pydot_graph(layers, **kwargs)
     ext = filename[filename.rfind('.') + 1:]
     with io.open(filename, 'wb') as fid:
         fid.write(dot.create(format=ext))
 
 
-def draw_to_notebook(net, **kwargs):
+def draw_to_notebook(layers, **kwargs):
     """
     Draws a network diagram in an IPython notebook
     :parameters:
-        - net : NeuralNet instance
-            The neural net to draw.
+        - layers : list or NeuralNet instance
+            List of layers or the neural net to draw.
         - **kwargs : see the docstring of make_pydot_graph for other options
     """
-    layers = net.get_all_layers()
+    layers = layers.get_all_layers() if hasattr(layers, 'get_all_layers') else layers
     dot = make_pydot_graph(layers, **kwargs)
     return Image(dot.create_png())
