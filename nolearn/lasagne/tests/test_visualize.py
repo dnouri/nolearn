@@ -55,3 +55,23 @@ class TestCNNVisualizeFunctions:
         plot_occlusion(net_color_non_square, X[:3], [3, 2, 1])
         plt.clf()
         plt.cla()
+
+    def test_draw_to_file_net(self, net_fitted, tmpdir):
+        from nolearn.lasagne.visualize import draw_to_file
+        fn = str(tmpdir.join('network.pdf'))
+        draw_to_file(
+            net_fitted, fn, output_shape=False)
+
+    def test_draw_to_notebook_net(self, net_fitted):
+        from nolearn.lasagne.visualize import draw_to_notebook
+        draw_to_notebook(net_fitted, output_shape=False)
+
+    def test_draw_to_file_layers(self, net_fitted, tmpdir):
+        from nolearn.lasagne.visualize import draw_to_file
+        fn = str(tmpdir.join('network.pdf'))
+        draw_to_file(
+            net_fitted.get_all_layers(), fn, output_shape=False)
+
+    def test_draw_to_notebook_layers(self, net_fitted):
+        from nolearn.lasagne.visualize import draw_to_notebook
+        draw_to_notebook(net_fitted.get_all_layers(), output_shape=False)

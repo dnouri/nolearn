@@ -21,6 +21,8 @@ install_requires = [
 
 visualization_require = [
     'matplotlib',
+    'pydotplus',
+    'ipython'
     ]
 
 tests_require = [
