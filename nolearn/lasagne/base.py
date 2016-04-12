@@ -582,30 +582,34 @@ class NeuralNet(BaseEstimator):
 
             t0 = time()
 
+            batch_train_sizes = []
             for Xb, yb in self.batch_iterator_train(X_train, y_train):
                 batch_train_loss = self.apply_batch_func(
                     self.train_iter_, Xb, yb)
-                train_losses.append(batch_train_loss)
+                train_losses.append(batch_train_loss[0])
+                batch_train_sizes.append(len(Xb))
 
                 for func in on_batch_finished:
                     func(self, self.train_history_)
 
+            batch_valid_sizes = []
             for Xb, yb in self.batch_iterator_test(X_valid, y_valid):
                 batch_valid_loss, accuracy = self.apply_batch_func(
                     self.eval_iter_, Xb, yb)
                 valid_losses.append(batch_valid_loss)
                 valid_accuracies.append(accuracy)
+                batch_valid_sizes.append(len(Xb))
 
                 if self.custom_scores:
                     y_prob = self.apply_batch_func(self.predict_iter_, Xb)
                     for custom_scorer, custom_score in zip(self.custom_scores, custom_scores):
                         custom_score.append(custom_scorer[1](yb, y_prob))
 
-            avg_train_loss = np.mean(train_losses)
-            avg_valid_loss = np.mean(valid_losses)
+            avg_train_loss = np.average(train_losses, weights=batch_train_sizes)
+            avg_valid_loss = np.average(valid_losses, weights=batch_valid_sizes)
             avg_valid_accuracy = np.mean(valid_accuracies)
             if custom_scores:
-                avg_custom_scores = np.mean(custom_scores, axis=1)
+                avg_custom_scores = np.average(custom_scores, weights=batch_valid_sizes, axis=1)
 
             if avg_train_loss < best_train_loss:
                 best_train_loss = avg_train_loss
