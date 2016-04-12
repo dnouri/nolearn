@@ -173,7 +173,7 @@ class PrintLayerInfo:
 
     @staticmethod
     def _get_layer_info_plain(nn):
-        nums = list(range(len(nn.layers)))
+        nums = list(range(len(nn.layers_)))
         names = [layer.name for layer in nn.layers_.values()]
         output_shapes = ['x'.join(map(str, layer.output_shape[1:]))
                          for layer in nn.layers_.values()]
