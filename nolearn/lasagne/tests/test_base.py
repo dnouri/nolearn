@@ -60,6 +60,14 @@ class TestFunctionalToy:
         net = NeuralNet(l, update_learning_rate=0.01)
         return net.fit(X, y)
 
+    def classif_no_valid(self, NeuralNet, X, y):
+        from nolearn.lasagne import TrainSplit
+        l = InputLayer(shape=(None, X.shape[1]))
+        l = DenseLayer(l, num_units=len(np.unique(y)), nonlinearity=softmax)
+        net = NeuralNet(
+            l, update_learning_rate=0.01, train_split=TrainSplit(0))
+        return net.fit(X, y)
+
     def regr(self, NeuralNet, X, y):
         l = InputLayer(shape=(None, X.shape[1]))
         l = DenseLayer(l, num_units=y.shape[1], nonlinearity=None)
@@ -77,6 +85,12 @@ class TestFunctionalToy:
         X = X.astype(floatX)
         y = y.astype(np.int32)
         self.classif(NeuralNet, X, y)
+
+    def test_classif_no_valid_two_classes(self, NeuralNet):
+        X, y = make_classification()
+        X = X.astype(floatX)
+        y = y.astype(np.int32)
+        self.classif_no_valid(NeuralNet, X, y)
 
     def test_regr_one_target(self, NeuralNet):
         X, y = make_regression()
