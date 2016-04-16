@@ -602,14 +602,22 @@ class NeuralNet(BaseEstimator):
 
                 if self.custom_scores:
                     y_prob = self.apply_batch_func(self.predict_iter_, Xb)
-                    for custom_scorer, custom_score in zip(self.custom_scores, custom_scores):
+                    for custom_scorer, custom_score in zip(
+                            self.custom_scores, custom_scores):
                         custom_score.append(custom_scorer[1](yb, y_prob))
 
-            avg_train_loss = np.average(train_losses, weights=batch_train_sizes)
-            avg_valid_loss = np.average(valid_losses, weights=batch_valid_sizes)
+            avg_train_loss = np.average(
+                train_losses, weights=batch_train_sizes)
+            if batch_valid_sizes:
+                avg_valid_loss = np.average(
+                    valid_losses, weights=batch_valid_sizes)
+            else:
+                avg_valid_loss = np.nan
+
             avg_valid_accuracy = np.mean(valid_accuracies)
             if custom_scores:
-                avg_custom_scores = np.average(custom_scores, weights=batch_valid_sizes, axis=1)
+                avg_custom_scores = np.average(
+                    custom_scores, weights=batch_valid_sizes, axis=1)
 
             if avg_train_loss < best_train_loss:
                 best_train_loss = avg_train_loss
