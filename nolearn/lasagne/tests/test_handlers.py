@@ -20,7 +20,8 @@ def test_print_log(mnist):
 
     nn = Mock(
         regression=False,
-        custom_scores=[('myscr', 0.99)],
+        custom_scores=[('my1', 0.99)],
+        scores_train=[('my2', 0.98)],
         )
 
     train_history = [{
@@ -30,7 +31,8 @@ def test_print_log(mnist):
         'train_loss_best': False,
         'valid_loss_best': False,
         'valid_accuracy': 0.9,
-        'myscr': 0.99,
+        'my1': 0.99,
+        'my2': 0.98,
         'dur': 1.0,
         }]
     output = PrintLog().table(nn, train_history)

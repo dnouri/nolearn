@@ -27,21 +27,27 @@ class PrintLog:
 
         info_tabulate = OrderedDict([
             ('epoch', info['epoch']),
-            ('train loss', "{}{:.5f}{}".format(
+            ('trn loss', "{}{:.5f}{}".format(
                 ansi.CYAN if info['train_loss_best'] else "",
                 info['train_loss'],
                 ansi.ENDC if info['train_loss_best'] else "",
                 )),
-            ('valid loss', "{}{:.5f}{}".format(
+            ('val loss', "{}{:.5f}{}".format(
                 ansi.GREEN if info['valid_loss_best'] else "",
                 info['valid_loss'],
                 ansi.ENDC if info['valid_loss_best'] else "",
                 )),
-            ('train/val', info['train_loss'] / info['valid_loss']),
+            ('trn/val', info['train_loss'] / info['valid_loss']),
             ])
 
         if not nn.regression:
             info_tabulate['valid acc'] = info['valid_accuracy']
+
+        for name, func in nn.scores_train:
+            info_tabulate[name] = info[name]
+
+        for name, func in nn.scores_valid:
+            info_tabulate[name] = info[name]
 
         if nn.custom_scores:
             for custom_score in nn.custom_scores:
