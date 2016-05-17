@@ -80,6 +80,11 @@ Lasange to run:
   `lasagne/nolearn-based code
   <https://imatge.upc.edu/web/resources/end-end-convolutional-networks-saliency-prediction-software>`_.
 
+- The winners of the 2nd place in the `Kaggle Diabetic Retinopathy Detection
+  challenge <https://www.kaggle.com/c/diabetic-retinopathy-detection>`_ have
+  published their `lasagne/nolearn-based code
+  <https://github.com/sveitser/kaggle_diabetic>`_.
+
 - The winner of the 2nd place in the `Kaggle Right Whale Recognition
   challenge <https://www.kaggle.com/c/noaa-right-whale-recognition>`_ has
   published his `lasagne/nolearn-based code
