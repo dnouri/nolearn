@@ -128,7 +128,7 @@ def grad_scale(layer, scale):
 
 
 class TrainSplit(object):
-    def __init__(self, eval_size, stratify=False):
+    def __init__(self, eval_size, stratify=True):
         self.eval_size = eval_size
         self.stratify = stratify
 
