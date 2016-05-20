@@ -23,6 +23,7 @@ import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.cross_validation import KFold
 from sklearn.cross_validation import StratifiedKFold
+from sklearn.cross_validation import LabelKFold
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
@@ -131,13 +132,19 @@ class TrainSplit(object):
         self.eval_size = eval_size
         self.stratify = stratify
 
-    def __call__(self, X, y, net):
+    def __call__(self, X, y, labels, net):
         if self.eval_size:
-            if net.regression or not self.stratify:
-                kf = KFold(y.shape[0], round(1. / self.eval_size))
-            else:
-                kf = StratifiedKFold(y, round(1. / self.eval_size))
+            if labels is not None:
+                if self.stratify:
+                    raise NotImplementedError("Can't support statified & labeled validation split")
 
+                kf = LabelKFold(labels, round(1. / self.eval_size))
+            else:
+                if net.regression or not self.stratify:
+                    kf = KFold(y.shape[0], round(1. / self.eval_size))
+                else:
+                    kf = StratifiedKFold(y, round(1. / self.eval_size))
+            
             train_indices, valid_indices = next(iter(kf))
             X_train, y_train = _sldict(X, train_indices), y[train_indices]
             X_valid, y_valid = _sldict(X, valid_indices), y[valid_indices]
@@ -335,7 +342,7 @@ class NeuralNet(BaseEstimator):
             else:
                 raise ValueError("Unused kwarg: {}".format(k))
 
-    def _check_good_input(self, X, y=None):
+    def _check_good_input(self, X, y=None, labels=None):
         if isinstance(X, dict):
             lengths = [len(X1) for X1 in X.values()]
             if len(set(lengths)) > 1:
@@ -351,7 +358,11 @@ class NeuralNet(BaseEstimator):
         if self.regression and y is not None and y.ndim == 1:
             y = y.reshape(-1, 1)
 
-        return X, y
+        if labels is not None:
+            if len(labels) != x_len:
+                raise ValueError("labels are not the same size as X.")
+
+        return X, y, labels
 
     def initialize(self):
         if getattr(self, '_initialized', False):
@@ -516,9 +527,11 @@ class NeuralNet(BaseEstimator):
 
         return train_iter, eval_iter, predict_iter
 
-    def fit(self, X, y, epochs=None):
+    def fit(self, X, y, labels=None, epochs=None):
+
+        # TODO
         if self.check_input:
-            X, y = self._check_good_input(X, y)
+            X, y, labels = self._check_good_input(X, y, labels)
 
         if self.use_label_encoder:
             self.enc_ = LabelEncoder()
@@ -527,7 +540,7 @@ class NeuralNet(BaseEstimator):
         self.initialize()
 
         try:
-            self.train_loop(X, y, epochs=epochs)
+            self.train_loop(X, y, labels, epochs=epochs)
         except KeyboardInterrupt:
             pass
         return self
@@ -535,9 +548,9 @@ class NeuralNet(BaseEstimator):
     def partial_fit(self, X, y, classes=None):
         return self.fit(X, y, epochs=1)
 
-    def train_loop(self, X, y, epochs=None):
+    def train_loop(self, X, y, labels, epochs=None):
         epochs = epochs or self.max_epochs
-        X_train, X_valid, y_train, y_valid = self.train_split(X, y, self)
+        X_train, X_valid, y_train, y_valid = self.train_split(X, y, labels, self)
 
         on_batch_finished = self.on_batch_finished
         if not isinstance(on_batch_finished, (list, tuple)):
