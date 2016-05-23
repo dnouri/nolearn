@@ -609,6 +609,8 @@ class NeuralNet(BaseEstimator):
                     func(self, self.train_history_)
 
             if want_dataset:
+                X_valid_epoch = np.zeros_like(X_valid)
+                y_valid_epoch = np.zeros_like(y_valid)
                 y_predict = np.zeros_like(y_valid)
                 y_predict_row = 0
 
@@ -624,6 +626,8 @@ class NeuralNet(BaseEstimator):
                     y_prob = self.apply_batch_func(self.predict_iter_, Xb)
 
                     if want_dataset:
+                        y_valid_epoch[y_predict_row:y_predict_row+len(yb), :, :, :] = yb
+                        X_valid_epoch[y_predict_row:y_predict_row+len(yb), :, :, :] = Xb
                         y_predict[y_predict_row:y_predict_row+len(yb), :, :, :] = y_prob
                         y_predict_row += len(yb)
 
@@ -667,7 +671,7 @@ class NeuralNet(BaseEstimator):
             try:
                 for func in on_epoch_finished:
                     if want_dataset and self._has_dataset_args(func):
-                        func(self, self.train_history_, X_valid, y_valid, y_predict)
+                        func(self, self.train_history_, X_valid_epoch, y_valid_epoch, y_predict)
                     else:
                         func(self, self.train_history_)
             except StopIteration:
