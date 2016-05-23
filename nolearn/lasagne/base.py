@@ -7,6 +7,7 @@ from collections import OrderedDict
 import itertools
 from warnings import warn
 from time import time
+import inspect
 
 from lasagne.layers import get_all_layers
 from lasagne.layers import get_output
@@ -23,6 +24,7 @@ import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.cross_validation import KFold
 from sklearn.cross_validation import StratifiedKFold
+from sklearn.cross_validation import LabelKFold
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
@@ -131,13 +133,19 @@ class TrainSplit(object):
         self.eval_size = eval_size
         self.stratify = stratify
 
-    def __call__(self, X, y, net):
+    def __call__(self, X, y, labels, net):
         if self.eval_size:
-            if net.regression or not self.stratify:
-                kf = KFold(y.shape[0], round(1. / self.eval_size))
-            else:
-                kf = StratifiedKFold(y, round(1. / self.eval_size))
+            if labels is not None:
+                if self.stratify:
+                    raise NotImplementedError("Can't support statified & labeled validation split")
 
+                kf = LabelKFold(labels, round(1. / self.eval_size))
+            else:
+                if net.regression or not self.stratify:
+                    kf = KFold(y.shape[0], round(1. / self.eval_size))
+                else:
+                    kf = StratifiedKFold(y, round(1. / self.eval_size))
+            
             train_indices, valid_indices = next(iter(kf))
             X_train, y_train = _sldict(X, train_indices), y[train_indices]
             X_valid, y_valid = _sldict(X, valid_indices), y[valid_indices]
@@ -335,7 +343,7 @@ class NeuralNet(BaseEstimator):
             else:
                 raise ValueError("Unused kwarg: {}".format(k))
 
-    def _check_good_input(self, X, y=None):
+    def _check_good_input(self, X, y=None, labels=None):
         if isinstance(X, dict):
             lengths = [len(X1) for X1 in X.values()]
             if len(set(lengths)) > 1:
@@ -351,7 +359,11 @@ class NeuralNet(BaseEstimator):
         if self.regression and y is not None and y.ndim == 1:
             y = y.reshape(-1, 1)
 
-        return X, y
+        if labels is not None:
+            if len(labels) != x_len:
+                raise ValueError("labels are not the same size as X.")
+
+        return X, y, labels
 
     def initialize(self):
         if getattr(self, '_initialized', False):
@@ -516,9 +528,11 @@ class NeuralNet(BaseEstimator):
 
         return train_iter, eval_iter, predict_iter
 
-    def fit(self, X, y, epochs=None):
+    def fit(self, X, y, labels=None, epochs=None):
+
+        # TODO
         if self.check_input:
-            X, y = self._check_good_input(X, y)
+            X, y, labels = self._check_good_input(X, y, labels)
 
         if self.use_label_encoder:
             self.enc_ = LabelEncoder()
@@ -527,7 +541,7 @@ class NeuralNet(BaseEstimator):
         self.initialize()
 
         try:
-            self.train_loop(X, y, epochs=epochs)
+            self.train_loop(X, y, labels, epochs=epochs)
         except KeyboardInterrupt:
             pass
         return self
@@ -535,9 +549,9 @@ class NeuralNet(BaseEstimator):
     def partial_fit(self, X, y, classes=None):
         return self.fit(X, y, epochs=1)
 
-    def train_loop(self, X, y, epochs=None):
+    def train_loop(self, X, y, labels, epochs=None):
         epochs = epochs or self.max_epochs
-        X_train, X_valid, y_train, y_valid = self.train_split(X, y, self)
+        X_train, X_valid, y_train, y_valid = self.train_split(X, y, labels, self)
 
         on_batch_finished = self.on_batch_finished
         if not isinstance(on_batch_finished, (list, tuple)):
@@ -569,6 +583,8 @@ class NeuralNet(BaseEstimator):
 
         num_epochs_past = len(self.train_history_)
 
+        want_dataset = NeuralNet._any_func_has_dataset_args(on_epoch_finished)
+
         while epoch < epochs:
             epoch += 1
 
@@ -592,6 +608,12 @@ class NeuralNet(BaseEstimator):
                 for func in on_batch_finished:
                     func(self, self.train_history_)
 
+            if want_dataset:
+                X_valid_epoch = np.zeros_like(X_valid)
+                y_valid_epoch = np.zeros_like(y_valid)
+                y_predict = np.zeros_like(y_valid)
+                y_predict_row = 0
+
             batch_valid_sizes = []
             for Xb, yb in self.batch_iterator_test(X_valid, y_valid):
                 batch_valid_loss, accuracy = self.apply_batch_func(
@@ -600,11 +622,19 @@ class NeuralNet(BaseEstimator):
                 valid_accuracies.append(accuracy)
                 batch_valid_sizes.append(len(Xb))
 
-                if self.custom_scores:
+                if self.custom_scores or want_dataset:
                     y_prob = self.apply_batch_func(self.predict_iter_, Xb)
-                    for custom_scorer, custom_score in zip(
-                            self.custom_scores, custom_scores):
-                        custom_score.append(custom_scorer[1](yb, y_prob))
+
+                    if want_dataset:
+                        y_valid_epoch[y_predict_row:y_predict_row+len(yb), :, :, :] = yb
+                        X_valid_epoch[y_predict_row:y_predict_row+len(yb), :, :, :] = Xb
+                        y_predict[y_predict_row:y_predict_row+len(yb), :, :, :] = y_prob
+                        y_predict_row += len(yb)
+
+                    if self.custom_scores:
+                        for custom_scorer, custom_score in zip(
+                                self.custom_scores, custom_scores):
+                            custom_score.append(custom_scorer[1](yb, y_prob))
 
             avg_train_loss = np.average(
                 train_losses, weights=batch_train_sizes)
@@ -640,12 +670,34 @@ class NeuralNet(BaseEstimator):
 
             try:
                 for func in on_epoch_finished:
-                    func(self, self.train_history_)
+                    if want_dataset and self._has_dataset_args(func):
+                        func(self, self.train_history_, X_valid_epoch, y_valid_epoch, y_predict)
+                    else:
+                        func(self, self.train_history_)
             except StopIteration:
                 break
 
         for func in on_training_finished:
             func(self, self.train_history_)
+
+    @staticmethod
+    def _has_dataset_args(callable_obj):
+        """Return True if the given callable object has args for X, y, and y_predict.
+
+        'Normal' on_epoch_finished handlers have 3 args, (self, nn, train_history). Look
+        for three more args and return True if found. We don't care what they are named.
+        """
+        call_methods = inspect.getmembers(callable_obj, lambda m: inspect.ismethod(m) and m.__name__ == '__call__')
+        return (len(call_methods) == 1 and
+                len(inspect.getargspec(call_methods[0][1]).args) == 6)
+
+    @staticmethod
+    def _any_func_has_dataset_args(callable_objs):
+        """Return True if any of the given on_epoch_finished functions has dataset args."""
+        for func in callable_objs:
+            if NeuralNet._has_dataset_args(func):
+                return True
+        return False
 
     @staticmethod
     def apply_batch_func(func, Xb, yb=None):
