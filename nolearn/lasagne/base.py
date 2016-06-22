@@ -485,13 +485,10 @@ class NeuralNet(BaseEstimator):
         else:
             accuracy = loss_eval
 
-        scores_train, scores_valid = [], []
-        if self.scores_train:
-            scores_train = [
-                s[1](predict_proba, y_batch) for s in self.scores_train]
-        if self.scores_valid:
-            scores_valid = [
-                s[1](predict_proba, y_batch) for s in self.scores_valid]
+        scores_train = [
+            s[1](predict_proba, y_batch) for s in self.scores_train]
+        scores_valid = [
+            s[1](predict_proba, y_batch) for s in self.scores_valid]
 
         all_params = self.get_all_params(trainable=True)
         grads = theano.grad(loss_train, all_params)
