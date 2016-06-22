@@ -647,9 +647,12 @@ class NeuralNet(BaseEstimator):
                 'epoch': num_epochs_past + epoch,
                 'train_loss': train_outputs[0],
                 'train_loss_best': best_train_loss == train_outputs[0],
-                'valid_loss': valid_outputs[0] if valid_outputs else np.nan,
-                'valid_loss_best': best_valid_loss == valid_outputs[0],
-                'valid_accuracy': valid_outputs[1],
+                'valid_loss': valid_outputs[0]
+                if valid_outputs else np.nan,
+                'valid_loss_best': best_valid_loss == valid_outputs[0]
+                if valid_outputs else np.nan,
+                'valid_accuracy': valid_outputs[1]
+                if valid_outputs else np.nan,
                 'dur': time() - t0,
                 }
 
