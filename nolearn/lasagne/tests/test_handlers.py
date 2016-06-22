@@ -20,7 +20,9 @@ def test_print_log(mnist):
 
     nn = Mock(
         regression=False,
-        custom_scores=[('myscr', 0.99)],
+        custom_scores=[('my1', 0.99)],
+        scores_train=[('my2', 0.98)],
+        scores_valid=[('my3', 0.33)],
         )
 
     train_history = [{
@@ -30,15 +32,44 @@ def test_print_log(mnist):
         'train_loss_best': False,
         'valid_loss_best': False,
         'valid_accuracy': 0.9,
-        'myscr': 0.99,
+        'my1': 0.99,
+        'my2': 0.98,
+        'my3': 0.33,
         'dur': 1.0,
         }]
     output = PrintLog().table(nn, train_history)
-    assert output == """\
-  epoch    train loss    valid loss    train/val    valid acc    myscr  dur
--------  ------------  ------------  -----------  -----------  -------  -----
-      1       0.80000       0.70000      1.14286      0.90000  0.99000  1.00s\
-"""
+    assert output.split() == [
+        'epoch',
+        'trn',
+        'loss',
+        'val',
+        'loss',
+        'trn/val',
+        'valid',
+        'acc',
+        'my2',
+        'my3',
+        'my1',
+        'dur',
+        '-------',
+        '----------',
+        '----------',
+        '---------',
+        '-----------',
+        '-------',
+        '-------',
+        '-------',
+        '-----',
+        '1',
+        '0.80000',
+        '0.70000',
+        '1.14286',
+        '0.90000',
+        '0.98000',
+        '0.33000',
+        '0.99000',
+        '1.00s',
+        ]
 
 
 class TestSaveWeights():

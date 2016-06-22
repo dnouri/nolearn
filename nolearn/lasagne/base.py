@@ -197,6 +197,8 @@ class NeuralNet(BaseEstimator):
         max_epochs=100,
         train_split=TrainSplit(eval_size=0.2),
         custom_scores=None,
+        scores_train=None,
+        scores_valid=None,
         X_tensor_type=None,
         y_tensor_type=None,
         use_label_encoder=False,
@@ -296,6 +298,8 @@ class NeuralNet(BaseEstimator):
         self.max_epochs = max_epochs
         self.train_split = train_split
         self.custom_scores = custom_scores
+        self.scores_train = scores_train or []
+        self.scores_valid = scores_valid or []
         self.y_tensor_type = y_tensor_type
         self.use_label_encoder = use_label_encoder
         self.on_batch_finished = on_batch_finished or []
@@ -481,6 +485,11 @@ class NeuralNet(BaseEstimator):
         else:
             accuracy = loss_eval
 
+        scores_train = [
+            s[1](predict_proba, y_batch) for s in self.scores_train]
+        scores_valid = [
+            s[1](predict_proba, y_batch) for s in self.scores_valid]
+
         all_params = self.get_all_params(trainable=True)
         grads = theano.grad(loss_train, all_params)
         for idx, param in enumerate(all_params):
@@ -499,13 +508,13 @@ class NeuralNet(BaseEstimator):
 
         train_iter = theano.function(
             inputs=inputs,
-            outputs=[loss_train],
+            outputs=[loss_train] + scores_train,
             updates=updates,
             allow_input_downcast=True,
             )
         eval_iter = theano.function(
             inputs=inputs,
-            outputs=[loss_eval, accuracy],
+            outputs=[loss_eval, accuracy] + scores_valid,
             allow_input_downcast=True,
             )
         predict_iter = theano.function(
@@ -572,9 +581,9 @@ class NeuralNet(BaseEstimator):
         while epoch < epochs:
             epoch += 1
 
-            train_losses = []
-            valid_losses = []
-            valid_accuracies = []
+            train_outputs = []
+            valid_outputs = []
+
             if self.custom_scores:
                 custom_scores = [[] for _ in self.custom_scores]
             else:
@@ -584,9 +593,8 @@ class NeuralNet(BaseEstimator):
 
             batch_train_sizes = []
             for Xb, yb in self.batch_iterator_train(X_train, y_train):
-                batch_train_loss = self.apply_batch_func(
-                    self.train_iter_, Xb, yb)
-                train_losses.append(batch_train_loss[0])
+                train_outputs.append(
+                    self.apply_batch_func(self.train_iter_, Xb, yb))
                 batch_train_sizes.append(len(Xb))
 
                 for func in on_batch_finished:
@@ -594,10 +602,8 @@ class NeuralNet(BaseEstimator):
 
             batch_valid_sizes = []
             for Xb, yb in self.batch_iterator_test(X_valid, y_valid):
-                batch_valid_loss, accuracy = self.apply_batch_func(
-                    self.eval_iter_, Xb, yb)
-                valid_losses.append(batch_valid_loss)
-                valid_accuracies.append(accuracy)
+                valid_outputs.append(
+                    self.apply_batch_func(self.eval_iter_, Xb, yb))
                 batch_valid_sizes.append(len(Xb))
 
                 if self.custom_scores:
@@ -606,36 +612,59 @@ class NeuralNet(BaseEstimator):
                             self.custom_scores, custom_scores):
                         custom_score.append(custom_scorer[1](yb, y_prob))
 
-            avg_train_loss = np.average(
-                train_losses, weights=batch_train_sizes)
-            if batch_valid_sizes:
-                avg_valid_loss = np.average(
-                    valid_losses, weights=batch_valid_sizes)
-            else:
-                avg_valid_loss = np.nan
+            train_outputs = np.array(train_outputs, dtype=object).T
+            train_outputs = [
+                np.average(
+                    [np.mean(row) for row in col],
+                    weights=batch_train_sizes,
+                    )
+                for col in train_outputs
+                ]
 
-            avg_valid_accuracy = np.mean(valid_accuracies)
+            if valid_outputs:
+                valid_outputs = np.array(valid_outputs, dtype=object).T
+                valid_outputs = [
+                    np.average(
+                        [np.mean(row) for row in col],
+                        weights=batch_valid_sizes,
+                        )
+                    for col in valid_outputs
+                    ]
+
             if custom_scores:
                 avg_custom_scores = np.average(
                     custom_scores, weights=batch_valid_sizes, axis=1)
 
-            if avg_train_loss < best_train_loss:
-                best_train_loss = avg_train_loss
-            if avg_valid_loss < best_valid_loss:
-                best_valid_loss = avg_valid_loss
+            if train_outputs[0] < best_train_loss:
+                best_train_loss = train_outputs[0]
+            if valid_outputs and valid_outputs[0] < best_valid_loss:
+                best_valid_loss = valid_outputs[0]
 
             info = {
                 'epoch': num_epochs_past + epoch,
-                'train_loss': avg_train_loss,
-                'train_loss_best': best_train_loss == avg_train_loss,
-                'valid_loss': avg_valid_loss,
-                'valid_loss_best': best_valid_loss == avg_valid_loss,
-                'valid_accuracy': avg_valid_accuracy,
+                'train_loss': train_outputs[0],
+                'train_loss_best': best_train_loss == train_outputs[0],
+                'valid_loss': valid_outputs[0]
+                if valid_outputs else np.nan,
+                'valid_loss_best': best_valid_loss == valid_outputs[0]
+                if valid_outputs else np.nan,
+                'valid_accuracy': valid_outputs[1]
+                if valid_outputs else np.nan,
                 'dur': time() - t0,
                 }
+
             if self.custom_scores:
                 for index, custom_score in enumerate(self.custom_scores):
                     info[custom_score[0]] = avg_custom_scores[index]
+
+            if self.scores_train:
+                for index, (name, func) in enumerate(self.scores_train):
+                    info[name] = train_outputs[index + 1]
+
+            if self.scores_valid:
+                for index, (name, func) in enumerate(self.scores_valid):
+                    info[name] = valid_outputs[index + 2]
+
             self.train_history_.append(info)
 
             try:
