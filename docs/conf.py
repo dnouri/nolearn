@@ -75,3 +75,59 @@ texinfo_documents = [
    u'Daniel Nouri', 'nolearn', 'One line description of project.',
    'Miscellaneous'),
 ]
+
+
+
+
+
+#-- Options for Module Mocking output ------------------------------------------------
+def blank_fn(cls, args, *kwargs):
+    pass
+
+class _MockModule(object):
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        return _MockModule()
+
+    @classmethod
+    def __getattr__(cls, name):
+        if name in ('__file__', '__path__'):
+            return os.devnull
+        elif name[0] == name[0].upper():
+            # Not very good, we assume Uppercase names are classes...
+            mocktype = type(name, (), {})
+            mocktype.__module__ = __name__
+            mocktype.__init__ = blank_fn
+            return mocktype
+        else:
+            return _MockModule()
+
+
+#autodoc_mock_imports =
+MOCK_MODULES = ['numpy',
+                'lasagne',
+                'lasagne.layers',
+                'lasagne.objectives',
+                'lasagne.updates',
+                'lasagne.regularization',
+                'lasagne.utils',
+                'sklearn',
+                'sklearn.BaseEstimator',
+                'sklearn.base',
+                'sklearn.metrics',
+                'sklearn.cross_validation',
+                'sklearn.preprocessing',
+                'sklearn.grid_search',
+                'caffe.imagenet',
+                'skimage.io',
+                'skimage.transform',
+                'joblib',
+                'matplotlib',
+                'matplotlib.pyplot',
+                'theano',
+                'theano.tensor',
+                'tabulate']
+
+sys.modules.update((mod_name, _MockModule()) for mod_name in MOCK_MODULES)
