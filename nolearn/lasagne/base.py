@@ -395,20 +395,20 @@ class NeuralNet(BaseEstimator):
             self.layers = layers
         self.layers_ = Layers()
 
+        #If a Layer, or a list of Layers was passed in
         if isinstance(self.layers[0], Layer):
-            # 'self.layers[0]' is already the output layer with type
-            # 'lasagne.layers.Layer', so we only have to fill
-            # 'self.layers_' and we're done:
-            for i, layer in enumerate(get_all_layers(self.layers[0])):
-                name = layer.name or self._layer_name(layer.__class__, i)
-                self.layers_[name] = layer
-                if self._get_params_for(name) != {}:
-                    raise ValueError(
-                        "You can't use keyword params when passing a Lasagne "
-                        "instance object as the 'layers' parameter of "
-                        "'NeuralNet'."
-                        )
-            return self.layers[0]
+            for out_layer in self.layers:
+                for i, layer in enumerate(get_all_layers(out_layer)):
+                    if layer not in self.layers_.values():
+                        name = layer.name or self._layer_name(layer.__class__, i)
+                        self.layers_[name] = layer
+                        if self._get_params_for(name) != {}:
+                            raise ValueError(
+                                "You can't use keyword params when passing a Lasagne "
+                                "instance object as the 'layers' parameter of "
+                                "'NeuralNet'."
+                                )
+            return self.layers[-1]
 
         # 'self.layers' are a list of '(Layer class, kwargs)', so
         # we'll have to actually instantiate the layers given the
