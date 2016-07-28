@@ -740,7 +740,7 @@ class NeuralNet(BaseEstimator):
             return_value[name] = [p.get_value() for p in layer.get_params()]
         return return_value
 
-    def load_params_from(self, source):
+    def load_params_from(self, source, lenient=False):
         self.initialize()
 
         if isinstance(source, basestring):
@@ -751,6 +751,7 @@ class NeuralNet(BaseEstimator):
             source = source.get_all_params_values()
 
         success = "Loaded parameters to layer '{}' (shape {})."
+        success_smaller = "Loaded parameters to layer '{}' (shape {}) from shape {}."  # noqa
         failure = ("Could not load parameters to layer '{}' because "
                    "shapes did not match: {} vs {}.")
 
@@ -758,7 +759,8 @@ class NeuralNet(BaseEstimator):
             layer = self.layers_.get(key)
             if layer is not None:
                 for p1, p2v in zip(layer.get_params(), values):
-                    shape1 = p1.get_value().shape
+                    p1v = p1.get_value()
+                    shape1 = p1v.shape
                     shape2 = p2v.shape
                     shape1s = 'x'.join(map(str, shape1))
                     shape2s = 'x'.join(map(str, shape2))
@@ -768,7 +770,15 @@ class NeuralNet(BaseEstimator):
                             print(success.format(
                                 key, shape1s, shape2s))
                     else:
-                        if self.verbose:
+                        if lenient and len(shape1) == len(shape2) and \
+                                all(t >= s for t, s in zip(shape1, shape2)):
+                            target = p1v.copy()
+                            target[[slice(k) for k in shape2]] = p2v
+                            p1.set_value(target)
+                            if self.verbose:
+                                print(success_smaller.format(
+                                    key, shape1s, shape2s))
+                        elif self.verbose:
                             print(failure.format(
                                 key, shape1s, shape2s))
 
