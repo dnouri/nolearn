@@ -9,8 +9,7 @@ import theano
 import theano.tensor as T
 import io
 import lasagne
-import pydotplus as pydot
-from IPython.display import Image
+
 
 
 def plot_loss(net):
@@ -307,7 +306,7 @@ def make_pydot_graph(layers, output_shape=True, verbose=False):
     :returns:
         - pydot_graph : PyDot object containing the graph
     """
-
+    import pydotplus as pydot
     pydot_graph = pydot.Dot('Network', graph_type='digraph')
     pydot_nodes = {}
     pydot_edges = []
@@ -376,6 +375,7 @@ def draw_to_notebook(layers, **kwargs):
             List of layers or the neural net to draw.
         - **kwargs : see the docstring of make_pydot_graph for other options
     """
+    from IPython.display import Image
     layers = (layers.get_all_layers() if hasattr(layers, 'get_all_layers')
               else layers)
     dot = make_pydot_graph(layers, **kwargs)
