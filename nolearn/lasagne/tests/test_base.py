@@ -853,23 +853,29 @@ class TestMultiOutput:
             loss = cls_loss + reg_loss
             return loss
 
-        # test that both branches of the multi ouptu network are included,
+        # test that both branches of the multi output network are included,
         # and also that a single layer isn't included multiple times.
         l = InputLayer(shape=(None, 1, 28, 28), name="input")
         l = Conv2DLayer(l, name='conv1', filter_size=(5, 5), num_filters=8)
         l = Conv2DLayer(l, name='conv2', filter_size=(5, 5), num_filters=8)
 
         la = DenseLayer(l, name='hidden_a', num_units=128)
-        la = DenseLayer(la, name='output_a', nonlinearity=softmax, num_units=10)
+        la = DenseLayer(la, name='output_a', nonlinearity=softmax,
+                        num_units=10)
 
         lb = DenseLayer(l, name='hidden_b', num_units=128)
         lb = DenseLayer(lb, name='output_b', nonlinearity=sigmoid, num_units=1)
 
-        net = NeuralNet(layers=[la, lb], update_learning_rate=0.5, y_tensor_type=None, regression=True,
+        net = NeuralNet(layers=[la, lb],
+                        update_learning_rate=0.5,
+                        y_tensor_type=None,
+                        regression=True,
                         objective=objective)
         net.initialize()
 
-        expected_names = sorted(["input", "conv1", "conv2", "hidden_a", "output_a", "hidden_b", "output_b"])
+        expected_names = sorted(["input", "conv1", "conv2",
+                                 "hidden_a", "output_a",
+                                 "hidden_b", "output_b"])
         network_names = sorted(list(net.layers_.keys()))
 
         assert (expected_names == network_names)
