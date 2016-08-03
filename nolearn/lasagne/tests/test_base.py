@@ -1,6 +1,7 @@
 import pickle
 import sys
 
+from lasagne.layers import get_output
 from lasagne.layers import BatchNormLayer
 from lasagne.layers import ConcatLayer
 from lasagne.layers import Conv2DLayer
@@ -9,7 +10,9 @@ from lasagne.layers import InputLayer
 from lasagne.layers import Layer
 from lasagne.nonlinearities import identity
 from lasagne.nonlinearities import softmax
+from lasagne.nonlinearities import sigmoid
 from lasagne.objectives import categorical_crossentropy
+from lasagne.objectives import aggregate
 from lasagne.updates import nesterov_momentum
 from mock import Mock
 from mock import patch
@@ -829,3 +832,50 @@ class TestGradScale:
             np.testing.assert_almost_equal(param.tag.grad_scale, 0.33)
         for param in layer.get_params(trainable=False):
             assert hasattr(param.tag, 'grad_scale') is False
+
+
+class TestMultiOutput:
+    def test_layers_included(self, NeuralNet):
+        def objective(layers_, target, **kwargs):
+            out_a_layer = layers_['output_a']
+            out_b_layer = layers_['output_b']
+
+            # Get the outputs
+            out_a, out_b = get_output([out_a_layer, out_b_layer])
+
+            # Get the targets
+            gt_a = T.cast(target[:, 0], 'int32')
+            gt_b = target[:, 1].reshape((-1, 1))
+
+            # Calculate the multi task loss
+            cls_loss = aggregate(categorical_crossentropy(out_a, gt_a))
+            reg_loss = aggregate(categorical_crossentropy(out_b, gt_b))
+            loss = cls_loss + reg_loss
+            return loss
+
+        # test that both branches of the multi output network are included,
+        # and also that a single layer isn't included multiple times.
+        l = InputLayer(shape=(None, 1, 28, 28), name="input")
+        l = Conv2DLayer(l, name='conv1', filter_size=(5, 5), num_filters=8)
+        l = Conv2DLayer(l, name='conv2', filter_size=(5, 5), num_filters=8)
+
+        la = DenseLayer(l, name='hidden_a', num_units=128)
+        la = DenseLayer(la, name='output_a', nonlinearity=softmax,
+                        num_units=10)
+
+        lb = DenseLayer(l, name='hidden_b', num_units=128)
+        lb = DenseLayer(lb, name='output_b', nonlinearity=sigmoid, num_units=1)
+
+        net = NeuralNet(layers=[la, lb],
+                        update_learning_rate=0.5,
+                        y_tensor_type=None,
+                        regression=True,
+                        objective=objective)
+        net.initialize()
+
+        expected_names = sorted(["input", "conv1", "conv2",
+                                 "hidden_a", "output_a",
+                                 "hidden_b", "output_b"])
+        network_names = sorted(list(net.layers_.keys()))
+
+        assert (expected_names == network_names)
