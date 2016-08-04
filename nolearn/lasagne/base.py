@@ -469,9 +469,9 @@ class NeuralNet(BaseEstimator):
         if getattr(self, '_initialized', False):
             return
 
-        out = getattr(self, '_output_layer', None)
+        out = getattr(self, '_output_layers', None)
         if out is None:
-            out = self._output_layers = self.initialize_layers()
+            self.initialize_layers()
         self._check_for_unused_kwargs()
 
         iter_funcs = self._create_iter_funcs(
@@ -526,7 +526,8 @@ class NeuralNet(BaseEstimator):
                                 "instance object as the 'layers' parameter of "
                                 "'NeuralNet'."
                                 )
-            return self.layers   # the list of all output layers
+            self._output_layers = self.layers
+            return self.layers if len(self.layers)>1 else self.layers[0]
 
         # 'self.layers' are a list of '(Layer class, kwargs)', so
         # we'll have to actually instantiate the layers given the
@@ -588,7 +589,8 @@ class NeuralNet(BaseEstimator):
                 layer = layer_wrapper(layer)
                 self.layers_["LW_%s" % layer_kw['name']] = layer
 
-        return [layer]
+        self._output_layers = [layer]
+        return layer
 
     def _create_iter_funcs(self, layers, objective, update, output_type):
         y_batch = output_type('y_batch')
