@@ -835,7 +835,8 @@ class TestGradScale:
 
 
 class TestMultiOutput:
-    def test_layers_included(self, NeuralNet):
+    @pytest.fixture(scope='class')
+    def mo_net(self, NeuralNet):
         def objective(layers_, target, **kwargs):
             out_a_layer = layers_['output_a']
             out_b_layer = layers_['output_b']
@@ -872,10 +873,18 @@ class TestMultiOutput:
                         regression=True,
                         objective=objective)
         net.initialize()
+        return net
 
+    def test_layers_included(self, mo_net):
         expected_names = sorted(["input", "conv1", "conv2",
                                  "hidden_a", "output_a",
                                  "hidden_b", "output_b"])
-        network_names = sorted(list(net.layers_.keys()))
+        network_names = sorted(list(mo_net.layers_.keys()))
 
         assert (expected_names == network_names)
+
+    def test_predict(self, mo_net):
+        dummy_data = np.zeros((2, 1, 28, 28), np.float32)
+        p_cls, p_reg = mo_net.predict(dummy_data)
+        assert(p_cls.shape == (2, 10))
+        assert(p_reg.shape == (2, 1))

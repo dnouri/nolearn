@@ -3,7 +3,7 @@ from __future__ import absolute_import
 from .._compat import basestring
 from .._compat import chain_exception
 from .._compat import pickle
-from collections import OrderedDict
+from collections import OrderedDict, Iterable
 import itertools
 from warnings import warn
 from time import time
@@ -84,7 +84,7 @@ class BatchIterator(object):
             sl = slice(i * bs, (i + 1) * bs)
             Xb = _sldict(self.X, sl)
             if self.y is not None:
-                yb = self.y[sl]
+                yb = _sldict(self.y, sl)
             else:
                 yb = None
             yield self.transform(Xb, yb)
@@ -139,11 +139,13 @@ class TrainSplit(object):
                 kf = StratifiedKFold(y, round(1. / self.eval_size))
 
             train_indices, valid_indices = next(iter(kf))
-            X_train, y_train = _sldict(X, train_indices), y[train_indices]
-            X_valid, y_valid = _sldict(X, valid_indices), y[valid_indices]
+            X_train = _sldict(X, train_indices)
+            y_train = _sldict(y, train_indices)
+            X_valid = _sldict(X, valid_indices)
+            y_valid = _sldict(y, valid_indices)
         else:
             X_train, y_train = X, y
-            X_valid, y_valid = _sldict(X, slice(len(y), None)), y[len(y):]
+            X_valid, y_valid = _sldict(X, slice(0,0)), _sldict(y, slice(0,0))
 
         return X_train, X_valid, y_train, y_valid
 
@@ -287,6 +289,8 @@ class NeuralNet(BaseEstimator):
 
         if isinstance(layers, Layer):
             layers = _list([layers])
+        elif isinstance(layers, Iterable):
+            layers = _list(layers)
             
         self.layers = layers
         self.update = update
@@ -363,7 +367,7 @@ class NeuralNet(BaseEstimator):
 
         out = getattr(self, '_output_layer', None)
         if out is None:
-            out = self._output_layer = self.initialize_layers()
+            out = self._output_layers = self.initialize_layers()
         self._check_for_unused_kwargs()
 
         iter_funcs = self._create_iter_funcs(
@@ -408,7 +412,7 @@ class NeuralNet(BaseEstimator):
                                 "instance object as the 'layers' parameter of "
                                 "'NeuralNet'."
                                 )
-            return self.layers[-1]
+            return self.layers   # the list of all output layers
 
         # 'self.layers' are a list of '(Layer class, kwargs)', so
         # we'll have to actually instantiate the layers given the
@@ -466,21 +470,23 @@ class NeuralNet(BaseEstimator):
                 layer = layer_wrapper(layer)
                 self.layers_["LW_%s" % layer_kw['name']] = layer
 
-        return layer
+        return [layer]
 
     def _create_iter_funcs(self, layers, objective, update, output_type):
         y_batch = output_type('y_batch')
 
-        output_layer = layers[-1]
+
         objective_kw = self._get_params_for('objective')
 
         loss_train = objective(
             layers, target=y_batch, **objective_kw)
         loss_eval = objective(
             layers, target=y_batch, deterministic=True, **objective_kw)
+
+        output_layer = self._output_layers
         predict_proba = get_output(output_layer, None, deterministic=True)
         if not self.regression:
-            predict = predict_proba.argmax(axis=1)
+            predict = predict_proba[0].argmax(axis=1)
             accuracy = T.mean(T.eq(predict, y_batch))
         else:
             accuracy = loss_eval
@@ -690,7 +696,8 @@ class NeuralNet(BaseEstimator):
         probas = []
         for Xb, yb in self.batch_iterator_test(X):
             probas.append(self.apply_batch_func(self.predict_iter_, Xb))
-        return np.vstack(probas)
+        output = tuple(np.vstack(o) for o in zip(*probas))
+        return output if len(output) > 1 else output[0]
 
     def predict(self, X):
         if self.regression:
