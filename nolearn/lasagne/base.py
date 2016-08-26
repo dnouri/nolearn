@@ -5,6 +5,7 @@ from .._compat import chain_exception
 from .._compat import pickle
 from collections import OrderedDict
 import itertools
+from pydoc import locate
 from warnings import warn
 from time import time
 
@@ -416,14 +417,18 @@ class NeuralNet(BaseEstimator):
         layer = None
         for i, layer_def in enumerate(self.layers):
 
-            if isinstance(layer_def[0], basestring):
+            if isinstance(layer_def[1], dict):
+                # Newer format: (Layer, {'layer': 'kwargs'})
+                layer_factory, layer_kw = layer_def
+                layer_kw = layer_kw.copy()
+            else:
                 # The legacy format: ('name', Layer)
                 layer_name, layer_factory = layer_def
                 layer_kw = {'name': layer_name}
-            else:
-                # New format: (Layer, {'layer': 'kwargs'})
-                layer_factory, layer_kw = layer_def
-                layer_kw = layer_kw.copy()
+
+            if isinstance(layer_factory, str):
+                layer_factory = locate(layer_factory)
+                assert layer_factory is not None
 
             if 'name' not in layer_kw:
                 layer_kw['name'] = self._layer_name(layer_factory, i)
