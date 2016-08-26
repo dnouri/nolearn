@@ -600,6 +600,16 @@ class TestInitializeLayers:
 
         assert out is nn.layers_['output']
 
+    def test_initializtion_with_tuples_resolve_layers(self, NeuralNet):
+        nn = NeuralNet(
+            layers=[
+                ('lasagne.layers.InputLayer', {'shape': (None, 10)}),
+                ('lasagne.layers.DenseLayer', {'num_units': 33}),
+                ],
+            )
+        out = nn.initialize_layers(nn.layers)
+        assert out.num_units == 33
+
     def test_initialization_legacy(self, NeuralNet):
         input = Mock(__name__='InputLayer', __bases__=(InputLayer,))
         hidden1, hidden2, output = [
@@ -632,6 +642,18 @@ class TestInitializeLayers:
             incoming=hidden2.return_value, name='output')
 
         assert out is nn.layers_['output']
+
+    def test_initializtion_legacy_resolve_layers(self, NeuralNet):
+        nn = NeuralNet(
+            layers=[
+                ('input', 'lasagne.layers.InputLayer'),
+                ('output', 'lasagne.layers.DenseLayer'),
+                ],
+            input_shape=(None, 10),
+            output_num_units=33,
+            )
+        out = nn.initialize_layers(nn.layers)
+        assert out.num_units == 33
 
     def test_initialization_legacy_with_unicode_names(self, NeuralNet):
         # Test whether legacy initialization is triggered; if not,
