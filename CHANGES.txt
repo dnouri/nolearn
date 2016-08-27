@@ -1,8 +1,67 @@
 Change History
 ==============
 
-0.6a - Unreleased
------------------
+0.6.0 - 2016-08-27
+------------------
+
+Thanks to @BenjaminBossan, @cancan101, @DanChianucci who greatly
+contributed to this release.
+
+- lasagne: Many improvements to the nolearn.lasagne interface.  Some
+  of the more important changes:
+
+  - Add basic support for multiple outputs
+    https://github.com/dnouri/nolearn/pull/278
+
+  - Extra scores can now be computed as part of Theano computation
+    graph
+    https://github.com/dnouri/nolearn/pull/261
+
+  - Fix excessive memory usage in batch iterator when using shuffle
+    https://github.com/dnouri/nolearn/pull/238
+
+  - Add visualization code for saliency maps
+    https://github.com/dnouri/nolearn/pull/223
+
+  - Add method for convenient access of network's intermediate layer
+    output
+    https://github.com/dnouri/nolearn/pull/196
+
+  - Allow gradients to be scaled per layer
+    https://github.com/dnouri/nolearn/pull/195
+
+  - Add shuffling to BatchIterator
+    https://github.com/dnouri/nolearn/pull/193
+
+  - Add l1 and l2 regularization to default objective
+    https://github.com/dnouri/nolearn/pull/169
+
+  - Add RememberBestWeights handler: restores best weights after
+    training
+    https://github.com/dnouri/nolearn/pull/155
+
+  - Passing Lasagne layer instances to 'layers' parameter of NeuralNet
+    is now possible
+    https://github.com/dnouri/nolearn/pull/146
+
+  - Add feature visualization functions plot_loss, plot_weights,
+    plot_activity, and plot_occlusion.  The latter shows for image
+    samples, which part of the images are crucial for the prediction
+    https://github.com/dnouri/nolearn/pull/74
+
+  - Add SaveWeights handler that saves weights to disk every n epochs
+    https://github.com/dnouri/nolearn/pull/91
+
+  - In verbose mode, print out more detailed layer information before
+    starting with training
+    https://github.com/dnouri/nolearn/pull/85
+
+  - List of NeuralNet's 'layers' parameter may now be formatted to
+    contain '(layer_factory, layer_kwargs)' tuples
+    https://github.com/dnouri/nolearn/pull/73
+
+- dbn: Added back module dbn because there's a few online articles
+  referencing it.  Works with Python 2 only.
 
 - Removed deprecated modules.  Also deprecate grid_search module.
 
