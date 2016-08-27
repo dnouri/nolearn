@@ -10,26 +10,36 @@ utility modules.  All code is written to be compatible with
 Installation
 ============
 
-We recommend using `virtualenv
+We recommend using `venv
+<https://docs.python.org/3/library/venv.html>`_ (when using Python 3)
+or `virtualenv
 <http://www.dabapps.com/blog/introduction-to-pip-and-virtualenv-python/>`_
-to install nolearn.
+(Python 2) to install nolearn.
 
-To install the latest version of nolearn from Git using `pip
-<http://www.pip-installer.org>`_, run the following commands::
+To install the latest release of nolearn from the Python Package
+Index, do::
+
+  pip install nolearn
+
+At the time of this writing, nolearn works with the latest versions of
+its dependencies, such as numpy, scipy, Theano, and Lasagne (the
+latter `from Git <https://github.com/Lasagne/Lasagne>`_).  But we also
+maintain a list of known good versions of dependencies that we support
+and test.  Should you run into hairy depdendency issues during
+installation or runtime, we recommend you try this same set of tested
+depdencencies instead::
+
+  pip install -r https://github.com/dnouri/nolearn/tree/0.6.0/requirements.txt
+  pip install nolearn
+  
+If you want to install the latest development version of nolearn
+directly from Git, run::
 
   pip install -r https://raw.githubusercontent.com/dnouri/nolearn/master/requirements.txt
   pip install git+https://github.com/dnouri/nolearn.git@master#egg=nolearn==0.7.git
 
-To instead install the release from PyPI (which is somewhat old at
-this point), do::
-
-  pip install nolearn    
-
 Documentation
 =============
-
-View the `nolearn documentation here
-<http://packages.python.org/nolearn/>`_.
 
 If you're looking for how to use *nolearn.lasagne*, then there's two
 introductory tutorials that you can choose from:
@@ -50,6 +60,10 @@ look at the `Lasagne project's documentation
 <https://github.com/dnouri/nolearn/tree/master/nolearn/lasagne/tests>`_
 that demonstrate some of the more advanced features, such as networks
 with merge layers, and networks with multiple inputs.
+
+`nolearn's own documentation <http://packages.python.org/nolearn/>`_
+is somewhat out of date at this point.  But there's more resources
+online.
 
 Finally, there's a few presentations and examples from around the web.
 Note that some of these might need a specific version of nolearn and
@@ -116,6 +130,14 @@ users list <https://groups.google.com/d/forum/lasagne-users>`_, or use
 Stack Overflow.  Please refrain from contacting the authors for
 non-commercial support requests directly; public forums are the right
 place for these.
+
+Citation
+========
+
+Citations are welcome:
+
+    Daniel Nouri. 2014. *nolearn: scikit-learn compatible neural
+    network library* https://github.com/dnouri/nolearn
 
 License
 =======

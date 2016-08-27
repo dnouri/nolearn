@@ -2,7 +2,7 @@ import os
 
 from setuptools import setup, find_packages
 
-version = '0.6adev'
+version = '0.6.0'
 
 here = os.path.abspath(os.path.dirname(__file__))
 try:
@@ -17,6 +17,7 @@ install_requires = [
     'scikit-learn',
     'tabulate',
     'Lasagne',
+    'Theano',
     ]
 
 visualization_require = [
@@ -41,10 +42,7 @@ all_require = (visualization_require + tests_require + docs_require)
 
 setup(name='nolearn',
       version=version,
-      description="nolearn contains a number of wrappers and abstractions "
-      "around existing neural network libraries, most notably Lasagne, "
-      "along with a few machine learning utility modules.  "
-      "All code is written to be compatible with scikit-learn.",
+      description="scikit-learn compatible neural network library",
       long_description='\n\n'.join([README, CHANGES]),
       classifiers=[
           "Development Status :: 4 - Beta",
