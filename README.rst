@@ -23,7 +23,7 @@ Index, do::
 
 At the time of this writing, nolearn works with the latest versions of
 its dependencies, such as numpy, scipy, Theano, and Lasagne (the
-latter `from Git <https://github.com/Lasagne/Lasagne>`_).  But we also
+latter `from Git <https://github.com/Lasagne/Lasagne>`__).  But we also
 maintain a list of known good versions of dependencies that we support
 and test.  Should you run into hairy depdendency issues during
 installation or runtime, we recommend you try this same set of tested
@@ -46,7 +46,7 @@ introductory tutorials that you can choose from:
 
 - `Using convolutional neural nets to detect facial keypoints tutorial
   <http://danielnouri.org/notes/2014/12/17/using-convolutional-neural-nets-to-detect-facial-keypoints-tutorial/>`_
-  with `code <https://github.com/dnouri/kfkd-tutorial>`_
+  with `code <https://github.com/dnouri/kfkd-tutorial>`__
 
 - `Training convolutional neural networks with nolearn
   <http://nbviewer.ipython.org/github/dnouri/nolearn/blob/master/docs/notebooks/CNN_tutorial.ipynb>`_
@@ -57,11 +57,11 @@ look at the `Lasagne project's documentation
 <http://lasagne.readthedocs.org/>`_.
 
 *nolearn.lasagne* comes with a `number of tests
-<https://github.com/dnouri/nolearn/tree/master/nolearn/lasagne/tests>`_
+<https://github.com/dnouri/nolearn/tree/master/nolearn/lasagne/tests>`__
 that demonstrate some of the more advanced features, such as networks
 with merge layers, and networks with multiple inputs.
 
-`nolearn's own documentation <http://packages.python.org/nolearn/>`_
+`nolearn's own documentation <http://packages.python.org/nolearn/>`__
 is somewhat out of date at this point.  But there's more resources
 online.
 
@@ -71,7 +71,7 @@ Lasange to run:
 
 - Oliver Dürr's `Convolutional Neural Nets II Hands On
   <https://home.zhaw.ch/~dueo/bbs/files/ConvNets_24_April.pdf>`_ with
-  `code <https://github.com/oduerr/dl_tutorial/tree/master/lasagne>`_
+  `code <https://github.com/oduerr/dl_tutorial/tree/master/lasagne>`__
 
 - Roelof Pieters' presentation `Python for Image Understanding
   <http://www.slideshare.net/roelofp/python-for-image-understanding-deep-learning-with-convolutional-neural-nets>`_
@@ -92,17 +92,17 @@ Lasange to run:
 - Winners of the saliency prediction task in the 2015 `LSUN Challenge
   <http://lsun.cs.princeton.edu/>`_ have published their
   `lasagne/nolearn-based code
-  <https://imatge.upc.edu/web/resources/end-end-convolutional-networks-saliency-prediction-software>`_.
+  <https://imatge.upc.edu/web/resources/end-end-convolutional-networks-saliency-prediction-software>`__.
 
 - The winners of the 2nd place in the `Kaggle Diabetic Retinopathy Detection
   challenge <https://www.kaggle.com/c/diabetic-retinopathy-detection>`_ have
   published their `lasagne/nolearn-based code
-  <https://github.com/sveitser/kaggle_diabetic>`_.
+  <https://github.com/sveitser/kaggle_diabetic>`__.
 
 - The winner of the 2nd place in the `Kaggle Right Whale Recognition
   challenge <https://www.kaggle.com/c/noaa-right-whale-recognition>`_ has
   published his `lasagne/nolearn-based code
-  <https://github.com/felixlaumon/kaggle-right-whale>`_.
+  <https://github.com/felixlaumon/kaggle-right-whale>`__.
 
 Support
 =======
