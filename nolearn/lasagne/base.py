@@ -165,6 +165,19 @@ def objective(layers,
               l1=0,
               l2=0,
               get_output_kw=None):
+    """
+    Default implementation of the NeuralNet Objective.
+    :param layers: The underlying layers of the NeuralNetwork
+    :param loss_function: The callable loss function to use
+    :param target: the expected output
+
+    :param aggregate: the aggregation function to use
+    :param deterministic: Whether or not to get a deterministic output
+    :param l1: Optional l1 regularization parameter
+    :param l2: Optional l2 regularization parameter
+    :param get_output_kw: optional kwargs to pass to :meth:`NeuralNetwork.get_output`
+    :return: The total calculated loss
+    """
     if get_output_kw is None:
         get_output_kw = {}
     output_layer = layers[-1]
@@ -182,7 +195,24 @@ def objective(layers,
 
 
 class NeuralNet(BaseEstimator):
-    """A scikit-learn estimator based on Lasagne.
+    """A Configurable Neural Network Estimator based on Lasagne.  Compatible with The Scikit-learn esitmator
+
+    Attributes
+    ----------
+    train_history_:
+        A list of network training info for each epoch.
+        Each index contains a dictionary with the following keys
+
+        * epoch - The epoch number
+        * train_loss_best - True if this epoch had the best training loss so far
+        * valid_loss_best - True if this epoch had the best validation loss so far
+        * train_loss -  The training loss for this epoch
+        * valid_loss - The validation loss for this epoch
+        * valid_accuracy - The validation accuracy for this epoch
+
+    layers_: A dictionary of lasagne layers keyed by the layer's name, or the layer's index
+
+    max_epochs: The default number of epochs to train for, as passed to the constructor
 
     """
     def __init__(
@@ -212,31 +242,84 @@ class NeuralNet(BaseEstimator):
         verbose=0,
         **kwargs
         ):
-        """:param layers: A list of lasagne layers to compose into the final
-                          neural net
+        """
+        Constructor For the Neural Network.
 
-        :param on_epoch_finished: A list of functions which are called
-                                 after every epoch.  The functions
-                                 will be passed the NeuralNet as the
-                                 first parameter and its
-                                 train_history_ attribute as the
-                                 second parameter.
+        Parameters
+        ----------
+        layers:
+            A list of lasagne layers to compose into the final neural net.
+            See :ref:`layer-def`
 
-        :param on_training_started: A list of functions which are
-                                    called after training has started.
-                                    The functions will be passed the
-                                    NeuralNet as the first parameter
-                                    and its train_history_ attribute
-                                    as the second parameter.
+        update:
+            The update function to use when training.
+            Uses the form provided by the :mod:`lasagne.updates` implementations.
 
-        :param on_training_finished: A list of functions which are
-                                     called after training is
-                                     finished.  The functions will be
-                                     passed the NeuralNet as the first
-                                     parameter and its train_history_
-                                     attribute as the second
-                                     parameter.
+        objective:
+            The objective function to use when training.
+            The callable will be passed the NeuralNetwork's :attr:`.layers_` attribute as the first argument, and
+            the output target as the second argument.
 
+        max_epochs:
+            The number of epochs to train.
+            This is used as the default when calling the :meth:`.fit` method without an epochs argument
+
+
+        Other Parameters
+        ----------------
+        batch_iterator_train:
+            The sample iterator to use while training the network
+
+        batch_iterator_test:
+            The sample Iterator to use while testing and validating the network.
+
+        regression:
+            Whether or not this is a regressor network.  Determines the default Objective and scoreing functions
+
+        train_split:
+            The callable TrainSplit Method used to separate training and validation samples.
+
+        y_tensor_type:
+            The Type of Tensor to use to hold the network Output
+
+        on_training_started, on_batch_finished, on_epoch_finished, on_training_finished:
+            A list of functions which are called during training at the corresponding times.
+
+            The functions will be passed the NeuralNet as the first parameter and its
+            :attr:`.train_history_` attribute as the second parameter.
+
+        custom_scores:
+            A list of callable custom scoring functions.
+
+            The functions will be passed the expected y values as the first argument, and the predicted y_values
+            as the second argument.
+
+        use_label_encoder:
+            If true, all y_values will be encoded using a LabelEncoder instance.
+
+        verbose:
+            The verbosity level of the network.
+
+            Any non-zero value will cause the Network to Print the layer info at the start of training, as well as
+            print a log of the training history after each epoch.  Larger values will increase the amount of info shown.
+
+        more_params:
+            A set of more parameters to use when initializing Layers defined using the dictionary method.
+
+        Note
+        ----
+
+        * Extra arguments can be passed to the *update* call through the NeuralNetwork by
+          prepending the string 'update\_' to the corresponding argument name.
+        * Extra arguments can be provided to the objective call through the Neural Network by prepending
+          the string 'objective\_' to the corresponding argument name.
+
+        Warnings
+        --------
+
+        * The objective parameter has changed since previous versions. The objective previously provided class is no
+          longer supported.  Instead use :func:`nolearn.lasagne.objective` or similar
+        * The loss parameter is now deprecated use `objective_loss_function` in conjunction with suitable `objective`
         """
         if loss is not None:
             raise ValueError(
@@ -359,6 +442,12 @@ class NeuralNet(BaseEstimator):
         return X, y
 
     def initialize(self):
+        """
+        Initializes the network.  Checks that no extra kwargs were passed to the constructor,
+        and compiles the train,predict, and evaluation functions
+
+        Subsequent calls to this function will return without any action
+        """
         if getattr(self, '_initialized', False):
             return
 
@@ -392,6 +481,14 @@ class NeuralNet(BaseEstimator):
             layer_class.__name__.lower().replace("layer", ""), index)
 
     def initialize_layers(self, layers=None):
+        """
+        Builds the underlying Lasagne network
+
+        :param layers:  The dictionary of layers, or a :class:`lasagne.Layers` instance, describing the underlying network
+        :return: the output layer of the underlying lasagne network.
+
+        :seealso: :ref:`layer-def`
+        """
         if layers is not None:
             self.layers = layers
         self.layers_ = Layers()
@@ -531,6 +628,14 @@ class NeuralNet(BaseEstimator):
         return train_iter, eval_iter, predict_iter
 
     def fit(self, X, y, epochs=None):
+        """
+        Runs the training loop for a given number of epochs
+
+        :param X:  The input data
+        :param y:  The ground truth
+        :param epochs:  The number of epochs to run, if `None` runs for the Networks :attr:`max_epochs`
+        :return: This instance
+        """
         if self.check_input:
             X, y = self._check_good_input(X, y)
 
@@ -547,6 +652,11 @@ class NeuralNet(BaseEstimator):
         return self
 
     def partial_fit(self, X, y, classes=None):
+        """
+        Runs a single epoch using the provided data
+
+        :return: This instance
+        """
         return self.fit(X, y, epochs=1)
 
     def train_loop(self, X, y, epochs=None):
