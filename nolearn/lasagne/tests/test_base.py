@@ -24,6 +24,7 @@ from sklearn.datasets import make_regression
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import r2_score
 import theano
 import theano.tensor as T
 
@@ -109,10 +110,12 @@ class TestFunctionalToy:
 
 
 class TestFunctionalMNIST:
-    def test_accuracy(self, net_fitted, mnist, y_pred):
+    def test_accuracy(self, net_fitted, mnist, X_test, y_pred):
         X, y = mnist
         y_test = y[60000:]
-        assert accuracy_score(y_pred, y_test) > 0.85
+        acc = accuracy_score(y_pred, y_test)
+        assert acc > 0.85
+        assert net_fitted.score(X_test, y_test) == acc
 
     def test_train_history(self, net_fitted):
         history = net_fitted.train_history_
@@ -299,6 +302,7 @@ def test_lasagne_functional_regression(boston):
 
     nn.fit(X[:300], y[:300])
     assert mean_absolute_error(nn.predict(X[300:]), y[300:]) < 3.0
+    assert r2_score(nn.predict(X[300:]), y[300:]) == nn.score(X[300:], y[300:])
 
 
 class TestDefaultObjective:

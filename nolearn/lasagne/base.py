@@ -25,7 +25,7 @@ from sklearn.base import BaseEstimator
 from sklearn.cross_validation import KFold
 from sklearn.cross_validation import StratifiedKFold
 from sklearn.metrics import accuracy_score
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import r2_score
 from sklearn.preprocessing import LabelEncoder
 import theano
 from theano import tensor as T
@@ -728,7 +728,7 @@ class NeuralNet(BaseEstimator):
         return np.vstack(outputs)
 
     def score(self, X, y):
-        score = mean_squared_error if self.regression else accuracy_score
+        score = r2_score if self.regression else accuracy_score
         return float(score(self.predict(X), y))
 
     def get_all_layers(self):
