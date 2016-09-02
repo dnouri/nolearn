@@ -49,15 +49,26 @@ Lasange to run:
   `lasagne/nolearn-based code
   <https://imatge.upc.edu/web/resources/end-end-convolutional-networks-saliency-prediction-software>`_.
 
+- The winners of the 2nd place in the `Kaggle Diabetic Retinopathy Detection
+  challenge <https://www.kaggle.com/c/diabetic-retinopathy-detection>`_ have
+  published their `lasagne/nolearn-based code
+  <https://github.com/sveitser/kaggle_diabetic>`_.
 
+- The winner of the 2nd place in the `Kaggle Right Whale Recognition
+  challenge <https://www.kaggle.com/c/noaa-right-whale-recognition>`_ has
+  published his `lasagne/nolearn-based code
+  <https://github.com/felixlaumon/kaggle-right-whale>`_.
 
 .. _layer-def:
 
-Neural Network Layer Definition
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-There are two supported methods of providing a Layer Definition to the :class:`.NeuralNet` constructor.
-The first involve generating the stack of :mod:`lasagne.layer` instances directly, while the second passes a dictionary
-and relies on the NeuralNet constructor to instantiate the layers.
+Defining The Layers Of A Neural Network
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There are two supported methods of providing a Layer Definition to the
+:class:`.NeuralNet` constructor.  The first involves generating the
+stack of :mod:`lasagne.layer` instances directly, while the second
+uses a declarative list of definitions whereas NeuralNet will do the
+actual instantiation of layers.
 
 The sample network below is given as an example
 
@@ -65,52 +76,78 @@ The sample network below is given as an example
 
 Passing a Layer Instance Directly
 =================================
-The newer method is to simply set up a stack of layer instances, and pass the output layer to the constructor.
-This method is more versatile, and supports all types of :mod:`lasagne.layers`
+
+This method of defining the layers is more flexible.  Very similarly
+to how you would define layers in pure Lasagne, we first define and
+set up our stack of layer instances, and then pass the output layer(s)
+to :meth:`NeuralNet.__init__`.  This method is more versatile than the
+one described next, and supports all types of :mod:`lasagne.layers`.
+
+Here's a toy example:
 
 .. code-block:: python
 
-     from lasagne import layers
+    from nolearn.lasagne import NeuralNet
+    from lasagne import layers
 
-     l_input = layers.InputLayer(shape=(None, 3, 32, 32), name="input")
-     l_conv = layers.Conv2DLayer(l_input, num_filters=16, filter_size=7, pad="same", stride=1, name="conv")
-     l_pool = layers.MaxPool2dLayer(l_conv, pool_size=2, stride=2, name="pool")
-     l_dense = layers.DenseLayer(l_pool, num_units=300, name="dense")
+    l_input = layers.InputLayer(
+        shape=(None, 3, 32, 32),
+        )
+    l_conv = layers.Conv2DLayer(
+        l_input,
+        num_filters=16,
+        filter_size=7,
+        )
+    l_pool = layers.MaxPool2dLayer(
+        l_conv,
+        pool_size=2,
+        )
+    l_out = layers.DenseLayer(
+        l_pool,
+        num_units=300,
+        )
+    net = NeuralNet(layers=l_out)
 
-    net = NeuralNet(layers=l_dense)
+    
+Declarative Layer Definition
+============================
 
-Passing a dictionary of LayerTypes
-==================================
-The second method involves creating a diction where the key is the layer name, and the value is the layer type.
+In some situations it's preferable to use the declarative style of
+defining layers.  It's not as flexible but it's sometimes easier to
+write out and manipulate when using features like scikit-learn's model
+selection.
 
-Additional parameters are passed to the layer constructors by prepending the parameter name with the layer name,
-and passing it as a kwarg to the NeuralNet.
-
-The dictionary method is less versatile, and is unable to accommodate some of the newer lasagne features.
+The following example is equivalent to the previous:
 
 .. code-block:: python
 
-     from lasagne import layers
+    from nolearn.lasagne import NeuralNet
+    from lasagne import layers
 
-     layer_dict = {"input": layers.InputLayer,
-                   "conv": layers.Conv2DLayer,
-                   "pool": layers.MaxPool2DLayer,
-                   "dense": layers.DenseLayer}
+    net = NeuralNet(
+        layers=[
+            (layers.InputLayer, {'shape': (None, 3, 32, 32)}),
+            (layers.Conv2DLayer, {'num_filters': 16, 'filter_size': 7}),
+            (layers.MaxPool2DLayer, {'pool_size': 2, 'name': 'pool'}),
+            (layers.DenseLayer, {'num_units': 300'}),
+            ],
+        )
 
-     layer_kwargs = {"input_shape": (None, 3, 32, 32),
-                     "conv_filter_size": 7,
-                     "conv_pad": "same",
-                     "conv_stride": 1,
-                     "conv_num_filters": 16,
-                     "pool_pool_size": 2,
-                     "pool_stride": 2,
-                     "num_units": 300}
+To give a concrete example of when this is useful when doing model
+selection, consider this example that uses
+:class:`sklearn.grid_search.GridSearchCV` to find the optimal value
+for the pool size of our max pooling layer:
 
-     net = NeuralNet(layers=layer_dict, **layer_kwargs)
+.. code-block:: python
 
+    from sklearn.grid_search import GridSearchCV
 
-.. note:: The `layer_dict` value is a layer type, **not** an instance of the layer type.
+    gs = GridSearchCV(estimator=net, param_grid={'pool__pool_size': [2, 3, 4]})
+    gs.fit(...)
 
+Note that we can set the max pooling layer's ``pool_size`` parameter
+using a double underscore syntax, the part before the double
+underscores refer to the layer's name in the layer definition above.
 
 API
 ~~~
@@ -121,7 +158,6 @@ API
      :members:
 
      .. automethod:: __init__(self, layers, **kwargs)
-
 
   .. autoclass:: BatchIterator
      :members:

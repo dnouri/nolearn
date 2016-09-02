@@ -16,10 +16,10 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'nolearn'
-copyright = u'2012-2014, Daniel Nouri'
+copyright = u'2012-2016, Daniel Nouri'
 
 version = '0.6'  # The short X.Y version.
-release = '0.6'  # The full version, including alpha/beta/rc tags.
+release = '0.6.1.dev0'  # The full version, including alpha/beta/rc tags.
 
 exclude_patterns = ['_build']
 
