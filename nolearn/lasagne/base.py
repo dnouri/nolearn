@@ -385,7 +385,7 @@ class NeuralNet(BaseEstimator):
 
         if isinstance(layers, Layer):
             layers = _list([layers])
-            
+
         self.layers = layers
         self.update = update
         self.objective = objective
@@ -818,20 +818,31 @@ class NeuralNet(BaseEstimator):
         else:
             return func(Xb) if yb is None else func(Xb, yb)
 
-    def predict_proba(self, X):
+    def predict_proba(self, X, y=None):
         probas = []
-        for Xb, yb in self.batch_iterator_test(X):
+        ys = []
+        for Xb, yb in self.batch_iterator_test(X, y):
             probas.append(self.apply_batch_func(self.predict_iter_, Xb))
-        return np.vstack(probas)
-
-    def predict(self, X):
-        if self.regression:
-            return self.predict_proba(X)
+            ys.append(yb)
+        if y is not None:
+            return np.vstack(probas), np.hstack(ys)
         else:
-            y_pred = np.argmax(self.predict_proba(X), axis=1)
+            return np.vstack(probas)
+
+    def predict(self, X, y=None):
+        if self.regression:
+            return self.predict_proba(X, y)
+        else:
+            predictions = self.predict_proba(X, y)
+            if y is not None:
+                predictions, y_actual = predictions
+            y_pred = np.argmax(predictions, axis=1)
             if self.use_label_encoder:
                 y_pred = self.enc_.inverse_transform(y_pred)
-            return y_pred
+            if y is not None:
+                return y_pred, y_actual
+            else:
+                return y_pred
 
     def get_output(self, layer, X):
         if isinstance(layer, basestring):
@@ -856,7 +867,7 @@ class NeuralNet(BaseEstimator):
 
     def score(self, X, y):
         score = mean_squared_error if self.regression else accuracy_score
-        return float(score(self.predict(X), y))
+        return float(score(*self.predict(X, y)))
 
     def get_all_layers(self):
         return self.layers_.values()
