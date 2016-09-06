@@ -413,7 +413,7 @@ class NeuralNet(BaseEstimator):
                                 "'NeuralNet'."
                                 )
             self._output_layers = self.layers
-            return self.layers if len(self.layers)>1 else self.layers[0]
+            return self.layers
 
         # 'self.layers' are a list of '(Layer class, kwargs)', so
         # we'll have to actually instantiate the layers given the
@@ -472,7 +472,7 @@ class NeuralNet(BaseEstimator):
                 self.layers_["LW_%s" % layer_kw['name']] = layer
 
         self._output_layers = [layer]
-        return layer
+        return [layer]
 
     def _create_iter_funcs(self, layers, objective, update, output_type):
         y_batch = output_type('y_batch')
