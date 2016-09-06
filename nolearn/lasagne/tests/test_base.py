@@ -561,7 +561,7 @@ class TestInitializeLayers:
         layer2 = DenseLayer(layer1, name='output', num_units=2)  # has name
         nn = NeuralNet(layers=layer2)
         out = nn.initialize_layers()
-        assert nn.layers_['output'] == layer2 == out
+        assert nn.layers_['output'] == layer2 == out[0]
         assert nn.layers_['input0'] == layer1
 
     def test_initialization_with_layer_instance_bad_params(self, NeuralNet):
@@ -602,7 +602,7 @@ class TestInitializeLayers:
         output.assert_called_with(
             incoming=hidden2.return_value, name='output')
 
-        assert out is nn.layers_['output']
+        assert out[0] is nn.layers_['output']
 
     def test_initializtion_with_tuples_resolve_layers(self, NeuralNet):
         nn = NeuralNet(
@@ -645,7 +645,7 @@ class TestInitializeLayers:
         output.assert_called_with(
             incoming=hidden2.return_value, name='output')
 
-        assert out is nn.layers_['output']
+        assert out[0] is nn.layers_['output']
 
     def test_initializtion_legacy_resolve_layers(self, NeuralNet):
         nn = NeuralNet(
