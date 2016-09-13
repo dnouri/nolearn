@@ -561,7 +561,7 @@ class TestInitializeLayers:
         layer2 = DenseLayer(layer1, name='output', num_units=2)  # has name
         nn = NeuralNet(layers=layer2)
         out = nn.initialize_layers()
-        assert nn.layers_['output'] == layer2 == out
+        assert nn.layers_['output'] == layer2 == out[0]
         assert nn.layers_['input0'] == layer1
 
     def test_initialization_with_layer_instance_bad_params(self, NeuralNet):
@@ -602,7 +602,7 @@ class TestInitializeLayers:
         output.assert_called_with(
             incoming=hidden2.return_value, name='output')
 
-        assert out is nn.layers_['output']
+        assert out[0] is nn.layers_['output']
 
     def test_initializtion_with_tuples_resolve_layers(self, NeuralNet):
         nn = NeuralNet(
@@ -645,7 +645,7 @@ class TestInitializeLayers:
         output.assert_called_with(
             incoming=hidden2.return_value, name='output')
 
-        assert out is nn.layers_['output']
+        assert out[0] is nn.layers_['output']
 
     def test_initializtion_legacy_resolve_layers(self, NeuralNet):
         nn = NeuralNet(
@@ -861,7 +861,8 @@ class TestGradScale:
 
 
 class TestMultiOutput:
-    def test_layers_included(self, NeuralNet):
+    @pytest.fixture(scope='class')
+    def mo_net(self, NeuralNet):
         def objective(layers_, target, **kwargs):
             out_a_layer = layers_['output_a']
             out_b_layer = layers_['output_b']
@@ -898,10 +899,18 @@ class TestMultiOutput:
                         regression=True,
                         objective=objective)
         net.initialize()
+        return net
 
+    def test_layers_included(self, mo_net):
         expected_names = sorted(["input", "conv1", "conv2",
                                  "hidden_a", "output_a",
                                  "hidden_b", "output_b"])
-        network_names = sorted(list(net.layers_.keys()))
+        network_names = sorted(list(mo_net.layers_.keys()))
 
         assert (expected_names == network_names)
+
+    def test_predict(self, mo_net):
+        dummy_data = np.zeros((2, 1, 28, 28), np.float32)
+        p_cls, p_reg = mo_net.predict(dummy_data)
+        assert(p_cls.shape == (2, 10))
+        assert(p_reg.shape == (2, 1))
