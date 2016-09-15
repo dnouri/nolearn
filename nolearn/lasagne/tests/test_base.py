@@ -611,7 +611,7 @@ class TestInitializeLayers:
                 ('lasagne.layers.DenseLayer', {'num_units': 33}),
                 ],
             )
-        out = nn.initialize_layers(nn.layers)
+        out, = nn.initialize_layers(nn.layers)
         assert out.num_units == 33
 
     def test_initialization_legacy(self, NeuralNet):
@@ -656,7 +656,7 @@ class TestInitializeLayers:
             input_shape=(None, 10),
             output_num_units=33,
             )
-        out = nn.initialize_layers(nn.layers)
+        out, = nn.initialize_layers(nn.layers)
         assert out.num_units == 33
 
     def test_initialization_legacy_with_unicode_names(self, NeuralNet):
