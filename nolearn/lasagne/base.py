@@ -50,6 +50,18 @@ def _sldict(arr, sl):
         return arr[sl]
 
 
+def _shuffle_arrays(arrays, random):
+    rstate = random.get_state()
+    for array in arrays:
+        if isinstance(array, dict):
+            for v in list(array.values()):
+                random.set_state(rstate)
+                random.shuffle(v)
+        else:
+            random.set_state(rstate)
+            random.shuffle(array)
+
+
 class Layers(OrderedDict):
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -75,7 +87,7 @@ class BatchIterator(object):
 
     def __call__(self, X, y=None):
         if self.shuffle:
-            self._shuffle_arrays([X, y] if y is not None else [X], self.random)
+            _shuffle_arrays([X, y] if y is not None else [X], self.random)
         self.X, self.y = X, y
         return self
 
@@ -89,18 +101,6 @@ class BatchIterator(object):
             else:
                 yb = None
             yield self.transform(Xb, yb)
-
-    @classmethod
-    def _shuffle_arrays(cls, arrays, random):
-        rstate = random.get_state()
-        for array in arrays:
-            if isinstance(array, dict):
-                for v in list(array.values()):
-                    random.set_state(rstate)
-                    random.shuffle(v)
-            else:
-                random.set_state(rstate)
-                random.shuffle(array)
 
     @property
     def n_samples(self):
@@ -128,11 +128,15 @@ def grad_scale(layer, scale):
 
 
 class TrainSplit(object):
-    def __init__(self, eval_size, stratify=True):
+    def __init__(self, eval_size, stratify=True, shuffle=False, seed=42):
         self.eval_size = eval_size
         self.stratify = stratify
+        self.shuffle = shuffle
+        self.random = np.random.RandomState(seed)
 
     def __call__(self, X, y, net):
+        if self.shuffle:
+            _shuffle_arrays([X, y] if y is not None else [X], self.random)
         if self.eval_size:
             if net.regression or not self.stratify:
                 kf = KFold(y.shape[0], round(1. / self.eval_size))
