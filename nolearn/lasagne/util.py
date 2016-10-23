@@ -145,7 +145,7 @@ def get_conv_infos(net, min_capacity=100. / 6, detailed=False):
         header += ['filter Y', 'filter X', 'field Y', 'field X']
 
     shapes = [layer.output_shape[1:] for layer in layers]
-    totals = [str(reduce(mul, shape)) for shape in shapes]
+    totals = [str(reduce(mul, shape)) if shape else '0' for shape in shapes]
     shapes = ['x'.join(map(str, shape)) for shape in shapes]
     shapes = np.array(shapes).reshape(-1, 1)
     totals = np.array(totals).reshape(-1, 1)

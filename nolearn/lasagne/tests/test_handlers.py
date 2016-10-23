@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import pickle
 
+from lasagne.layers import ConcatLayer
 from lasagne.layers import Conv2DLayer
 from lasagne.layers import DenseLayer
 from lasagne.layers import MaxPool2DLayer
@@ -356,6 +357,21 @@ Explanation
     \x1b[31mred\x1b[0m:     capacity too low and coverage too high
 """
         assert legend == expected
+
+    def test_print_layer_info_with_empty_shape(self, print_info, NeuralNet):
+        # construct a net with both conv layer (to trigger
+        # get_conv_infos) and a layer with shape (None,).
+        l_img = InputLayer(shape=(None, 1, 28, 28))
+        l_conv = Conv2DLayer(l_img, num_filters=3, filter_size=3)
+        l0 = DenseLayer(l_conv, num_units=10)
+        l_inp = InputLayer(shape=(None,))  # e.g. vector input
+        l1 = DenseLayer(l_inp, num_units=10)
+        l_merge = ConcatLayer([l0, l1])
+
+        nn = NeuralNet(l_merge, update_learning_rate=0.1, verbose=2)
+        nn.initialize()
+        # used to raise TypeError
+        print_info(nn)
 
 
 class TestWeightLog:
