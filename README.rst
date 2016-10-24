@@ -29,7 +29,7 @@ and test.  Should you run into hairy depdendency issues during
 installation or runtime, we recommend you try this same set of tested
 depdencencies instead::
 
-  pip install -r https://github.com/dnouri/nolearn/tree/0.6.0/requirements.txt
+  pip install -r https://raw.githubusercontent.com/dnouri/nolearn/0.6.0/requirements.txt
   pip install nolearn
   
 If you want to install the latest development version of nolearn
