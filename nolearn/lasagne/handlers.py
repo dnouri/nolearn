@@ -123,7 +123,7 @@ class RememberBestWeights:
     def __init__(self, loss='valid_loss', score=None, verbose=1):
         self.loss = loss
         self.score = score
-        self.verbose = 1
+        self.verbose = verbose
         self.best_weights = None
         self.best_weights_loss = sys.maxsize
         self.best_weights_epoch = None
