@@ -748,6 +748,7 @@ class NeuralNet(BaseEstimator):
 
                 if self.custom_scores:
                     y_prob = self.apply_batch_func(self.predict_iter_, Xb)
+                    y_prob = y_prob[0] if len(y_prob) == 1 else y_prob
                     for custom_scorer, custom_score in zip(
                             self.custom_scores, custom_scores):
                         custom_score.append(custom_scorer[1](yb, y_prob))
