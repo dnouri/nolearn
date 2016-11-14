@@ -54,7 +54,7 @@ class TestSliceDict:
     def test_set_item_incorrect_key_type(self, sldict, key):
         with pytest.raises(TypeError) as exc:
             sldict[key] = np.ones((100, 5))
-        assert str(exc.value).startswith("Key must be str, not <type '")
+        assert str(exc.value).startswith("Key must be str, not <")
 
     @pytest.mark.parametrize('item', [
         np.ones(3),
@@ -105,17 +105,30 @@ class TestSliceDict:
         sliced = sldict[sl]
         self.assert_dicts_equal(sliced, SliceDict(**expected))
 
+    def test_slice_list(self, sldict, SliceDict):
+        result = sldict[[0, 2]]
+        expected = SliceDict(
+            f0=np.array([0, 2]),
+            f1=np.array([[0, 1, 2], [6, 7, 8]]))
+        self.assert_dicts_equal(result, expected)
+
+    def test_slice_mask(self, sldict, SliceDict):
+        result = sldict[np.array([1, 0, 1, 0]).astype(bool)]
+        expected = SliceDict(
+            f0=np.array([0, 2]),
+            f1=np.array([[0, 1, 2], [6, 7, 8]]))
+        self.assert_dicts_equal(result, expected)
+
     def test_len_sliced(self, sldict):
         assert len(sldict) == 4
         for i in range(1, 4):
             assert len(sldict[:i]) == i
 
-    def test_str_repr(self, sldict):
-        result = str(sldict)
-        expected = ("SliceDict(**{'f0': array([0, 1, 2, 3]), "
-                    "'f1': array([[ 0,  1,  2],\n       [ 3,  4,  5],\n       "
-                    "[ 6,  7,  8],\n       [ 9, 10, 11]])})")
-        assert result == expected
+    def test_str_repr(self, sldict, SliceDict):
+        loc = locals().copy()
+        loc.update({'array': np.array, 'SliceDict': SliceDict})
+        result = eval(str(sldict), globals(), loc)
+        self.assert_dicts_equal(result, sldict)
 
     def test_iter(self, sldict):
         expected_keys = set(['f0', 'f1'])
