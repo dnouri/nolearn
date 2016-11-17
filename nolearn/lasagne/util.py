@@ -185,7 +185,7 @@ def get_conv_infos(net, min_capacity=100. / 6, detailed=False):
     return tabulate(table, header, floatfmt='.2f')
 
 
-class SliceDict(dict, object):
+class SliceDict(dict):
     def __init__(self, **kwargs):
         shapes = [value.shape[0] for value in kwargs.values()]
         shapes_set = set(shapes)
@@ -205,8 +205,8 @@ class SliceDict(dict, object):
         return self._len
 
     def __getitem__(self, sl):
-        # if isinstance(sl, int):
-        #     raise TypeError("Not sure what to do here?!")
+        if isinstance(sl, int):
+            raise ValueError("SliceDict cannot be indexed by integers.")
         if isinstance(sl, basestring):
             return super(SliceDict, self).__getitem__(sl)
         return SliceDict(**{k: v[sl] for k, v in self.items()})

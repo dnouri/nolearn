@@ -119,6 +119,11 @@ class TestSliceDict:
             f1=np.array([[0, 1, 2], [6, 7, 8]]))
         self.assert_dicts_equal(result, expected)
 
+    def test_slice_int(self, sldict):
+        with pytest.raises(ValueError) as exc:
+            sldict[0]
+        assert str(exc.value) == 'SliceDict cannot be indexed by integers.'
+
     def test_len_sliced(self, sldict):
         assert len(sldict) == 4
         for i in range(1, 4):
@@ -136,9 +141,6 @@ class TestSliceDict:
             assert key in expected_keys
             expected_keys.remove(key)
         assert not expected_keys
-
-    def test_slice_int(self, sldict):
-        pass
 
     @pytest.fixture(scope='session')
     def net(self, NeuralNet):
