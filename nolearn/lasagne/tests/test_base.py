@@ -7,6 +7,7 @@ from lasagne.layers import ConcatLayer
 from lasagne.layers import Conv2DLayer
 from lasagne.layers import DenseLayer
 from lasagne.layers import InputLayer
+from lasagne.layers import RecurrentLayer
 from lasagne.layers import Layer
 from lasagne.nonlinearities import identity
 from lasagne.nonlinearities import softmax
@@ -703,6 +704,38 @@ class TestInitializeLayers:
             name='concat'
             )
         output.assert_called_with(incoming=concat.return_value, name='output')
+
+    def test_initialization_with_mask_input(self, NeuralNet):
+        nn = NeuralNet(
+            layers=[
+                (InputLayer, {'shape': (None, 20, 32), 'name': 'l_in'}),
+                (InputLayer, {'shape': (None, 20), 'name': 'l_mask'}),
+                (RecurrentLayer, {'incoming': 'l_in',
+                                  'mask_input': 'l_mask',
+                                  'num_units': 2,
+                                  'name': 'l_rec'}),
+                ])
+        nn.initialize_layers()
+        assert nn.layers_['l_rec'].mask_incoming_index == 1
+
+    def test_legacy_initialization_with_mask_input(self, NeuralNet):
+        nn = NeuralNet(
+            layers=[
+                ('l_in', InputLayer),
+                ('l_mask', InputLayer),
+                ('l_rec', RecurrentLayer),
+                ],
+            l_in_shape=(None, 20, 32),
+            l_in_name='l_in',
+            l_mask_shape=(None, 20),
+            l_mask_name='l_mask',
+            l_rec_incoming='l_in',
+            l_rec_mask_input='l_mask',
+            l_rec_num_units=2,
+            l_rec_name='l_rec',
+            )
+        nn.initialize_layers()
+        assert nn.layers_['l_rec'].mask_incoming_index == 1
 
 
 class TestCheckGoodInput:
