@@ -571,6 +571,15 @@ class NeuralNet(BaseEstimator):
                 else:
                     layer_kw['incoming'] = layer
 
+            # Deal with additional string parameters that may
+            # reference other layers; currently only 'mask_input'.
+            layer_ref_params = ['mask_input']
+            for param in layer_ref_params:
+                if param in layer_kw:
+                    val = layer_kw[param]
+                    if isinstance(val, basestring):
+                        layer_kw[param] = self.layers_[val]
+
             for attr in ('W', 'b'):
                 if isinstance(layer_kw.get(attr), str):
                     name = layer_kw[attr]
