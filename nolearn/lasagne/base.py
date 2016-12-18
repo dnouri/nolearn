@@ -216,7 +216,14 @@ class NeuralNet(BaseEstimator):
         * valid_accuracy - The validation accuracy for this epoch
 
     layers_: A dictionary of lasagne layers keyed by the layer's name, or the layer's index
+
+    layer_reference_params:
+        A list of Lasagne layer parameter names that may reference
+        other layers, excluding 'incoming' and 'incomings'.
+
     """
+    layer_reference_params = ['mask_input']
+
     def __init__(
         self,
         layers,
@@ -573,8 +580,7 @@ class NeuralNet(BaseEstimator):
 
             # Deal with additional string parameters that may
             # reference other layers; currently only 'mask_input'.
-            layer_ref_params = ['mask_input']
-            for param in layer_ref_params:
+            for param in self.layer_reference_params:
                 if param in layer_kw:
                     val = layer_kw[param]
                     if isinstance(val, basestring):
