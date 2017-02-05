@@ -26,6 +26,7 @@ from sklearn.cross_validation import KFold
 from sklearn.cross_validation import StratifiedKFold
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import r2_score
+from sklearn.utils import shuffle
 from sklearn.preprocessing import LabelEncoder
 import theano
 from theano import tensor as T
@@ -92,15 +93,13 @@ class BatchIterator(object):
 
     @classmethod
     def _shuffle_arrays(cls, arrays, random):
-        rstate = random.get_state()
+        unpacked_arrays = []
         for array in arrays:
             if isinstance(array, dict):
-                for v in list(array.values()):
-                    random.set_state(rstate)
-                    random.shuffle(v)
+                unpacked_arrays.extend(array.values())
             else:
-                random.set_state(rstate)
-                random.shuffle(array)
+                unpacked_arrays.append(array)
+        shuffle(*unpacked_arrays, random_state=random)
 
     @property
     def n_samples(self):
