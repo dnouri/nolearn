@@ -123,7 +123,7 @@ class BatchIterator(object):
 
 def grad_scale(layer, scale):
     for param in layer.get_params(trainable=True):
-        param.tag.grad_scale = floatX(scale)
+        param.tag.grad_scale = theano.shared(floatX(scale))
     return layer
 
 
@@ -634,8 +634,8 @@ class NeuralNet(BaseEstimator):
         all_params = self.get_all_params(trainable=True)
         grads = theano.grad(loss_train, all_params)
         for idx, param in enumerate(all_params):
-            grad_scale = getattr(param.tag, 'grad_scale', 1)
-            if grad_scale != 1:
+            grad_scale = getattr(param.tag, 'grad_scale', None)
+            if grad_scale is not None:
                 grads[idx] *= grad_scale
         update_params = self._get_params_for('update')
         updates = update(grads, all_params, **update_params)
