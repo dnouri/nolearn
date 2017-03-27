@@ -626,7 +626,7 @@ class NeuralNet(BaseEstimator):
         predict_proba = get_output(output_layer, None, deterministic=True)
         if not self.regression:
             predict = predict_proba[0].argmax(axis=1)
-            accuracy = T.mean(T.eq(predict, y_batch))
+            accuracy = T.mean(T.eq(predict, y_batch), dtype=theano.config.floatX)
         else:
             accuracy = loss_eval
 
