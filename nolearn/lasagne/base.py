@@ -234,7 +234,6 @@ class NeuralNet(BaseEstimator):
         update=nesterov_momentum,
         loss=None,  # BBB
         objective=objective,
-        objective_loss_function=None,
         batch_iterator_train=BatchIterator(batch_size=128),
         batch_iterator_test=BatchIterator(batch_size=128),
         regression=False,
@@ -404,7 +403,6 @@ class NeuralNet(BaseEstimator):
         self.layers = layers
         self.update = update
         self.objective = objective
-        self.objective_loss_function = objective_loss_function
         self.batch_iterator_train = batch_iterator_train
         self.batch_iterator_test = batch_iterator_test
         self.regression = regression
