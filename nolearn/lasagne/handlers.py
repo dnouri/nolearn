@@ -104,11 +104,14 @@ class SaveWeights:
             nn.save_params_to(path)
 
 
-class _RestoreBestWeights:
-    def __init__(self, remember):
+class RestoreBestWeights:
+    def __init__(self, remember=None):
         self.remember = remember
 
     def __call__(self, nn, train_history):
+        if self.remember is None:
+            [self.remember] = [handler for handler in nn.on_epoch_finished
+                               if isinstance(handler, RememberBestWeights)]
         nn.load_params_from(self.remember.best_weights)
         if self.remember.verbose:
             print("Loaded best weights from epoch {} where {} was {}".format(
@@ -127,7 +130,6 @@ class RememberBestWeights:
         self.best_weights = None
         self.best_weights_loss = sys.maxsize
         self.best_weights_epoch = None
-        self.restore = _RestoreBestWeights(self)
 
     def __call__(self, nn, train_history):
         key = self.score if self.score is not None else self.loss
