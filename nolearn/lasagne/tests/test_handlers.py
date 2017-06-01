@@ -148,6 +148,11 @@ class TestRememberBestWeights:
         from nolearn.lasagne.handlers import RememberBestWeights
         return RememberBestWeights
 
+    @pytest.fixture
+    def RestoreBestWeights(self):
+        from nolearn.lasagne.handlers import RestoreBestWeights
+        return RestoreBestWeights
+
     @pytest.mark.parametrize('loss_name', ['valid_loss', 'my_loss'])
     def test_simple(self, RememberBestWeights, loss_name):
         nn1, nn2, nn3 = Mock(), Mock(), Mock()
@@ -183,13 +188,14 @@ class TestRememberBestWeights:
         rbw(nn3, train_history)
         assert rbw.best_weights is nn2.get_all_params_values()
 
-    def test_restore(self, RememberBestWeights):
+    def test_restore(self, RememberBestWeights, RestoreBestWeights):
         nn = Mock()
         rbw = RememberBestWeights()
+        restore_best_weights = RestoreBestWeights(remember=rbw)
         train_history = []
         train_history.append({'epoch': 1, 'valid_loss': 1.0})
         rbw(nn, train_history)
-        rbw.restore(nn, train_history)
+        restore_best_weights(nn, train_history)
         nn.load_params_from.assert_called_with(nn.get_all_params_values())
         nn.load_params_from.assert_called_with(rbw.best_weights)
 
