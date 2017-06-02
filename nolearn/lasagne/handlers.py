@@ -122,6 +122,9 @@ class RestoreBestWeights:
                 ))
 
 
+_RestoreBestWeights = RestoreBestWeights
+
+
 class RememberBestWeights:
     def __init__(self, loss='valid_loss', score=None, verbose=1):
         self.loss = loss

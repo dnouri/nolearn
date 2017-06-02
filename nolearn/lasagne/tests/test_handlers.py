@@ -190,14 +190,16 @@ class TestRememberBestWeights:
 
     def test_restore(self, RememberBestWeights, RestoreBestWeights):
         nn = Mock()
-        rbw = RememberBestWeights()
-        restore_best_weights = RestoreBestWeights(remember=rbw)
+        remember_best_weights = RememberBestWeights()
+        restore_best_weights = RestoreBestWeights(
+            remember=remember_best_weights)
         train_history = []
         train_history.append({'epoch': 1, 'valid_loss': 1.0})
-        rbw(nn, train_history)
+        remember_best_weights(nn, train_history)
         restore_best_weights(nn, train_history)
         nn.load_params_from.assert_called_with(nn.get_all_params_values())
-        nn.load_params_from.assert_called_with(rbw.best_weights)
+        nn.load_params_from.assert_called_with(
+            remember_best_weights.best_weights)
 
 
 class TestPrintLayerInfo():
