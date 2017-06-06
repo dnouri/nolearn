@@ -453,21 +453,31 @@ class NeuralNet(BaseEstimator):
                 raise ValueError("Unused kwarg: {}".format(k))
 
     def _check_good_input(self, X, y=None):
-        if isinstance(X, dict):
-            lengths = [len(X1) for X1 in X.values()]
-            if len(set(lengths)) > 1:
-                raise ValueError("Not all values of X are of equal length.")
-            x_len = lengths[0]
-        else:
-            x_len = len(X)
-
+        def _get_length(arr, label):
+          if isinstance(arr, dict):
+              lengths = [len(X1) for X1 in arr.values()]
+              if len(set(lengths)) > 1:
+                  raise ValueError("Not all values of %s are of equal length." % label)
+              return lengths[0]
+          else:
+              return len(arr)
+    
+        x_len = _get_length(X, 'X')
+    
         if y is not None:
-            if len(y) != x_len:
+            y_len = _get_length(y, 'y') 
+                
+            if y_len != x_len:
                 raise ValueError("X and y are not of equal length.")
-
-        if self.regression and y is not None and y.ndim == 1:
-            y = y.reshape(-1, 1)
-
+    
+            if self.regression:
+                if isinstance(y, dict):
+                    for k, v in y.items():
+                        if v.ndim == 1:
+                            y[k] = y[k].reshape(-1, 1)
+                elif y.ndim == 1:
+                    y = y.reshape(-1, 1)
+    
         return X, y
 
     def initialize(self):
