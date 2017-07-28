@@ -572,7 +572,11 @@ class NeuralNet(BaseEstimator):
             # Any layers that aren't subclasses of InputLayer are
             # assumed to require an 'incoming' paramter.  By default,
             # we'll use the previous layer as input:
-            if not issubclass(layer_factory, InputLayer):
+            try:
+                is_input_layer = issubclass(layer_factory, InputLayer)
+            except TypeError:
+                is_input_layer = False
+            if not is_input_layer:
                 if 'incoming' in layer_kw:
                     layer_kw['incoming'] = self.layers_[
                         layer_kw['incoming']]
