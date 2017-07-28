@@ -660,6 +660,7 @@ class NeuralNet(BaseEstimator):
             outputs=[loss_train] + scores_train,
             updates=updates,
             allow_input_downcast=True,
+            on_unused_input='ignore',
             )
         eval_iter = theano.function(
             inputs=inputs,
