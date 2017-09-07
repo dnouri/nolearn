@@ -311,9 +311,7 @@ def make_pydot_graph(layers, output_shape=True, verbose=False):
     pydot_nodes = {}
     pydot_edges = []
     for i, layer in enumerate(layers):
-        layer_name = None
-        if hasattr(layer, 'name'):
-            layer_name = layer.name
+        layer_name = getattr(layer, 'name', None):
         if layer_name is None:
             layer_name = layer.__class__.__name__
         layer_type = '{0}'.format(layer_name)
