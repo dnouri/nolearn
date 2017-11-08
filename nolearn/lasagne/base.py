@@ -666,11 +666,13 @@ class NeuralNet(BaseEstimator):
             inputs=inputs,
             outputs=[loss_eval, accuracy] + scores_valid,
             allow_input_downcast=True,
+            on_unused_input='ignore',
             )
         predict_iter = theano.function(
             inputs=X_inputs,
             outputs=predict_proba,
             allow_input_downcast=True,
+            on_unused_input='ignore',
             )
 
         return train_iter, eval_iter, predict_iter
