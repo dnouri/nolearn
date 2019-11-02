@@ -4,6 +4,18 @@ existing neural network libraries, most notably `Lasagne
 utility modules.  All code is written to be compatible with
 `scikit-learn <http://scikit-learn.org/>`_.
 
+.. note::
+
+  nolearn is currently unmaintained.  However, if you follow the
+  installation instructions, you should still be able to get it to
+  work (namely with library versions that are outdated at this point).
+
+  If you're looking for an alternative to *nolearn.lasagne*, a library
+  that integrates neural networks with scikit-learn, then take a look
+  at `skorch <https://github.com/skorch-dev/skorch>`_, which wraps
+  PyTorch for scikit-learn.
+
+
 .. image:: https://travis-ci.org/dnouri/nolearn.svg?branch=master
     :target: https://travis-ci.org/dnouri/nolearn
 
@@ -16,27 +28,13 @@ or `virtualenv
 <http://www.dabapps.com/blog/introduction-to-pip-and-virtualenv-python/>`_
 (Python 2) to install nolearn.
 
-To install the latest release of nolearn from the Python Package
-Index, do::
-
-  pip install nolearn
-
-At the time of this writing, nolearn works with the latest versions of
-its dependencies, such as numpy, scipy, Theano, and Lasagne (the
-latter `from Git <https://github.com/Lasagne/Lasagne>`__).  But we also
-maintain a list of known good versions of dependencies that we support
-and test.  Should you run into hairy depdendency issues during
-installation or runtime, we recommend you try this same set of tested
-depdencencies instead::
-
-  pip install -r https://raw.githubusercontent.com/dnouri/nolearn/0.6.0/requirements.txt
-  pip install nolearn
-  
-If you want to install the latest development version of nolearn
-directly from Git, run::
+nolearn comes with a list of known good versions of dependencies that
+we test with in ``requirements.txt``.  To install the latest version
+of nolearn from Git along with these known good dependencies, run
+these two commands::
 
   pip install -r https://raw.githubusercontent.com/dnouri/nolearn/master/requirements.txt
-  pip install git+https://github.com/dnouri/nolearn.git@master#egg=nolearn==0.7.git
+  pip install git+https://github.com/dnouri/nolearn.git
 
 Documentation
 =============
