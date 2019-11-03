@@ -23,7 +23,7 @@ install_requires = [
     ]
 
 visualization_require = [
-    'matplotlib',
+    'matplotlib<3.0.999',
     'pydotplus',
     'ipython<5.999'
     ]
@@ -37,7 +37,7 @@ tests_require = [
     ]
 
 docs_require = [
-    'Sphinx',
+    'Sphinx<1.999',
     ]
 
 gdbn_require = [
