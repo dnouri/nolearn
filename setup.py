@@ -3,7 +3,7 @@ import codecs
 
 from setuptools import setup, find_packages
 
-version = '0.6.1'
+version = '0.6.2.dev0'
 
 here = os.path.abspath(os.path.dirname(__file__))
 try:
