@@ -1,8 +1,11 @@
 Change History
 ==============
 
-0.6.1 - Unreleased
+0.6.1 - 2019-11-05
 ------------------
+
+See Github for a list of changes between this release and the last:
+https://github.com/dnouri/nolearn/pulls?q=is%3Apr+is%3Aclosed
 
 0.6.0 - 2016-08-27
 ------------------
