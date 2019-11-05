@@ -13,8 +13,8 @@ try:
 except IOError:
     README = CHANGES = ''
 
+
 install_requires = [
-    'gdbn',
     'joblib',
     'scikit-learn',
     'tabulate',
@@ -40,7 +40,11 @@ docs_require = [
     'Sphinx<1.999',
     ]
 
-all_require = (visualization_require + tests_require + docs_require)
+gdbn_require = [
+    "gdbn"
+]
+
+all_require = (visualization_require + tests_require + docs_require + gdbn_require)
 
 setup(name='nolearn',
       version=version,
@@ -64,6 +68,7 @@ setup(name='nolearn',
           'visualization': visualization_require,
           'testing': tests_require,
           'docs': docs_require,
+          'gdbn': gdbn_require,
           'all': all_require,
           },
       )
