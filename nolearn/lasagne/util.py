@@ -7,6 +7,9 @@ from lasagne.layers import MaxPool2DLayer
 import numpy as np
 from tabulate import tabulate
 
+from nolearn._compat import basestring
+
+
 convlayers = [Conv2DLayer]
 maxpoollayers = [MaxPool2DLayer]
 try:
@@ -180,3 +183,53 @@ def get_conv_infos(net, min_capacity=100. / 6, detailed=False):
                            receptive_fields.astype(int)))
 
     return tabulate(table, header, floatfmt='.2f')
+
+
+class SliceDict(dict):
+    def __init__(self, **kwargs):
+        shapes = [value.shape[0] for value in kwargs.values()]
+        shapes_set = set(shapes)
+        if shapes_set and (len(shapes_set) != 1):
+            raise ValueError(
+                "Initialized with items of different shapes: {}"
+                "".format(', '.join(map(str, sorted(shapes_set)))))
+
+        if not shapes:
+            self._len = 0
+        else:
+            self._len = shapes[0]
+
+        super(SliceDict, self).__init__(**kwargs)
+
+    def __len__(self):
+        return self._len
+
+    def __getitem__(self, sl):
+        if isinstance(sl, int):
+            raise ValueError("SliceDict cannot be indexed by integers.")
+        if isinstance(sl, basestring):
+            return super(SliceDict, self).__getitem__(sl)
+        return SliceDict(**{k: v[sl] for k, v in self.items()})
+
+    def __setitem__(self, key, value):
+        if not isinstance(key, basestring):
+            raise TypeError("Key must be str, not {}.".format(type(key)))
+
+        length = value.shape[0]
+        if len(self.keys()) == 0:
+            self._len = length
+
+        if self._len != length:
+            raise ValueError(
+                "Cannot set array with shape[0] != {}"
+                "".format(self._len))
+
+        super(SliceDict, self).__setitem__(key, value)
+
+    def update(self, kwargs):
+        for key, value in kwargs.items():
+            self.__setitem__(key, value)
+
+    def __repr__(self):
+        out = super(SliceDict, self).__repr__()
+        return "SliceDict(**{})".format(out)
