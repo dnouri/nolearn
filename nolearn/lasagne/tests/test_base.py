@@ -220,6 +220,24 @@ def test_lasagne_functional_grid_search(mnist, monkeypatch):
         )
 
 
+def test_lasagne_functional_grid_search_architecture(mnist):
+    from nolearn.lasagne import NeuralNet
+    from lasagne import layers
+
+    X, y = mnist
+
+    l_in = layers.InputLayer(shape=(None, X.shape[1]))
+    l_out0 = layers.DenseLayer(l_in, num_units=10)
+    l_out1 = layers.DenseLayer(l_in, num_units=10)
+
+    nn = NeuralNet(l_out0)
+
+    param_grid = {'layers': [l_out0, l_out1]}
+
+    gs = GridSearchCV(nn, param_grid, cv=2, refit=False, verbose=4)
+    gs.fit(X[:1000], y[:1000])
+
+
 def test_clone():
     from nolearn.lasagne import NeuralNet
     from nolearn.lasagne import BatchIterator
