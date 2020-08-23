@@ -8,7 +8,7 @@ class TestCNNVisualizeFunctions:
     def X_non_square(self, X_train):
         X = np.hstack(
             (X_train[:, :20 * 28], X_train[:, :20 * 28], X_train[:, :20 * 28]))
-        X = X.reshape(-1, 3, 20, 28)
+        X = X.reshape((-1, 3, 20, 28))
         return X
 
     def test_plot_loss(self, net_fitted):

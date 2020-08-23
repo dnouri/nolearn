@@ -15,14 +15,14 @@ from lasagne.nonlinearities import sigmoid
 from lasagne.objectives import categorical_crossentropy
 from lasagne.objectives import aggregate
 from lasagne.updates import nesterov_momentum
-from mock import Mock
-from mock import patch
+from unittest.mock import Mock
+from unittest.mock import patch
 import numpy as np
 import pytest
 from sklearn.base import clone
 from sklearn.datasets import make_classification
 from sklearn.datasets import make_regression
-from sklearn.grid_search import GridSearchCV
+from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import r2_score
