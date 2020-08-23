@@ -113,7 +113,7 @@ class OverFeatShell(ChunkedTransform, BaseEstimator):
             n_feat, n_rows, n_cols = data[i * 2].split()
             n_feat, n_rows, n_cols = int(n_feat), int(n_rows), int(n_cols)
             feat = np.fromstring(data[i * 2 + 1], dtype=np.float32, sep=' ')
-            feat = feat.reshape(n_feat, n_rows, n_cols)
+            feat = feat.reshape((n_feat, n_rows, n_cols))
             if self.merge == 'maxmean':
                 feat = feat.max(2).mean(1)
             elif self.merge == 'meanmax':

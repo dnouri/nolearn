@@ -22,8 +22,7 @@ from lasagne.utils import floatX
 from lasagne.utils import unique
 import numpy as np
 from sklearn.base import BaseEstimator
-from sklearn.cross_validation import KFold
-from sklearn.cross_validation import StratifiedKFold
+from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import r2_score
 from sklearn.preprocessing import LabelEncoder

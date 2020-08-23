@@ -1,6 +1,6 @@
 from sklearn.linear_model import LogisticRegression
-from sklearn.grid_search import GridSearchCV
-from mock import Mock
+from sklearn.model_selection import GridSearchCV
+from unittest.mock import Mock
 import numpy as np
 
 

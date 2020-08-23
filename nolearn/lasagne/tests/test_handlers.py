@@ -8,8 +8,8 @@ from lasagne.layers import MaxPool2DLayer
 from lasagne.layers import InputLayer
 from lasagne.nonlinearities import softmax
 from lasagne.updates import nesterov_momentum
-from mock import patch
-from mock import Mock
+from unittest.mock import patch
+from unittest.mock import Mock
 import numpy
 import pytest
 
