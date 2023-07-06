@@ -1,5 +1,5 @@
 numpy==1.10.4
-scipy==0.16.1
+scipy==1.10.0
 Theano==0.8
 -e git+https://github.com/Lasagne/Lasagne.git@8f4f9b2#egg=Lasagne==0.2.git
 joblib==0.9.3
